@@ -1,0 +1,15 @@
+Package: EmptyDrops
+Version: 1.0.0
+Date: 2017-08-12
+Title: Find Empty Droplets in Single-Cell RNA sequenncing data
+Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), email =
+        "alun@wehi.edu.au"))
+Maintainer: Aaron Lun <alun@wehi.edu.au>
+Imports: Matrix, methods, stats, edgeR, Rcpp
+biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics
+Description: Finds empty droplets in droplet-based single-cell RNA-seq data.
+License: GPL-3
+NeedsCompilation: yes
+VignetteBuilder: knitr
+LinkingTo: Rcpp
+SystemRequirements: C++11
