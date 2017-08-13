@@ -1,4 +1,4 @@
-computePValue <- function(m, lower=250, tol=0.5, npts=10000) 
+computePValue <- function(m, lower=250, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -44,7 +44,7 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000)
     sim.totals <- 2^seq(from=lower.pt, to=upper.pt, length.out=S)
 
     # Computing the deviance estimate for simulated runs.
-    sim.LR <- .Call("calculate_random_dev", sim.totals, ambient.prop)
+    sim.LR <- bpvec(sim.totals, FUN=.simulate_dev, prop=ambient.prop, BPPARAM=BPPARAM)
 
     # Modelling the total-dependent trend in the simulated LR (and the variance around the trend).
     log.totals <- log2(sim.totals)
@@ -67,6 +67,10 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000)
     all.lim[!ambient] <- limited
     return(data.frame(Total=umi.sum, LR=all.lr, Expected=all.exp, PValue=all.p, 
                       Limited=all.lim, row.names=colnames(m)))
+}
+
+.simulate_dev <- function(totals, prop) {
+    .Call("calculate_random_dev", totals, prop)
 }
 
 .compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, tol) {

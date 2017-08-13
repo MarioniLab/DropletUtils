@@ -5,6 +5,7 @@ Title: Find Empty Droplets in Single-Cell RNA sequenncing data
 Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), email =
         "alun@wehi.edu.au"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
+Depends: R (>= 3.4), BiocParallel
 Imports: Matrix, methods, stats, edgeR, Rcpp
 Suggests: testthat
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics

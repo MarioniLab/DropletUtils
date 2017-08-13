@@ -1,7 +1,26 @@
 # This tests that the C++ code does what it says it does.
-# library(EmptyDrops); library(testthat)
+# library(EmptyDrops); library(testthat); source("test-drops.R")
 
-test_that("pvalue calculations are correct", {
+test_that("simulated deviance calculations are correct", {
+    set.seed(100)
+    ambient.prop <- runif(1000)
+    ambient.prop <- ambient.prop/sum(ambient.prop)
+
+    set.seed(200)
+    sim.totals <- seq(1, 2000, by=0.5)
+    sim.LR <- numeric(length(sim.totals))
+    for (x in seq_along(sim.LR)) {
+        cur.means <- ambient.prop*sim.totals[x]
+        current <- rpois(length(ambient.prop), lambda=cur.means)
+        sim.LR[x] <- sum(current * log(current/cur.means), na.rm=TRUE) + sum(cur.means - current)
+    }
+
+    set.seed(200)
+    ref <- EmptyDrops:::.simulate_dev(sim.totals, ambient.prop) 
+    expect_equal(sim.LR, ref)             
+})
+
+test_that("p-value calculations are correct", {
     ncells <- 10000
     obs.totals <- sample(1000, ncells, replace=TRUE) + 10
     obs.spread <- runif(ncells)
