@@ -6,6 +6,7 @@ Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), email =
         "alun@wehi.edu.au"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
 Imports: Matrix, methods, stats, edgeR, Rcpp
+Suggests: testthat
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics
 Description: Finds empty droplets in droplet-based single-cell RNA-seq data.
 License: GPL-3
