@@ -16,16 +16,13 @@ SEXP calculate_random_dev (SEXP _totals, SEXP _prop) {
 
     auto sdIt=sum_dev.begin();
     for (const auto& t : totals) {
-        double& current=(*sdIt);
+        double& current=(*sdIt=t); // Taking advantage of the formulation of the deviance.
         ++sdIt;
 
         for (const auto& p : prop) { 
             double curmean=t*p;
             int out=R::rpois(curmean);
-            if (out) { 
-                current+=out * std::log(out/curmean) - out;
-            }
-            current+=curmean;
+            if (out) { current+=out * std::log(out/curmean) - out; }
         }
     }
     
@@ -35,14 +32,12 @@ SEXP calculate_random_dev (SEXP _totals, SEXP _prop) {
 
 SEXP calculate_pval (SEXP _obstotal, SEXP _obsresid, SEXP _simtotal, SEXP _simresid, SEXP _tol) {
     BEGIN_RCPP
-    Rcpp::NumericVector obstotal(_obstotal);
+    Rcpp::IntegerVector obstotal(_obstotal);
     Rcpp::NumericVector obsresid(_obsresid);
     Rcpp::NumericVector simtotal(_simtotal);
     Rcpp::NumericVector simresid(_simresid);
 
-    double last_obs=0;
     const size_t nobs=obstotal.size();
-    if (nobs) { last_obs=obstotal[0]; }
     if (nobs!=obsresid.size()) { throw std::runtime_error("observed vector lengths are not the same"); }
     if (simtotal.size()!=simresid.size()) { 
         throw std::runtime_error("simulated vector lengths are not the same"); 
@@ -58,34 +53,60 @@ SEXP calculate_pval (SEXP _obstotal, SEXP _obsresid, SEXP _simtotal, SEXP _simre
     }
 
     // Setting up output constructs.
-    Rcpp::IntegerVector output(nobs);
-    auto oIt=output.begin();
+    Rcpp::IntegerVector above(nobs);
+    auto aIt=above.begin();
     Rcpp::IntegerVector totals(nobs);
     auto tIt=totals.begin();
-    auto orIt=obsresid.begin();
 
-    for (const auto& ot : obstotal) {
-        const double lower=ot*tol, upper=ot/tol;
-        const double& curresid=*orIt;
-        ++orIt;
+    auto orIt=obsresid.begin();
+    auto otIt=obstotal.begin();
+    auto stLeft=simtotal.begin(), stRight=stLeft;
+    auto srLeft=simresid.begin(), srRight=srLeft;
+
+    while (otIt!=obstotal.end()) { 
+        // Figuring out how many other points have similar totals.
+        auto endtIt=otIt;
+        while (endtIt!=obstotal.end() && *endtIt==*otIt) { 
+            ++endtIt;
+        }
+        const size_t numO=(endtIt-otIt);
+        auto endrIt=orIt + numO;
 
         // Finding the upper and lower bound.
-        auto left=std::lower_bound(simtotal.begin(), simtotal.end(), lower);
-        auto right=std::upper_bound(simtotal.begin(), simtotal.end(), upper);
-        *tIt=right-left;
-        ++tIt;
-
-        int& nabove=(*oIt=0);
-        ++oIt;
-        auto srIt=simresid.begin() + (left-simtotal.begin());
-        while (left!=right) {
-            if (*srIt >= curresid) { ++nabove; }
-            ++left;
-            ++srIt;
+        const double ot=*otIt;
+        const double lower=ot*tol, upper=ot/tol;
+        while (*stLeft < lower && stLeft!=simtotal.end()) { 
+            ++stLeft;
+            ++srLeft;
         }
+        while (*stRight < upper && stRight!=simtotal.end()) { 
+            ++stRight;
+            ++srRight;
+        }
+
+        // Counting the number of residuals larger than the current.
+        // Done with a binary search on the sorted observed residuals with the same total.
+        for (auto srIt=srLeft; srIt!=srRight; ++srIt) {
+            const size_t hit=std::upper_bound(orIt, endrIt, *srIt) - orIt;
+            if (hit) { *(aIt+hit-1)+=1; }
+        }
+        if (numO>=2) { 
+            // Cumulative sum to count the number of larger residuals.
+            for (int i=int(numO)-2; i>=0; --i) {
+                *(aIt+i)+=*(aIt+i+1);
+            }
+        }
+        const int numS=stRight-stLeft;
+        std::fill(tIt, tIt+numO, numS);
+    
+        // Jumping ahead.
+        aIt+=numO; 
+        tIt+=numO;
+        orIt=endrIt;
+        otIt=endtIt;
     }
          
-    return Rcpp::List::create(output, totals); 
+    return Rcpp::List::create(above, totals); 
     END_RCPP
 }
 

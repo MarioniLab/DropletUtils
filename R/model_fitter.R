@@ -38,7 +38,6 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000)
     obs.LR[by.col$Col] <- by.col$x
 
     # Computing a simulation with "npts" entries for any "tol"-fold interval around the interrogation point..
-    tol <- 0.5
     lower.pt <- log2(min(obs.totals))-tol
     upper.pt <- log2(max(obs.totals))+tol
     S <- round(npts * (upper.pt - lower.pt)/(2*tol)) # npts => R in the text.
@@ -55,9 +54,9 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000)
     obs.spread <- obs.LR/expected.LR
 
     # Computing a p-value for each observed value.
-    perm.stats <- .Call("calculate_pval", obs.totals, obs.spread, sim.totals, sim.spread, 2^-tol)
-    limited <- perm.stats[[1]]==0L
-    p <- (perm.stats[[1]]+1)/(perm.stats[[2]]+1)
+    stats <- .compute_P(obs.totals, obs.spread, sim.totals, sim.spread, tol)
+    limited <- stats$limited
+    p <- stats$p.value
 
     # Collating into some sensible output.
     all.p <- all.lr <- all.exp <- rep(NA_real_, length(ambient))
@@ -68,6 +67,16 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000)
     all.lim[!ambient] <- limited
     return(data.frame(Total=umi.sum, LR=all.lr, Expected=all.exp, PValue=all.p, 
                       Limited=all.lim, row.names=colnames(m)))
+}
+
+.compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, tol) {
+    o <- order(obs.totals, obs.spread)
+    perm.stats <- .Call("calculate_pval", obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-tol)
+    perm.stats[[1]][o] <- perm.stats[[1]]
+    perm.stats[[2]][o] <- perm.stats[[2]]
+    limited <- perm.stats[[1]]==0L
+    p <- (perm.stats[[1]]+1)/(perm.stats[[2]]+1)
+    return(list(limited=limited, p.value=p))
 }
 
 findInflectionPoint <- function(m, lower=250) 
