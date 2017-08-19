@@ -1,6 +1,6 @@
 Package: EmptyDrops
-Version: 1.0.0
-Date: 2017-08-12
+Version: 1.0.1
+Date: 2017-08-19
 Title: Find Empty Droplets in Single-Cell RNA sequenncing data
 Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), email =
         "alun@wehi.edu.au"))

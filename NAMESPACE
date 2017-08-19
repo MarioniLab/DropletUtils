@@ -7,4 +7,4 @@ importFrom("stats", lowess, spline, p.adjust)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
 
-export(computePValue, findInflectionPoint, detectCells)
+export(testBarcodeAmbience, findKneePoint, detectCells)

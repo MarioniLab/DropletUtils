@@ -1,4 +1,4 @@
-computePValue <- function(m, lower=250, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
+testBarcodeAmbience <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -83,8 +83,8 @@ computePValue <- function(m, lower=250, tol=0.5, npts=10000, BPPARAM=SerialParam
     return(list(limited=limited, p.value=p))
 }
 
-findInflectionPoint <- function(m, lower=250) 
-# A function to identify the inflection point from a reverse cumulative distribution.
+findKneePoint <- function(m, lower=100) 
+# A function to identify the knee point from a reverse cumulative distribution.
 # 
 # written by Aaron Lun
 # created 7 August 2017    
@@ -95,22 +95,31 @@ findInflectionPoint <- function(m, lower=250)
     stuff <- rle(sort(totals, decreasing=TRUE))
     y <- log(stuff$values)
     x <- log(cumsum(stuff$lengths))
-    
-    grad <- diff(y)/diff(x)
-    threshold <- y[which.min(grad)+1]
+
+    d1 <- diff(y)/diff(x)
+    x.mid <- x[-length(x)] 
+    d1FUN <- splinefun(x.mid, d1)
+
+    d2 <- diff(d1)/diff(x.mid)
+    x.mid2 <- x.mid[-length(x.mid)] 
+    d2FUN <- splinefun(x.mid2, d2)
+
+    curvature <- abs(d2FUN(x.mid2))/(1 + d1FUN(x.mid2)^2)^1.5
+    x.pos <- x.mid2[which.max(curvature)]
+    threshold <- spline(x, y, xout=x.pos)$y
     return(unname(exp(threshold)))
 }
 
-detectCells <- function(m, lower=250, scale=2, ...) 
+detectCells <- function(m, lower=100, scale=5, ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
 # created 7 August 2017
 {
-    stats <- computePValue(m, lower=lower, ...)
-    inflection <- findInflectionPoint(m, lower=lower)
-    always <- stats$Total >= inflection*scale
+    stats <- testBarcodeAmbience(m, lower=lower, ...)
+    kneept <- findKneePoint(m, lower=lower)
+    always <- stats$Total >= kneept*scale
     tmp <- stats$PValue
     tmp[always] <- 0
     stats$FDR <- p.adjust(tmp, method="BH")
