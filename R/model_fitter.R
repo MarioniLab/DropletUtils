@@ -6,7 +6,7 @@ testBarcodeAmbience <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=Seria
 # last modified 12 August 2017
 {
     discard <- rowSums(m) == 0
-    m <- m[!discard,]
+    m <- m[!discard,,drop=FALSE]
 
     # Computing the average profile.
     umi.sum <- colSums(m)
@@ -16,7 +16,7 @@ testBarcodeAmbience <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=Seria
     ambient.prop <- goodTuringProportions(ambient.prof)
 
     # Removing cells from the ambient.
-    obs <- m[,!ambient]
+    obs <- m[,!ambient,drop=FALSE]
     obs.totals <- colSums(obs)
 
     # Calculating the likelihood ratio.
