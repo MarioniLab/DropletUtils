@@ -1,15 +1,20 @@
-Package: EmptyDrops
-Version: 1.0.1
-Date: 2017-08-19
-Title: Find Empty Droplets in Single-Cell RNA sequenncing data
-Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), email =
-        "alun@wehi.edu.au"))
+Package: DropletUtils
+Version: 1.0.0
+Date: 2017-12-18
+Title: Utilities for Handling Single-Cell Droplet Data
+Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), 
+    email = "alun@wehi.edu.au"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
-Depends: R (>= 3.4), BiocParallel
-Imports: Matrix, methods, stats, edgeR, Rcpp
+Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
+Imports: S4Vectors, SummarizedExperiment, Matrix, methods, 
+    stats, edgeR, Rcpp
 Suggests: testthat
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics
-Description: Finds empty droplets in droplet-based single-cell RNA-seq data.
+Description: Provides a number of utility functions for handling 
+    single-cell (RNA-seq) data from droplet technologies such as 10X
+    Genomics. This includes data loading, identification of cells from 
+    empty droplets, removal of barcode-swapped pseudo-cells, and 
+    downsampling of the count matrix.
 License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr

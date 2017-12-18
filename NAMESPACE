@@ -1,10 +1,18 @@
-useDynLib(EmptyDrops)
+useDynLib(DropletUtils)
 
 import(BiocParallel)
+import(SingleCellExperiment)
+
+importFrom("SummarizedExperiment", colData, rowData)
+importFrom("S4Vectors", DataFrame)
 importFrom("Matrix", colSums, rowSums)
 importFrom("methods", is)
 importFrom("stats", lowess, spline, p.adjust)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
 
-export(testBarcodeAmbience, findKneePoint, detectCells)
+export(
+    read10xResults, 
+    downsampleCounts,
+    testBarcodeAmbience, findKneePoint, detectCells
+)
