@@ -1,4 +1,4 @@
-testEmptyDrops <- function(m, lower=100, span=2, npts=10000, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun

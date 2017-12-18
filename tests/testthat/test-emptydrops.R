@@ -1,5 +1,5 @@
-# This tests that the C++ code does what it says it does.
-# library(DropletUtils); library(testthat); source("test-drops.R")
+# This tests that the C++ code for emptyDrops does what it says it does.
+# library(DropletUtils); library(testthat); source("test-emptydrops.R")
 
 test_that("simulated deviance calculations are correct", {
     set.seed(100)
@@ -16,7 +16,7 @@ test_that("simulated deviance calculations are correct", {
     }
 
     set.seed(200)
-    ref <- EmptyDrops:::.simulate_dev(sim.totals, ambient.prop) 
+    ref <- DropletUtils:::.simulate_dev(sim.totals, ambient.prop) 
     expect_equal(sim.LR, ref)             
 })
 
@@ -27,17 +27,17 @@ test_that("p-value calculations are correct", {
     sim.totals <- seq(0, 2000, by=0.5)
     sim.spread <- runif(length(sim.totals))
 
+    span <- sqrt(2)
     p <- numeric(length(obs.spread))
     limited <- logical(length(obs.spread))
-    fold.tol <- 2^-0.5
     for (x in seq_along(p)) {
-        current <- obs.totals[x]*fold.tol <= sim.totals & obs.totals[x]/fold.tol >= sim.totals
+        current <- obs.totals[x]/span <= sim.totals & obs.totals[x]*span >= sim.totals
         nexceed <- sum(sim.spread[current] >= obs.spread[x])
         limited[x] <- nexceed==0L
         p[x] <- (nexceed + 1)/(sum(current)+1)
     }
     
-    stats <- EmptyDrops:::.compute_P(obs.totals, obs.spread, sim.totals, sim.spread, tol=0.5)
+    stats <- DropletUtils:::.compute_P(obs.totals, obs.spread, sim.totals, sim.spread, span=log2(span))
     expect_equal(stats$p.value, p)
     expect_identical(stats$limited, limited)
 })

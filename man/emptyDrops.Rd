@@ -7,7 +7,8 @@
 \description{Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.}
 
 \usage{
-testEmptyDrops(m, lower=100, span=0.5, npts=10000, BPPARAM=SerialParam()) 
+testEmptyDrops(m, lower=100, span=sqrt(2), npts=10000, 
+    BPPARAM=SerialParam()) 
 
 findKneePoint(m, lower=100) 
 
