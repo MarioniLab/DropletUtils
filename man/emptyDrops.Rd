@@ -40,8 +40,9 @@ and calculating the proportion of those simulated droplets that have deviances g
 
 For this calculation, a \code{span} value is used as the variance of the deviance is dependent on the total count.
 Reducing the \code{span} will yield a more accurate p-value for each droplet.
-The number of simulated droplets is such that there will always be \code{npts} values within \code{span} at any total UMI count above \code{lower}.
+The number of simulated droplets is chosen such that there will always be \code{npts} values within \code{span} at any total UMI count above \code{lower}.
 Increasing \code{npts} will improve the precision and reproducibility of the p-values, at the cost of increasing the run-time.
+It will also reduce the lower bound on the permutation p-values (see Phipson and Smyth, 2010).
 
 The \code{findKneePoint} function will examine the curve of log-total count against the log-rank,
 and will identify the knee point, i.e., the point on the curve where the curvature is maximized.
@@ -107,3 +108,10 @@ totals <- colSums(my.counts)
 plot(rank(-totals), totals, log="xy")
 abline(h=K, col="red")
 }
+
+\references{
+Phipson B and Smyth GK (2010).
+Permutation P-values should never be zero: calculating exact P-values when permutations are randomly drawn.
+\emph{Stat. Appl. Genet. Mol. Biol.} 9:Article 39.
+}
+

@@ -52,5 +52,7 @@ write(cell.ids, file=file.path(tmpdir, "barcodes.tsv"))
 
 # Reading it in.
 sce10x <- read10xResults(tmpdir)
+
+# Column names are dropped with multiple 'samples'.
 sce10x2 <- read10xResults(c(tmpdir, tmpdir))
 }
