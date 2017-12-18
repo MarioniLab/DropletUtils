@@ -1,9 +1,8 @@
-testBarcodeAmbience <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
 # created 1 August 2017
-# last modified 12 August 2017
 {
     discard <- rowSums(m) == 0
     m <- m[!discard,,drop=FALSE]
@@ -65,17 +64,16 @@ testBarcodeAmbience <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=Seria
     all.lr[!ambient] <- obs.LR
     all.exp[!ambient] <- expected.LR
     all.lim[!ambient] <- limited
-    return(data.frame(Total=umi.sum, LR=all.lr, Expected=all.exp, PValue=all.p, 
-                      Limited=all.lim, row.names=colnames(m)))
+    return(DataFrame(Total=umi.sum, LR=all.lr, Expected=all.exp, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
 }
 
 .simulate_dev <- function(totals, prop) {
-    .Call("calculate_random_dev", totals, prop)
+    .Call(cxx_calculate_random_dev, totals, prop)
 }
 
 .compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, tol) {
     o <- order(obs.totals, obs.spread)
-    perm.stats <- .Call("calculate_pval", obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-tol)
+    perm.stats <- .Call(cxx_calculate_pval, obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-tol)
     perm.stats[[1]][o] <- perm.stats[[1]]
     perm.stats[[2]][o] <- perm.stats[[2]]
     limited <- perm.stats[[1]]==0L
@@ -110,18 +108,18 @@ findKneePoint <- function(m, lower=100)
     return(unname(exp(threshold)))
 }
 
-detectCells <- function(m, lower=100, scale=5, ...) 
+emptyDrops <- function(m, lower=100, scale=5, ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
 # created 7 August 2017
 {
-    stats <- testBarcodeAmbience(m, lower=lower, ...)
+    stats <- testEmptyDrops(m, lower=lower, ...)
     kneept <- findKneePoint(m, lower=lower)
     always <- stats$Total >= kneept*scale
     tmp <- stats$PValue
     tmp[always] <- 0
     stats$FDR <- p.adjust(tmp, method="BH")
-    return(stats)
+    emptyDrops return(stats)
 }

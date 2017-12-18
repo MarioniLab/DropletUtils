@@ -14,5 +14,5 @@ importFrom("edgeR", goodTuringProportions)
 export(
     read10xResults, 
     downsampleCounts,
-    testBarcodeAmbience, findKneePoint, detectCells
+    testEmptyDrops, findKneePoint, emptyDrops
 )
