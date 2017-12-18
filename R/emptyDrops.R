@@ -1,4 +1,4 @@
-testEmptyDrops <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, span=2, npts=10000, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -36,10 +36,11 @@ testEmptyDrops <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialPara
     obs.LR <- numeric(length(obs.totals))
     obs.LR[by.col$Col] <- by.col$x
 
-    # Computing a simulation with "npts" entries for any "tol"-fold interval around the interrogation point..
-    lower.pt <- log2(min(obs.totals))-tol
-    upper.pt <- log2(max(obs.totals))+tol
-    S <- round(npts * (upper.pt - lower.pt)/(2*tol)) # npts => R in the text.
+    # Computing a simulation with "npts" entries for any "span"-fold interval around the interrogation point..
+    span <- log2(span)
+    lower.pt <- log2(min(obs.totals))-span
+    upper.pt <- log2(max(obs.totals))+span
+    S <- round(npts * (upper.pt - lower.pt)/(2*span)) # npts => R in the text.
     sim.totals <- 2^seq(from=lower.pt, to=upper.pt, length.out=S)
 
     # Computing the deviance estimate for simulated runs.
@@ -53,7 +54,7 @@ testEmptyDrops <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialPara
     obs.spread <- obs.LR/expected.LR
 
     # Computing a p-value for each observed value.
-    stats <- .compute_P(obs.totals, obs.spread, sim.totals, sim.spread, tol)
+    stats <- .compute_P(obs.totals, obs.spread, sim.totals, sim.spread, span)
     limited <- stats$limited
     p <- stats$p.value
 
@@ -64,16 +65,16 @@ testEmptyDrops <- function(m, lower=100, tol=0.5, npts=10000, BPPARAM=SerialPara
     all.lr[!ambient] <- obs.LR
     all.exp[!ambient] <- expected.LR
     all.lim[!ambient] <- limited
-    return(DataFrame(Total=umi.sum, LR=all.lr, Expected=all.exp, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
+    return(DataFrame(Total=umi.sum, Deviance=all.lr, Expected=all.exp, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
 }
 
 .simulate_dev <- function(totals, prop) {
     .Call(cxx_calculate_random_dev, totals, prop)
 }
 
-.compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, tol) {
+.compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, span) {
     o <- order(obs.totals, obs.spread)
-    perm.stats <- .Call(cxx_calculate_pval, obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-tol)
+    perm.stats <- .Call(cxx_calculate_pval, obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-span)
     perm.stats[[1]][o] <- perm.stats[[1]]
     perm.stats[[2]][o] <- perm.stats[[2]]
     limited <- perm.stats[[1]]==0L
@@ -121,5 +122,5 @@ emptyDrops <- function(m, lower=100, scale=5, ...)
     tmp <- stats$PValue
     tmp[always] <- 0
     stats$FDR <- p.adjust(tmp, method="BH")
-    emptyDrops return(stats)
+    return(stats)
 }
