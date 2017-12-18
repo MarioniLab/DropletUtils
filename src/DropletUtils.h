@@ -21,6 +21,8 @@ SEXP calculate_random_dev(SEXP, SEXP);
 
 SEXP calculate_pval(SEXP, SEXP, SEXP, SEXP, SEXP);
 
+SEXP find_swapped(SEXP, SEXP, SEXP);
+
 }
 
 #endif

@@ -10,6 +10,7 @@ static const R_CallMethodDef all_call_entries[] = {
     REGISTER(downsample_matrix, 2),
     REGISTER(calculate_random_dev, 2),
     REGISTER(calculate_pval, 5),
+    REGISTER(find_swapped, 3),
     {NULL, NULL, 0}
 };
 

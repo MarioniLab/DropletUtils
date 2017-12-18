@@ -5,16 +5,17 @@ import(SingleCellExperiment)
 
 importFrom("SummarizedExperiment", colData, rowData)
 importFrom("S4Vectors", DataFrame)
-importFrom("Matrix", colSums, rowSums, readMM)
+importFrom("Matrix", colSums, rowSums, readMM, sparseMatrix)
 importFrom("methods", is, as)
 importFrom("stats", lowess, spline, p.adjust, aggregate, splinefun)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
 importFrom("utils", read.table)
-
+importFrom("rhdf5", h5write, h5read, h5createFile)
 
 export(
     read10xResults, 
     downsampleCounts,
+    swappedDrops, sim10xMolInfo,
     testEmptyDrops, findKneePoint, emptyDrops
 )
