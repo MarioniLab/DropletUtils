@@ -20,7 +20,7 @@ emptyDrops(m, lower=100, scale=5, ...)
 Columns represent barcoded droplets, rows represent cells.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, below which all barcodes are assumed to correspond to empty droplets.}
-\item{tol, npts}{Numeric scalars controlling the accuracy of the p-value calculation.}
+\item{span, npts}{Numeric scalars controlling the accuracy of the p-value calculation.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{scale}{A numeric scalar specifying the fold-change about the knee-point for the total UMI count, above which all barcodes are assumed to contain cells.}
 \item{...}{Further arguments to pass to \code{testEmptyDrops}.}

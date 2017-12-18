@@ -5,11 +5,13 @@ import(SingleCellExperiment)
 
 importFrom("SummarizedExperiment", colData, rowData)
 importFrom("S4Vectors", DataFrame)
-importFrom("Matrix", colSums, rowSums)
-importFrom("methods", is)
-importFrom("stats", lowess, spline, p.adjust)
+importFrom("Matrix", colSums, rowSums, readMM)
+importFrom("methods", is, as)
+importFrom("stats", lowess, spline, p.adjust, aggregate, splinefun)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
+importFrom("utils", read.table)
+
 
 export(
     read10xResults, 
