@@ -23,6 +23,8 @@ SEXP calculate_pval(SEXP, SEXP, SEXP, SEXP, SEXP);
 
 SEXP find_swapped(SEXP, SEXP, SEXP);
 
+SEXP get_cell_barcodes(SEXP, SEXP, SEXP);
+
 }
 
 #endif
