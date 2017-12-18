@@ -1,3 +1,3 @@
 library(testthat)
-library(EmptyDrops)
-test_check("EmptyDrops")
+library(DropletUtils)
+test_check("DropletUtils")

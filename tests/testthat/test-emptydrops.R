@@ -1,5 +1,5 @@
 # This tests that the C++ code does what it says it does.
-# library(EmptyDrops); library(testthat); source("test-drops.R")
+# library(DropletUtils); library(testthat); source("test-drops.R")
 
 test_that("simulated deviance calculations are correct", {
     set.seed(100)
