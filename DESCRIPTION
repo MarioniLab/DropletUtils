@@ -3,7 +3,8 @@ Version: 1.0.0
 Date: 2017-12-18
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), 
-    email = "alun@wehi.edu.au"))
+    email = "alun@wehi.edu.au"), person("Davis", "McCarthy",
+    role="ctb"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, SummarizedExperiment, Matrix, methods, 
