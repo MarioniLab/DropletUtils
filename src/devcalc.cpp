@@ -1,8 +1,4 @@
-#include "Rcpp.h"
-#include <cmath>
-#include <algorithm>
-
-extern "C" {
+#include "DropletUtils.h"
 
 SEXP calculate_random_dev (SEXP _totals, SEXP _prop) {
     BEGIN_RCPP
@@ -110,4 +106,3 @@ SEXP calculate_pval (SEXP _obstotal, SEXP _obsresid, SEXP _simtotal, SEXP _simre
     END_RCPP
 }
 
-}

@@ -8,7 +8,7 @@ Maintainer: Aaron Lun <alun@wehi.edu.au>
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, SummarizedExperiment, Matrix, methods, 
     stats, edgeR, Rcpp
-Suggests: testthat
+Suggests: testthat, beachmat
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics
 Description: Provides a number of utility functions for handling 
     single-cell (RNA-seq) data from droplet technologies such as 10X
@@ -18,5 +18,5 @@ Description: Provides a number of utility functions for handling
 License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr
-LinkingTo: Rcpp
+LinkingTo: Rcpp, beachmat, Rhdf5lib
 SystemRequirements: C++11

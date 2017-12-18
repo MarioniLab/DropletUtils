@@ -1,4 +1,4 @@
-useDynLib(DropletUtils)
+useDynLib(DropletUtils, .fixes="cxx", .registration=TRUE)
 
 import(BiocParallel)
 import(SingleCellExperiment)
