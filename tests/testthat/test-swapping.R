@@ -3,10 +3,9 @@
 
 tmpdir <- tempfile()
 dir.create(tmpdir)
-ncells <- 100L
 ngenes <- 20L
-output <- sim10xMolInfo(tmpdir, return.tab=TRUE, ncells=ncells)
-barcode <- ceiling(logb(ncells, 4))
+barcode <- 4L
+output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode)
 
 test_that("Extraction of molecule information fields works correctly", {
     for (i in seq_along(output$files)) {
@@ -20,22 +19,29 @@ test_that("Extraction of molecule information fields works correctly", {
         expect_identical(as.integer(current$data$gene), combined$gene+1L)
         expect_identical(as.integer(current$data$reads), combined$reads)
         expect_identical(as.integer(current$data$gem_group), rep(1L, nrow(combined)))
-        expect_identical(length(current$anno$cells), ncells)
-        expect_identical(length(current$anno$genes), ngenes)
-       
+
         # Checking that there is a 1:1 relationship between the cell barcodes and cell IDs.
+        by.barcode <- split(combined$cell, current$data$cell)
+        expect_true(all(lengths(lapply(by.barcode, unique))==1L))
+        by.cell.id <- split(current$data$cell, combined$cell)
+        expect_true(all(lengths(lapply(by.cell.id, unique))==1L))
 
         # Checking that using too little barcode length underestimates the number of cells.
         current2 <- DropletUtils:::.readHDF5Data(output$files[i], barcode_len=barcode - 1L)
-        expect_true(length(current2$anno$cells) < ncells)
+        expect_true(length(current2$anno$cells) < length(current$anno$cells))
         current3 <- DropletUtils:::.readHDF5Data(output$files[i], barcode_len=barcode + 1L)
-        expect_true(length(current3$anno$cells)==ncells)
+        expect_true(length(current3$anno$cells) == length(current$anno$cells))
+
+        # Checking annotation.
+        expect_identical(current$anno$cells, sort(unique(current$data$cell)))
+        expect_identical(length(current$anno$genes), ngenes)
     }
 })
 
 ###########################
 ###########################
 
+ncells <- 4L^barcode
 REFFUN <- function(original, swapped, min.frac) {
     combined <- rbind(original, swapped)
     combined <- combined[combined$gene<ngenes,] # Removing "unmapped" reads
@@ -58,7 +64,7 @@ REFFUN <- function(original, swapped, min.frac) {
         if (all.props[chosen] >= min.frac) {
             s <- combined$sample[current[chosen]]
             cur.gene <- combined$gene[current[chosen]] + 1L
-            cur.cell <- combined$cell[current[chosen]]
+            cur.cell <- combined$cell[current[chosen]] + 1L
             all.counts[[s]][cur.gene, cur.cell] <- all.counts[[s]][cur.gene, cur.cell] + 1
             is.swapped[current[chosen]] <- FALSE
         }
@@ -70,43 +76,54 @@ REFFUN <- function(original, swapped, min.frac) {
     return(all.counts)
 }
 
+library(Matrix)
 test_that("Removal of swapped drops works correctly", {
-    # Figuring out the correspondence between cell ID and the reported barcode.
-    cell.barcode <- .Call(DropletUtils:::cxx_get_cell_barcodes, output$files[1], "barcode", barcode)
-    cell.id <- rhdf5::h5read(output$files[1], "barcode")
-    barcodes.by.id <- cell.barcode[match(seq_len(ncells), cell.id)]
+    for (nmolecules in c(10, 100, 1000, 10000)) { 
+        output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode, nmolecules=nmolecules)
 
-    # Constructing total matrices:
-    combined <- rbind(output$original, output$swapped)
-    combined <- combined[combined$gene<ngenes,] # Removing "unmapped" reads
-    total.mat <- vector("list", length(output$files))
-    for (s in seq_along(total.mat)) { 
-        current.tab <- combined[combined$sample==s,]
-        total.mat[[s]] <- Matrix::sparseMatrix(i=current.tab$gene+1, j=current.tab$cell,
-                                               x=rep(1, nrow(current.tab)), 
-                                               dims=c(ngenes, ncells))
-    }
-
-    # Matching them up for a specified min.frac of varying stringency.
-    for (min.frac in c(0.5, 0.7, 1)) { 
-        observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
-        reference <- REFFUN(output$original, output$swapped, min.frac)
-    
-        # Checking that the cleaned object is correct.
-        for (s in seq_along(reference)) {
-            obs.mat <- as.matrix(observed$cleaned[[s]][,barcodes.by.id])
-            ref.mat <- reference[[s]]
-            rownames(ref.mat) <- rownames(obs.mat)
-            colnames(ref.mat) <- barcodes.by.id
-            expect_equal(obs.mat, ref.mat)  
+        # Figuring out the correspondence between cell ID and the reported barcode.
+        # This involves a bit of work when not all cells are available.
+        retainer <- vector("list", length(output$files))
+        for (i in seq_along(retainer)) { 
+            cell.barcode <- .Call(DropletUtils:::cxx_get_cell_barcodes, output$files[i], "barcode", barcode)
+            cell.id <- rhdf5::h5read(output$files[i], "barcode")
+            m <- match(seq_len(ncells)-1, cell.id)
+            keep <- which(!is.na(m))
+            retainer[[i]] <- keep[order(cell.barcode[m[keep]])]
         }
-
-        # Checking that everything adds up to the total.
-        for (s in seq_along(reference)) { 
-            total <- (observed$cleaned[[s]] + observed$swapped[[s]])[,barcodes.by.id]
-            ref.total <- total.mat[[s]]
-            dimnames(ref.total) <- dimnames(total)
-            expect_equal(ref.total, total)
+    
+        # Constructing total matrices:
+        combined <- rbind(output$original, output$swapped)
+        combined <- combined[combined$gene<ngenes,] # Removing "unmapped" reads
+        total.mat <- vector("list", length(output$files))
+        for (s in seq_along(total.mat)) { 
+            current.tab <- combined[combined$sample==s,]
+            total.mat[[s]] <- sparseMatrix(i=current.tab$gene+1, 
+                                           j=current.tab$cell+1,
+                                           x=rep(1, nrow(current.tab)), 
+                                           dims=c(ngenes, ncells))
+        }
+    
+        # Matching them up for a specified min.frac of varying stringency.
+        for (min.frac in c(0.5, 0.7, 1)) { 
+            observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
+            reference <- REFFUN(output$original, output$swapped, min.frac)
+        
+            # Checking that the cleaned object is correct.
+            for (s in seq_along(reference)) {
+                obs.mat <- as.matrix(observed$cleaned[[s]])
+                ref.mat <- reference[[s]][,retainer[[s]]]
+                dimnames(ref.mat) <- dimnames(obs.mat)
+                expect_equal(obs.mat, ref.mat)  
+            }
+    
+            # Checking that everything adds up to the total.
+            for (s in seq_along(reference)) { 
+                total <- (observed$cleaned[[s]] + observed$swapped[[s]])
+                ref.total <- total.mat[[s]][,retainer[[s]]]
+                dimnames(ref.total) <- dimnames(total) 
+                expect_equal(ref.total, total)
+            }
         }
     }
 })

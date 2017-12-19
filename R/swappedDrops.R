@@ -77,8 +77,8 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
     gene <- h5read(h5_loc, "/gene") + 1L #zero-indexed by default
     reads <- h5read(h5_loc, "/reads") #maybe useful for selective exclusion
   
-    # Defining the set of all barcodes.
-    all.barcodes <- unique(cell)
+    # Defining the set of all barcodes, and of all genes.
+    all.barcodes <- sort(unique(cell))
     gene.ids <- h5read(h5_loc, "/gene_ids") 
 
     # Remove the unassigned gene entries.
