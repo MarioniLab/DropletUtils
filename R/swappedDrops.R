@@ -6,12 +6,14 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnos
 # created 18 December 2017
 {
     tabs <- lapply(samples, .readHDF5Data, barcode_len=barcode.length)
-
-    # Warning if multiple GEM groups are observed, as this interferes with deswapping.
     for (i in seq_along(tabs)) {
+        if (!identical(tabs[[1]]$genes, tabs[[i]]$genes)) {
+            stop("gene information differs between samples")
+        }
+
         curgems <- tabs[[i]]$data$gem_group
         if (min(curgems)!=max(curgems)) { 
-            warning("each sample should not contain multiple 10X runs")
+            warning("each sample should only contain GEM codes from one 10X run")
             break
         }
         tabs[[i]]$data$gem_group <- NULL
@@ -46,29 +48,30 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnos
     last <- 0L
     for (i in seq_along(tabs)) { 
         current <- tabs[[i]]$data
-        anno <- tabs[[i]]$annotation
+        all.genes <- tabs[[i]]$genes
+        all.cells <- sort(unique(current$cell))
         curswap <- swap[last + seq_along(current[[1]])]
 
         mat <- sparseMatrix(i=current$gene[!curswap], 
-                            j=match(current$cell[!curswap], anno$cells),
+                            j=match(current$cell[!curswap], all.cells),
                             x=rep(1, sum(!curswap)),
-                            dims=c(length(anno$genes), length(anno$cells)),
+                            dims=c(length(all.genes), length(all.cells)),
                             use.last.ij=FALSE, # Adds up the duplicates.
                             giveCsparse=TRUE)
-        rownames(mat) <- anno$genes
-        colnames(mat) <- anno$cells
+        rownames(mat) <- all.genes
+        colnames(mat) <- all.cells
         cleaned[[i]] <- mat
 
         # Adding up the reads to discard if requested.
         if (get.swapped) {
             mat <- sparseMatrix(i=current$gene[curswap], 
-                                j=match(current$cell[curswap], anno$cells),
+                                j=match(current$cell[curswap], all.cells),
                                 x=rep(1, sum(curswap)),
-                                dims=c(length(anno$genes), length(anno$cells)),
+                                dims=c(length(all.genes), length(all.cells)),
                                 use.last.ij=FALSE, # Adds up the duplicates.
                                 giveCsparse=TRUE)
-            rownames(mat) <- anno$genes
-            colnames(mat) <- anno$cells
+            rownames(mat) <- all.genes
+            colnames(mat) <- all.cells
             swapped[[i]] <- mat
         }
 
@@ -109,8 +112,9 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnos
     gene <- gene[keep]
     reads <- reads[keep]
 
+    # Don't define the total cell pool here, as higher level functions may want to use gem_group.
     return(list(data=list(cell=cell, umi=umi, gene=gene, reads=reads, gem_group=gem_group), 
-                annotation=list(genes=gene.ids, cells=all.barcodes)))
+                genes=gene.ids))
 }
 
 .findSwapped <- function(swap.marks, reads, min.frac=0.8, get.diagnostics=FALSE) { 
