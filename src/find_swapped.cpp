@@ -25,20 +25,21 @@ SEXP find_swapped(SEXP _groups, SEXP _reads, SEXP _minfrac) {
     // Iterating across the molecule groups.
     auto rIt=reads.begin();
     for (const auto& g : groups) {
-        int topindex=0, topreads=0, totalreads=0;
+        int topindex=0, topreads=*rIt, totalreads=topreads;
+        ++rIt;
 
-        for (int i=0; i<g; ++i, ++rIt) {
+        for (int i=1; i<g; ++i, ++rIt) {
             if (topreads < *rIt) {
                 topreads=*rIt;
                 topindex=i;
             }
             totalreads+=*rIt;
         }
-
+        
         if (double(totalreads)*mf <= double(topreads)) {
             *(oIt+topindex)=0;
-            oIt+=g;
         }
+        oIt+=g;
     }
 
     return output;

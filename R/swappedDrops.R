@@ -85,6 +85,7 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
     keep <- gene <= length(gene.ids)
     cell <- cell[keep]
     umi <- umi[keep]
+    gem_group <- gem_group[keep]
     gene <- gene[keep]
     reads <- reads[keep]
 
