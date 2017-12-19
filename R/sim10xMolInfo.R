@@ -12,22 +12,25 @@ sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, s
     # Assigning each molecule to a gene and sample.
     gene <- sample(c(0L, seq_len(ngenes)), noriginal, replace = TRUE)
     sample <- sample(nsamples, noriginal, replace = TRUE)
-   
-    # Creating swapped molecules.
     original <- data.frame(cell = cell, umi = umi, gene = gene, sample = sample) 
-    swapped <- original[sample(nrow(original), nmolecules - noriginal),]
-
-    samp.vec <- seq_len(nsamples)
-    new.sample <- swapped$sample
-    for (x in samp.vec) {
-        current <- swapped$sample==x
-        new.sample[current] <- sample(samp.vec[-x], sum(current), replace=TRUE)
+   
+    # Creating swapped molecules (unless nsamples==1L, in which case we skip this).
+    if (nsamples > 1L) { 
+        swapped <- original[sample(nrow(original), nmolecules - noriginal),]
+        samp.vec <- seq_len(nsamples)
+        new.sample <- swapped$sample
+        for (x in samp.vec) {
+            current <- swapped$sample==x
+            new.sample[current] <- sample(samp.vec[-x], sum(current), replace=TRUE)
+        }
+        swapped$sample <- new.sample
+    } else {
+        swapped <- original[integer(0),]
     }
-    swapped$sample <- new.sample
     
     # Simulating the number of reads.
-    original$reads <- rpois(nrow(original), lambda = 10) + 1L
-    swapped$reads <- 1L
+    original$reads <- rpois(nrow(original), lambda = lambda) + 1L
+    swapped$reads <- rep(1L, nrow(swapped))
     fulltab <- rbind(original, swapped)
 
     # Writing them to 10X-like HDF5 files.
@@ -46,7 +49,7 @@ sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, s
         h5write(current$gene, out.file, "gene")
         h5write(rep(1, nrow(current)), out.file, "gem_group")
         h5write(current$reads, out.file, "reads")
-        h5write(array(paste0("ENSG", seq_len(ngenes))), out.file, "gene_ids")
+        h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
     }
 
     if (return.tab) { 
