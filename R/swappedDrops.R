@@ -1,4 +1,4 @@
-swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.8)
+swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnostics=FALSE, min.frac=0.8)
 # This function removes swapped reads between samples in 10X Genomics data.
 #
 # written by Jonathan Griffiths
@@ -17,7 +17,7 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
         tabs[[i]]$data$gem_group <- NULL
     }
         
-    # Identifying swapped molecules, if requested.
+    # Identifying swapped molecules.
     swap.marks <- nreads <- vector("list", length(samples))
     for (i in seq_along(tabs)) {
         current <- tabs[[i]]$data
@@ -29,8 +29,20 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
     nreads <- unlist(nreads)
     swap <- .findSwapped(swap.marks, nreads, min.frac)
 
+    # Printing out per-molecule read counts. 
+    if (get.diagnostics) {
+        sample.ids <- rep(seq_along(tabs), unlist(lapply(tabs, FUN=function(x) { length(x$data[[1]]) })))
+        all.molecules <- sort(unique(swap.marks))
+        m <- match(swap.marks, all.molecules)
+        diagnostics <- sparseMatrix(i=m, j=sample.ids, x=nreads, 
+                                    dims=c(length(all.molecules), length(samples)))
+        rownames(diagnostics) <- all.molecules
+        colnames(diagnostics) <- names(samples)
+    }
+
     # Producing an output sparseMatrix.
     cleaned <- swapped <- vector("list", length(samples))
+    names(cleaned) <- names(swapped) <- names(samples)
     last <- 0L
     for (i in seq_along(tabs)) { 
         current <- tabs[[i]]$data
@@ -63,10 +75,18 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
         last <- last + length(current[[1]])
     }
 
-    if (get.swapped) {
-        return(list(cleaned=cleaned, swapped=swapped)) 
-    } else {
+    # Figuring out what kind of output to return.
+    if (!get.swapped && !get.diagnostics) {
         return(cleaned)
+    } else {
+        output <- list(cleaned=cleaned)
+        if (get.swapped){  
+            output$swapped <- swapped
+        } 
+        if (get.diagnostics) { 
+            output$diagnostics <- diagnostics
+        }
+        return(output)
     }
 }
 
@@ -93,7 +113,10 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, min.frac=0.
                 annotation=list(genes=gene.ids, cells=all.barcodes)))
 }
 
-.findSwapped <- function(swap.marks, reads, min.frac=0.8) { 
+.findSwapped <- function(swap.marks, reads, min.frac=0.8, get.diagnostics=FALSE) { 
+    # Identifies the molecules that are swapped or not. Technically we could 
+    # use sparse matrices and max.col() to do this, but max.col() isn't supported
+    # natively for sparse matrices and would call as.matrix() instead.
     o <- order(swap.marks)
     rout <- rle(swap.marks[o])
     is.swap <- .Call(cxx_find_swapped, rout$lengths, reads[o], min.frac)

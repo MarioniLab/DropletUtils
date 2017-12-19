@@ -6,13 +6,15 @@
 \description{Remove the effects of barcode swapping on droplet-based single-cell RNA-seq data, specifically 10X Genomics datasets.}
 
 \usage{
-swappedDrops(samples, barcode.length, get.swapped=FALSE, min.frac=0.8)
+swappedDrops(samples, barcode.length, get.swapped=FALSE, 
+    get.diagnostics=FALSE, min.frac=0.8)
 }
 
 \arguments{
 \item{samples}{A character vector containing paths to the molecule information HDF5 files, produced by CellRanger for 10X Genomics data.}
 \item{barcode.length}{An integer scalar specifying the length of the cell barcode.}
-\item{get.swapped}{A logical scalar indicating whether the counts for swapped molecules should also be returned.}
+\item{get.swapped}{A logical scalar indicating whether the UMI counts corresponding to swapped molecules should also be returned.}
+\item{get.diagnostics}{A logical scalar indicating whether to return the number of reads for each swapped molecule in each sample.}
 \item{min.frac}{A numeric scalar specifying the minimum fraction of reads required for a swapped molecule to be assigned to a sample.}
 }
 
@@ -33,14 +35,17 @@ The \code{barcode.length} parameter needs to be set manually as the length of th
 } 
 
 \value{
-If \code{get.swapped=FALSE}, a list of sparse matrices.
-Each matrix corresponds to a sample and contains the UMI counts for each gene and barcode after removing swapped molecules.
+If \code{get.swapped=FALSE} and \code{get.diagnostics=FALSE}, a list of sparse matrices is returned.
+Each matrix corresponds to a sample and contains the UMI count for each gene (row) and barcode (column) after removing swapped molecules.
 All barcodes that were originally observed are reported as columns, though note that it is possible for some barcodes to contain no counts.
 
-If \code{get.swapped=TRUE}, a list of two lists are returned.
-The \code{cleaned} list is the same as described above. 
-The \code{swapped} list contains sample-specific sparse matrices of UMI counts corresponding to the swapped molecules for each gene and barcode.
-Adding these two matrices for each sample should yield the total UMI count.
+Otherwise, a list is returned containing a \code{cleaned} element, which is the same as the list described above. 
+If \code{get.swapped=TRUE}, a \code{swapped} element is included that contains sample-specific sparse matrices of UMI counts corresponding to the swapped molecules.
+Adding the cleaned and swapped matrices for each sample should yield the total UMI count prior to removal of swapped molecules. 
+
+If \code{get.diagnostics=TRUE}, the list will contain an additional \code{diagnostics} matrix.
+Each entry of this matrix contains the number of reads for each molecule (row) in each sample (column).
+This can be useful for examining the level of swapping across samples on a molecule-by-molecule basis.
 }
 
 \author{
