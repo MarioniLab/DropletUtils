@@ -1,51 +1,58 @@
-sim10xMolInfo <- function(prefix, num_mols=10000, dup_frac=0.2, ncells=100, ngenes=20, nsamples=3, lambda=10)
-# An internal function that creates a HDF5 file mimicking the output from CellRanger.
-# Used only for testing the correctness of the swapping removal algorithm.    
+sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, swap.frac=0.2, 
+    ngenes=20, nsamples=3, lambda=10, return.tab=FALSE)
+# A function that creates a HDF5 file mimicking the molecule information from CellRanger.
+# Used for testing the correctness of the swapping removal algorithm.    
 {
     # Generating original reads.
-    base <- round(num_mols * (1-dup_frac) )
-    cell <- sample(ncells, base, replace = TRUE)
-    umi <- sample(4^10, base, replace = FALSE)
+    noriginal <- round(nmolecules * (1-swap.frac))
+    ncells <- 4L^barcode.len
+    cell <- sample(ncells, noriginal, replace = TRUE) - 1L
+    umi <- sample(4L^as.integer(umi.len), noriginal, replace = FALSE)
 
     # Assigning each read to a gene and sample.
-    gene <- sample(c(0, seq_len(ngenes)), base, replace = TRUE)
-    sample <- sample(nsamples, base, replace = TRUE)
+    gene <- sample(c(0L, seq_len(ngenes)), noriginal, replace = TRUE)
+    sample <- sample(nsamples, noriginal, replace = TRUE)
    
     # Creating swapped reads.
-    tab <- data.frame(cell = cell, umi = umi, gene = gene, sample = sample) 
-    dups <- tab[sample(nrow(tab), num_mols - base),]
+    original <- data.frame(cell = cell, umi = umi, gene = gene, sample = sample) 
+    swapped <- original[sample(nrow(original), nmolecules - noriginal),]
 
-    samp_vec <- seq_len(nsamples)
-    for (x in samp_vec) {
-        current <- dups$sample==x
-        new.sample <- sample(samp_vec[-x], sum(current), replace=TRUE)
-        dups$sample[current] <- new.sample
+    samp.vec <- seq_len(nsamples)
+    for (x in samp.vec) {
+        current <- swapped$sample==x
+        new.sample <- sample(samp.vec[-x], sum(current), replace=TRUE)
+        swapped$sample[current] <- new.sample
     }
     
     # Simulating the number of reads.
-    tab <- rbind(tab, dups)
-    tab$reads <- rpois(nrow(tab), lambda = 10) + 1
+    original$reads <- rpois(nrow(original), lambda = 10) + 1L
+    swapped$reads <- 1L
+    fulltab <- rbind(original, swapped)
 
     # Writing them to 10X-like HDF5 files.
-    out_files <- paste0(prefix, "_", seq_len(nsamples), ".h5")
-    for (i in seq_along(out_files)){
+    out.files <- paste0(prefix, ".", seq_len(nsamples), ".h5")
+    for (i in seq_along(out.files)){
         sample <- seq_len(nsamples)[i]
-        out_file <- out_files[i]
-        if(file.exists(out_file)) {
-            file.remove(out_file)
+        out.file <- out.files[i]
+        if(file.exists(out.file)) {
+            file.remove(out.file)
         }
         
-        chosen <- tab$sample==sample
-        h5 <- h5createFile(out_file)
-        h5write(tab$cell[chosen], out_file, "barcode")
-        h5write(tab$umi[chosen], out_file, "umi")
-        h5write(tab$gene[chosen], out_file, "gene")
-        h5write(rep(1, sum(chosen)), out_file, "gem_group")
-        h5write(tab$reads[chosen], out_file, "reads")
-        h5write(array(paste0("ENSG", seq_len(ngenes))), out_file, "gene_ids")
+        current <- fulltab[fulltab$sample==sample,]
+        h5 <- h5createFile(out.file)
+        h5write(current$cell, out.file, "barcode")
+        h5write(current$umi, out.file, "umi")
+        h5write(current$gene, out.file, "gene")
+        h5write(rep(1, nrow(current)), out.file, "gem_group")
+        h5write(current$reads, out.file, "reads")
+        h5write(array(paste0("ENSG", seq_len(ngenes))), out.file, "gene_ids")
     }
 
-    return(out_files)
+    if (return.tab) { 
+        return(list(files=out.files, original=original, swapped=swapped))
+    } else {
+        return(out.files)
+    }
 }
 
 
