@@ -15,7 +15,9 @@
 
 extern "C" {
 
-SEXP downsample_matrix(SEXP, SEXP);
+SEXP downsample_matrix(SEXP, SEXP, SEXP);
+
+SEXP downsample_runs(SEXP, SEXP, SEXP, SEXP);
 
 SEXP calculate_random_dev(SEXP, SEXP);
 

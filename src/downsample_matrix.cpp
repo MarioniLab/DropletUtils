@@ -1,81 +1,194 @@
 #include "DropletUtils.h"
 
-template <class M, class O>
-void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop) {
-    const size_t ngenes=mat->get_nrow();
-    Rcpp::IntegerVector incoming(ngenes), outgoing(ngenes);
+/* Defining some general-purpose downsampling functions. */
 
-    const size_t ncells=mat->get_ncol();
-    if (prop.size()!=ncells) {
-        throw std::runtime_error("length of 'prop' should be equal to number of cells");
+template<class IN, class OUT> 
+void downsample_counts (IN iIt, IN iend, OUT oIt, 
+        int num_total, 
+        int num_sample, 
+        int& offset,      // the location of 'iIt' in the total set of points.
+        int& num_selected // number of points already selected.
+        ) {        
+
+    Rprintf("%i %i %i %i\n", num_total, num_sample, offset, num_selected);
+    if (iIt==iend) { 
+        return;
     }
-    Rcpp::RNGScope _rng;
-    
-    for (size_t i=0; i<ncells; ++i) {
-        mat->get_col(i, incoming.begin());
-        const double& curprop=prop[i];
+    int cumulative=offset + *iIt;
+    ++iIt;
+
+    // Sampling scheme adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
+    while (num_selected < num_sample) {
+        const double u = unif_rand(); 
+
+        if ( (num_total - offset)*u < num_sample - num_selected) {
+            /* Current read is selected, we advance to that read's "index" (if we had instantiated the full [0, num_total) array).
+             * Note that the second clause below should never trigger, but this assumes exact arithmetic in the probability calculations. 
+             * Thus, we add the second clause to provide some protection against segfaults, just in case.
+             */
+            while (cumulative <= offset && iIt!=iend) { 
+                cumulative+=(*iIt);
+                ++iIt;
+                ++oIt;
+            }
+            ++(*oIt);
+            ++num_selected;
+        }
+      
+        // Bailing out if we've reached the end of the vector. 
+        ++offset;
+        if (offset>=cumulative && iIt==iend) {
+            break;
+        } 
+    }
+    return;
+}  
+
+template<class IN, class OUT> 
+void downsample_counts (IN iIt, IN iend, OUT oIt, double prop) { 
+    // Convenience wrapper, when we're just downsampling in a vector.
+    const int num_total=std::accumulate(iIt, iend, 0), num_sample=std::round(prop*num_total);
+    int offset=0, num_selected=0;
+    downsample_counts(iIt, iend, oIt, num_total, num_sample, offset, num_selected);
+    return;
+}
+
+bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
+    // Choosing between global downsampling or cell-specific downsampling.
+    if (bycol.size()!=1) {
+        throw std::runtime_error("'bycol' should be a logical scalar");
+    }
+    if (bycol[0]) { 
+        if (prop.size()!=ncells) {
+            throw std::runtime_error("length of 'prop' should be equal to number of cells");
+        }
+        for (const auto& curprop : prop) { 
+            if (curprop < 0 || curprop > 1) { 
+                throw std::runtime_error("downsampling proportion must lie in [0, 1]");
+            }
+        }
+    } else {
+        if (prop.size()!=1) { 
+            throw std::runtime_error("'prop' should be a numeric scalar");
+        }
+        const double curprop=prop[0];
         if (curprop < 0 || curprop > 1) { 
             throw std::runtime_error("downsampling proportion must lie in [0, 1]");
         }
+    }
+    return bycol[0];
+}
 
-        // Getting the total library size and the size to downsample.
-        const int num_total=std::accumulate(incoming.begin(), incoming.end(), 0),
-                  num_sample=std::round(curprop*num_total);
+/*************************************************
+ **** Downsampling (each column of) a matrix. ****
+ *************************************************/
+
+template <class M, class O>
+void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
+    // Checking inputs:
+    const size_t ngenes=mat->get_nrow();
+    Rcpp::IntegerVector incoming(ngenes), outgoing(ngenes);
+    const size_t ncells=mat->get_ncol();
+
+    int num_total=0, num_sample=0, offset=0, num_selected=0;
+    const bool percol=check_downsampling_mode(ncells, prop, bycol);
+    if (!percol) {
+        // Getting the total sum of counts in the matrix.
+        for (size_t i=0; i<ncells; ++i) {
+            mat->get_col(i, incoming.begin());
+            num_total+=std::accumulate(incoming.begin(), incoming.end(), 0);
+        }
+        num_sample=std::round(num_total*prop[0]);
+    }
+
+    // Iterating across cells and downsampling the count matrix.
+    auto pIt=prop.begin();
+    Rcpp::RNGScope _rng; 
+
+    for (size_t i=0; i<ncells; ++i) {
+        mat->get_col(i, incoming.begin());
 
         // Setting up the output vector.
         std::fill(outgoing.begin(), outgoing.end(), 0);
-        auto oIt=outgoing.begin();
-        auto iIt=incoming.begin();
-        int cumulative=0;
-        if (incoming.size()) { 
-            cumulative+=*iIt;
-            ++iIt;
+        if (percol) { 
+            downsample_counts(incoming.begin(), incoming.end(), outgoing.begin(), *pIt);
+            ++pIt;
+        } else {
+            downsample_counts(incoming.begin(), incoming.end(), outgoing.begin(), num_total, num_sample, offset, num_selected);
         }
 
-        // Sampling scheme adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
-        int current=0, num_selected=0;
-        while (num_selected < num_sample) {
-            const double u = unif_rand(); 
-
-            if ( (num_total - current)*u < num_sample - num_selected) {
-                // Current read is selected, we advance to that read's "index" (if we had instantiated the full [0, num_total) array).
-                while (cumulative <= current 
-                        && iIt!=incoming.end()) { /* Second clause should never trigger, but this assumes exact arithmetic
-                                                     in the probability calculations. We protect against segfaults just in case. */
-                    cumulative+=(*iIt);
-                    ++iIt;
-                    ++oIt;
-                }
-                ++(*oIt);
-                ++num_selected;
-            }
-            ++current; 
-        }
-               
         output->set_col(i, outgoing.begin());
     }
 
     /* Note that the RNGscope destructor may trigger a garbage collection.
      * I'm not sure that the object from output->yield() remains protected if a compiler does not implement RVO.
      * This would result in a copy and destruction, and a point in time at which the output memory is unprotected.
+     * Hence, we do not perform an output->yield() to return out of this function.
      */
     return;
 }
 
-SEXP downsample_matrix(SEXP rmat, SEXP prop) {
+SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
     BEGIN_RCPP
     int rtype=beachmat::find_sexp_type(rmat);
     auto otype=beachmat::output_param(rmat, false, true);
     if (rtype==INTSXP) {
         auto mat=beachmat::create_integer_matrix(rmat);
         auto out=beachmat::create_integer_output(mat->get_nrow(), mat->get_ncol(), otype);
-        downsample_matrix_internal(mat.get(), out.get(), prop);
+        downsample_matrix_internal(mat.get(), out.get(), prop, bycol);
         return out->yield();
     } else {
         auto mat=beachmat::create_numeric_matrix(rmat);
         auto out=beachmat::create_numeric_output(mat->get_nrow(), mat->get_ncol(), otype);
-        downsample_matrix_internal(mat.get(), out.get(), prop);
+        downsample_matrix_internal(mat.get(), out.get(), prop, bycol);
         return out->yield();
     }
     END_RCPP    
 }
+
+/*************************************************
+ ***** Downsampling (each run of) a vector. ******
+ *************************************************/
+
+SEXP downsample_runs(SEXP _groups, SEXP _reads, SEXP _prop, SEXP _bycol) {
+    BEGIN_RCPP
+
+    // Checking all of the inputs.
+    Rcpp::IntegerVector groups(_groups);
+    Rcpp::IntegerVector reads(_reads);
+    const int nmolecules=std::accumulate(groups.begin(), groups.end(), 0);
+    if (nmolecules!=reads.size()) {
+        throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
+    }
+
+    int num_total=0, num_sample=0, offset=0, num_selected=0;
+    Rcpp::NumericVector prop(_prop);
+    const bool percol=check_downsampling_mode(groups.size(), prop, _bycol);
+    if (!percol) {
+        // Getting the total sum of counts in the vector.
+        num_total=std::accumulate(reads.begin(), reads.end(), 0);
+        num_sample=std::round(num_total*prop[0]);
+    }
+
+    // Setting up the output.
+    Rcpp::IntegerVector output(nmolecules, 0);
+    auto oIt=output.begin();
+    auto rIt=reads.begin();
+    auto pIt=prop.begin();
+
+    // Iterating across the molecule groups and downsampling.
+    for (const auto& g : groups) {
+        if (percol) { 
+            downsample_counts(rIt, rIt+g, oIt, *pIt);
+            ++pIt;
+        } else {
+            downsample_counts(rIt, rIt+g, oIt, num_total, num_sample, offset, num_selected);
+        }
+        rIt+=g;
+        oIt+=g;        
+    }
+
+    return output;
+    END_RCPP;
+}
+
