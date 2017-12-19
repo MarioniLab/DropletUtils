@@ -148,8 +148,8 @@ test_that("downsampling from the reads yields correct results", {
         expect_true(all(out <= full.tab))
 
         # Checking that downsampling is more-or-less even.
-        expect_true(sd(rowMeans(out)) < 0.1)
-        expect_true(sd(colMeans(out)) < 0.1) 
+        expect_true(sd(Matrix::rowMeans(out)) < 0.1)
+        expect_true(sd(Matrix::colMeans(out)) < 0.1) 
     }
 
     # Making it easier to check the totals, by making all UMIs have a read count of 1.
