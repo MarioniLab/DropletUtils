@@ -36,10 +36,11 @@ sim10xMolInfo <- function(prefix, num_mols=10000, dup_frac=0.2, ncells=100, ngen
         }
         
         chosen <- tab$sample==sample
-        h5 <- H5Fcreate(out_file)
+        h5 <- h5createFile(out_file)
         h5write(tab$cell[chosen], out_file, "barcode")
         h5write(tab$umi[chosen], out_file, "umi")
         h5write(tab$gene[chosen], out_file, "gene")
+        h5write(rep(1, sum(chosen)), out_file, "gem_group")
         h5write(tab$reads[chosen], out_file, "reads")
         h5write(array(paste0("ENSG", seq_len(ngenes))), out_file, "gene_ids")
     }
