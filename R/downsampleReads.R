@@ -6,7 +6,11 @@ downsampleReads <- function(sample, barcode.length, prop, bycol=FALSE)
 # created 19 December 2017    
 {
     incoming <- .readHDF5Data(sample, barcode.length)
-    cell.id <- paste0(incoming$data$cell, "-", incoming$data$gem_group)
+    if (length(incoming$data$cell)) { 
+        cell.id <- paste0(incoming$data$cell, "-", incoming$data$gem_group)
+    } else {
+        cell.id <- character(0)
+    }
     all.cells <- sort(unique(cell.id))
     
     # Obtaining new read counts for each molecule.

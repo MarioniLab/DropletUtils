@@ -10,7 +10,6 @@ void downsample_counts (IN iIt, IN iend, OUT oIt,
         int& num_selected // number of points already selected.
         ) {        
 
-    Rprintf("%i %i %i %i\n", num_total, num_sample, offset, num_selected);
     if (iIt==iend) { 
         return;
     }

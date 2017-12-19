@@ -21,45 +21,33 @@ test_that("downsampling from a count matrix gives expected sums", {
     u2 <- matrix(rpois(20000, 1), ncol=ncells)
 
     set.seed(100)
-    CHECKFUN(u1, 0.111) # Avoid problems with different rounding of 0.5.
-    CHECKFUN(u1, 0.333)
-    CHECKFUN(u1, 0.777)
-    
-    CHECKSUM(u1, 0.111) 
-    CHECKSUM(u1, 0.333)
-    CHECKSUM(u1, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { # Avoid problems with different rounding of 0.5.
+        CHECKFUN(u1, down) 
+        CHECKSUM(u1, down) 
+    }
 
     set.seed(101)
-    CHECKFUN(u2, 0.111) # Avoid problems with different rounding of 0.5.
-    CHECKFUN(u2, 0.333)
-    CHECKFUN(u2, 0.777)
-
-    CHECKSUM(u2, 0.111) 
-    CHECKSUM(u2, 0.333)
-    CHECKSUM(u2, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { # Avoid problems with different rounding of 0.5.
+        CHECKFUN(u2, down) 
+        CHECKSUM(u2, down) 
+    }
 
     # Checking double-precision inputs.
     v1 <- u1
     storage.mode(v1) <- "double"
     set.seed(200)
-    CHECKFUN(v1, 0.111)
-    CHECKFUN(v1, 0.333)
-    CHECKFUN(v1, 0.777)
-
-    CHECKSUM(v1, 0.111)
-    CHECKSUM(v1, 0.333)
-    CHECKSUM(v1, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { 
+        CHECKFUN(v1, down) 
+        CHECKSUM(v1, down) 
+    }
 
     v2 <- u2
     storage.mode(v2) <- "double"
     set.seed(202)
-    CHECKFUN(v2, 0.111)
-    CHECKFUN(v2, 0.333)
-    CHECKFUN(v2, 0.777)
-    
-    CHECKSUM(v2, 0.111)
-    CHECKSUM(v2, 0.333)
-    CHECKSUM(v2, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { 
+        CHECKFUN(v2, down) 
+        CHECKSUM(v2, down) 
+    }
 
     # Checking vectors of proportions.
     set.seed(300)
@@ -76,28 +64,35 @@ test_that("downsampling from a count matrix gives expected sums", {
     library(Matrix)
     w1 <- as(v1, "dgCMatrix")
     set.seed(400)
-    CHECKFUN(w1, 0.111)
-    CHECKFUN(w1, 0.333)
-    CHECKFUN(w1, 0.777)
-
-    CHECKSUM(w1, 0.111)
-    CHECKSUM(w1, 0.333)
-    CHECKSUM(w1, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { 
+        CHECKFUN(w1, down) 
+        CHECKSUM(w1, down) 
+    }
 
     w2 <- as(v2, "dgCMatrix")
     set.seed(404)
-    CHECKFUN(w2, 0.111)
-    CHECKFUN(w2, 0.333)
-    CHECKFUN(w2, 0.777)
+    for (down in c(0.111, 0.333, 0.777)) { 
+        CHECKFUN(w2, down) 
+        CHECKSUM(w2, down) 
+    }
 
-    CHECKSUM(w2, 0.111)
-    CHECKSUM(w2, 0.333)
-    CHECKSUM(w2, 0.777)
+    # Checking silly inputs.
+    expect_equal(downsampleMatrix(u1[0,,drop=FALSE], prop=0.5), u1[0,,drop=FALSE])
+    expect_equal(downsampleMatrix(v1[0,,drop=FALSE], prop=0.5), v1[0,,drop=FALSE])
+    expect_equal(downsampleMatrix(w1[0,,drop=FALSE], prop=0.5), w1[0,,drop=FALSE])
+
+    expect_equal(downsampleMatrix(u1[,0,drop=FALSE], prop=0.5), u1[,0,drop=FALSE])
+    expect_equal(downsampleMatrix(v1[,0,drop=FALSE], prop=0.5), v1[,0,drop=FALSE])
+    expect_equal(downsampleMatrix(w1[,0,drop=FALSE], prop=0.5), w1[,0,drop=FALSE])
+
+    expect_equal(downsampleMatrix(u1[0,0,drop=FALSE], prop=0.5), u1[0,0,drop=FALSE])
+    expect_equal(downsampleMatrix(v1[0,0,drop=FALSE], prop=0.5), v1[0,0,drop=FALSE])
+    expect_equal(downsampleMatrix(w1[0,0,drop=FALSE], prop=0.5), w1[0,0,drop=FALSE])
 })
 
+set.seed(500)
 test_that("downsampling from a count matrix gives expected margins", {
     # Checking that the sampling scheme is correct (as much as possible).
-    set.seed(500)
     known <- matrix(1:5, nrow=5, ncol=10000)
     prop <- 0.51
     truth <- known[,1]*prop
@@ -123,3 +118,55 @@ test_that("downsampling from a count matrix gives expected margins", {
     expect_true(all(abs(colMeans(out)/colMeans(known)/prop - 1) < 0.01))
 })
 
+#####################################################
+#####################################################
+#####################################################
+
+library(Matrix)
+set.seed(501)
+test_that("downsampling from the reads yields correct results", {
+    barcode <- 4L
+    tmpdir <- tempfile()
+    dir.create(tmpdir)
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.len=barcode) 
+   
+    # Creating the full matrix, and checking that it's the same when no downsampling is requested.
+    collated <- DropletUtils:::.readHDF5Data(out.paths, barcode)
+    all.cells <- sort(unique(collated$data$cell))
+    m <- match(collated$data$cell, all.cells)
+    full.tab <- sparseMatrix(i=collated$data$gene, j=m, x=rep(1, length(m)),
+                             dims=c(length(collated$genes), length(all.cells)))
+    rownames(full.tab) <- collated$genes
+    colnames(full.tab) <- paste0(all.cells, "-1")
+
+    out <- downsampleReads(out.paths, barcode, prop=1)
+    expect_equal(out, full.tab)
+
+    # Checking that the sums are downsampled appropriately (hard to check the totals, as UMI counts != read counts).
+    for (down in 1:4/11) {
+        out <- downsampleReads(out.paths, barcode, prop=down)
+        expect_true(all(out <= full.tab))
+
+        # Checking that downsampling is more-or-less even.
+        expect_true(sd(rowMeans(out)) < 0.1)
+        expect_true(sd(colMeans(out)) < 0.1) 
+    }
+
+    # Making it easier to check the totals, by making all UMIs have a read count of 1.
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.len=barcode, lambda=0) 
+    full.tab <- downsampleReads(out.paths, barcode, prop=1)
+    expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.555)), round(0.555*sum(full.tab))) # Again, avoiding rounding differences.
+    expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.111)), round(0.111*sum(full.tab)))
+    expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.555, bycol=TRUE)), round(0.555*colSums(full.tab)))
+    expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.111, bycol=TRUE)), round(0.111*colSums(full.tab)))
+
+    # Checking behaviour on silly inputs where there are no reads, or no genes.
+    ngenes <- 20L
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode.len=barcode) 
+    out <- downsampleReads(out.paths, barcode, prop=0.5)
+    expect_identical(dim(out), c(ngenes, 0L))
+
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.len=barcode) 
+    out <- downsampleReads(out.paths, barcode, prop=0.5)
+    expect_identical(dim(out), c(0L, 0L))
+})
