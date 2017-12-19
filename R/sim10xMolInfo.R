@@ -3,26 +3,27 @@ sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, s
 # A function that creates a HDF5 file mimicking the molecule information from CellRanger.
 # Used for testing the correctness of the swapping removal algorithm.    
 {
-    # Generating original reads.
+    # Generating original molecules. 
     noriginal <- round(nmolecules * (1-swap.frac))
     ncells <- 4L^barcode.len
     cell <- sample(ncells, noriginal, replace = TRUE) - 1L
-    umi <- sample(4L^as.integer(umi.len), noriginal, replace = FALSE)
+    umi <- sample(4L^as.integer(umi.len), noriginal, replace = FALSE) # without replacement, to guarantee uniqueness within each sample.
 
-    # Assigning each read to a gene and sample.
+    # Assigning each molecule to a gene and sample.
     gene <- sample(c(0L, seq_len(ngenes)), noriginal, replace = TRUE)
     sample <- sample(nsamples, noriginal, replace = TRUE)
    
-    # Creating swapped reads.
+    # Creating swapped molecules.
     original <- data.frame(cell = cell, umi = umi, gene = gene, sample = sample) 
     swapped <- original[sample(nrow(original), nmolecules - noriginal),]
 
     samp.vec <- seq_len(nsamples)
+    new.sample <- swapped$sample
     for (x in samp.vec) {
         current <- swapped$sample==x
-        new.sample <- sample(samp.vec[-x], sum(current), replace=TRUE)
-        swapped$sample[current] <- new.sample
+        new.sample[current] <- sample(samp.vec[-x], sum(current), replace=TRUE)
     }
+    swapped$sample <- new.sample
     
     # Simulating the number of reads.
     original$reads <- rpois(nrow(original), lambda = 10) + 1L
@@ -54,6 +55,3 @@ sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, s
         return(out.files)
     }
 }
-
-
-

@@ -107,9 +107,9 @@ test_that("Removal of swapped drops works correctly", {
         # Matching them up for a specified min.frac of varying stringency.
         for (min.frac in c(0.5, 0.7, 1)) { 
             observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
-            reference <- REFFUN(output$original, output$swapped, min.frac)
-        
+
             # Checking that the cleaned object is correct.
+            reference <- REFFUN(output$original, output$swapped, min.frac)
             for (s in seq_along(reference)) {
                 obs.mat <- as.matrix(observed$cleaned[[s]])
                 ref.mat <- reference[[s]][,retainer[[s]]]
@@ -124,6 +124,24 @@ test_that("Removal of swapped drops works correctly", {
                 dimnames(ref.total) <- dimnames(total) 
                 expect_equal(ref.total, total)
             }
+        }
+
+        # Further input/output tests.
+        min.frac <- 0.9
+        observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
+        observed2 <- swappedDrops(output$files, barcode, min.frac=min.frac)
+        expect_equal(observed$cleaned, observed2)
+        
+        observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, get.diagnostics=TRUE, min.frac=min.frac)
+        expect_equal(observed$cleaned, observed3$cleaned)
+        expect_equal(observed$swapped, observed3$swapped)
+
+        # Checking that the diagnostic field is consistent with the total.
+        top.prop <- as.matrix(observed3$diagnostics)/rowSums(observed3$diagnostics)
+        best.in.class <- max.col(top.prop)
+        best.prop <- top.prop[(best.in.class - 1L) * nrow(top.prop) + seq_along(best.in.class)]
+        for (s in seq_along(reference)) {
+            expect_equal(sum(observed2[[s]]), sum(best.in.class==s & best.prop >= min.frac))
         }
     }
 })
