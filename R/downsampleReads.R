@@ -1,4 +1,4 @@
-downsampleReads <- function(sample, barcode.length, prop, bycol=FALSE) 
+downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE) 
 # Downsamples the reads to produce a matrix of UMI counts, given
 # a HDF5 file containing molecule information.
 #

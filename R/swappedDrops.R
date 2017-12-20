@@ -1,11 +1,11 @@
-swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnostics=FALSE, min.frac=0.8)
+swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.diagnostics=FALSE, min.frac=0.8)
 # This function removes swapped reads between samples in 10X Genomics data.
 #
 # written by Jonathan Griffiths
 # with modifications from Aaron Lun
 # created 18 December 2017
 {
-    tabs <- lapply(samples, read10xMolInfo, barcode_len=barcode.length)
+    tabs <- lapply(samples, read10xMolInfo, barcode.length=barcode.length)
     for (i in seq_along(tabs)) {
         if (!identical(tabs[[1]]$genes, tabs[[i]]$genes)) {
             stop("gene information differs between samples")
