@@ -5,7 +5,7 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnos
 # with modifications from Aaron Lun
 # created 18 December 2017
 {
-    tabs <- lapply(samples, .readHDF5Data, barcode_len=barcode.length)
+    tabs <- lapply(samples, read10xMolInfo, barcode_len=barcode.length)
     for (i in seq_along(tabs)) {
         if (!identical(tabs[[1]]$genes, tabs[[i]]$genes)) {
             stop("gene information differs between samples")
@@ -91,30 +91,6 @@ swappedDrops <- function(samples, barcode.length, get.swapped=FALSE, get.diagnos
         }
         return(output)
     }
-}
-
-.readHDF5Data <- function(h5_loc, barcode_len) {
-    cell <- .Call(cxx_get_cell_barcodes, h5_loc, "barcode", barcode_len)
-    umi <- h5read(h5_loc, "/umi")
-    gem_group <- h5read(h5_loc, "/gem_group")
-    gene <- h5read(h5_loc, "/gene") + 1L #zero-indexed by default
-    reads <- h5read(h5_loc, "/reads") #maybe useful for selective exclusion
-  
-    # Defining the set of all barcodes, and of all genes.
-    all.barcodes <- sort(unique(cell))
-    gene.ids <- h5read(h5_loc, "/gene_ids") 
-
-    # Remove the unassigned gene entries.
-    keep <- gene <= length(gene.ids)
-    cell <- cell[keep]
-    umi <- umi[keep]
-    gem_group <- gem_group[keep]
-    gene <- gene[keep]
-    reads <- reads[keep]
-
-    # Don't define the total cell pool here, as higher level functions may want to use gem_group.
-    return(list(data=list(cell=cell, umi=umi, gene=gene, reads=reads, gem_group=gem_group), 
-                genes=gene.ids))
 }
 
 .findSwapped <- function(swap.marks, reads, min.frac=0.8, get.diagnostics=FALSE) { 

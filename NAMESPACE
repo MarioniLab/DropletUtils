@@ -14,7 +14,7 @@ importFrom("utils", read.table)
 importFrom("rhdf5", h5write, h5read, h5createFile, h5write.default)
 
 export(
-    read10xResults, 
+    read10xResults, read10xMolInfo, 
     downsampleMatrix, downsampleReads,
     swappedDrops, sim10xMolInfo,
     testEmptyDrops, findKneePoint, emptyDrops

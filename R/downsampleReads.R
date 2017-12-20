@@ -5,7 +5,7 @@ downsampleReads <- function(sample, barcode.length, prop, bycol=FALSE)
 # written by Aaron Lun
 # created 19 December 2017    
 {
-    incoming <- .readHDF5Data(sample, barcode.length)
+    incoming <- read10xMolInfo(sample, barcode.length)
     if (length(incoming$data$cell)) { 
         cell.id <- paste0(incoming$data$cell, "-", incoming$data$gem_group)
     } else {
