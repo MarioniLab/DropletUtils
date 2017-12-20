@@ -116,3 +116,19 @@ test_that("Removal of swapped drops works correctly", {
         }
     }
 })
+
+test_that("swappedDrops functions correctly for silly inputs", {
+    output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
+    deswapped <- swappedDrops(output)
+    for (ref in deswapped) {
+        expect_identical(dim(ref), c(ngenes, 0L))
+    }   
+
+    output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
+    deswapped <- swappedDrops(output)
+    for (ref in deswapped) {
+        expect_identical(dim(ref), c(0L, 0L))
+    }   
+})
+
+

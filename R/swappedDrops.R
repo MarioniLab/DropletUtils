@@ -12,7 +12,7 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         }
 
         curgems <- tabs[[i]]$data$gem_group
-        if (min(curgems)!=max(curgems)) { 
+        if (length(curgems) && min(curgems)!=max(curgems)) { 
             warning("each sample should only contain GEM codes from one 10X run")
             break
         }
