@@ -5,40 +5,11 @@ tmpdir <- tempfile()
 dir.create(tmpdir)
 ngenes <- 20L
 barcode <- 4L
-output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode)
-
-test_that("Extraction of molecule information fields works correctly", {
-    for (i in seq_along(output$files)) {
-        ref.original <- output$original[output$original$sample==i,]        
-        ref.swapped <- output$swapped[output$swapped$sample==i,]
-        combined <- rbind(ref.original, ref.swapped)
-        combined <- combined[combined$gene<ngenes,]
-
-        current <- DropletUtils:::.readHDF5Data(output$files[i], barcode_len=barcode)
-        expect_identical(length(current$genes), ngenes)
-        expect_identical(as.integer(current$data$umi), combined$umi)
-        expect_identical(as.integer(current$data$gene), combined$gene+1L)
-        expect_identical(as.integer(current$data$reads), combined$reads)
-        expect_identical(as.integer(current$data$gem_group), rep(1L, nrow(combined)))
-
-        # Checking that there is a 1:1 relationship between the cell barcodes and cell IDs.
-        by.barcode <- split(combined$cell, current$data$cell)
-        expect_true(all(lengths(lapply(by.barcode, unique))==1L))
-        by.cell.id <- split(current$data$cell, combined$cell)
-        expect_true(all(lengths(lapply(by.cell.id, unique))==1L))
-
-        # Checking that using too little barcode length underestimates the number of cells.
-        current2 <- DropletUtils:::.readHDF5Data(output$files[i], barcode_len=barcode - 1L)
-        expect_true(length(unique(current2$data$cell)) < length(unique(current$data$cell)))
-        current3 <- DropletUtils:::.readHDF5Data(output$files[i], barcode_len=barcode + 1L)
-        expect_true(length(unique(current3$data$cell)) == length(unique(current$data$cell)))
-    }
-})
-
-###########################
-###########################
-
 ncells <- 4L^barcode
+
+##########################################
+
+# Defining a reference function to compare the results.
 REFFUN <- function(original, swapped, min.frac) {
     combined <- rbind(original, swapped)
     combined <- combined[combined$gene<ngenes,] # Removing "unmapped" reads
@@ -73,20 +44,23 @@ REFFUN <- function(original, swapped, min.frac) {
     return(all.counts)
 }
 
+##########################################
+
 library(Matrix)
+set.seed(5717)
 test_that("Removal of swapped drops works correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        ngenes <- 20
-        output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode, ngenes=ngenes, nmolecules=nmolecules)
+        output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3,
+                                ngenes=ngenes, nmolecules=nmolecules)
 
         # Figuring out the correspondence between cell ID and the reported barcode.
         # This involves a bit of work to decode the barcode.
         retainer <- vector("list", length(output$files))
         for (i in seq_along(retainer)) { 
-            info <- DropletUtils:::.readHDF5Data(output$files[i], barcode)
+            info <- read10xMolInfo(output$files[i], barcode)
             all.cells <- sort(unique(info$data$cell))
-            retainer[[i]] <- unlist(lapply(strsplit(all.cells, ""), FUN=function(i) { sum(4^(rev(seq_along(i))-1)*c(A=0, C=1, G=2, T=3)[i]) }))
-            retainer[[i]] <- retainer[[i]] + 1L # to get back to 1-based indexing.
+            encoded <- unlist(lapply(strsplit(all.cells, ""), FUN=function(i) { sum(4^(rev(seq_along(i))-1)*c(A=0, C=1, G=2, T=3)[i]) }))
+            retainer[[i]] <- encoded + 1L # to get back to 1-based indexing.
         }
     
         # Constructing total matrices:
