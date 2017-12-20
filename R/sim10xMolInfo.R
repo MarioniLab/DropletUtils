@@ -1,18 +1,27 @@
-sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, swap.frac=0.2, 
-    ngenes=20, nsamples=3, lambda=10, return.tab=FALSE)
+sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4, 
+                          ngenes=20, nmolecules=10000, swap.frac=0.2, 
+                          ave.read=10, return.tab=FALSE)
 # A function that creates a HDF5 file mimicking the molecule information from CellRanger.
-# Used for testing the correctness of the swapping removal algorithm.    
+# Used for testing the correctness of the swapping removal algorithm.   
+#
+# written by Jonathan Griffiths
+# with modifications by Aaron Lun
+# created 18 December 2017    
 {
+    if (nsamples==1L) {
+        swap.frac <- 0
+    }
+
     # Generating original molecules. 
     noriginal <- round(nmolecules * (1-swap.frac))
-    ncells <- 4L^barcode.len
+    ncells <- 4L^as.integer(barcode.length)
     cell <- sample(ncells, noriginal, replace = TRUE) - 1L
-    umi <- sample(4L^as.integer(umi.len), noriginal, replace = FALSE) # without replacement, to guarantee uniqueness within each sample.
+    umi <- sample(4L^as.integer(umi.length), noriginal, replace = FALSE) # without replacement, to guarantee uniqueness within each sample.
 
     # Assigning each molecule to a gene and sample.
     gene <- sample(c(0L, seq_len(ngenes)), noriginal, replace = TRUE)
     sample <- sample(nsamples, noriginal, replace = TRUE)
-    original <- data.frame(cell = cell, umi = umi, gene = gene, sample = sample) 
+    original <- DataFrame(cell = cell, umi = umi, gene = gene, sample = sample) 
    
     # Creating swapped molecules (unless nsamples==1L, in which case we skip this).
     if (nsamples > 1L) { 
@@ -29,7 +38,7 @@ sim10xMolInfo <- function(prefix, umi.len=10, barcode.len=4, nmolecules=10000, s
     }
     
     # Simulating the number of reads.
-    original$reads <- rpois(nrow(original), lambda = lambda) + 1L
+    original$reads <- rpois(nrow(original), lambda = ave.read) + 1L
     swapped$reads <- rep(1L, nrow(swapped))
     fulltab <- rbind(original, swapped)
 
