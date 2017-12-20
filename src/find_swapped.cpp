@@ -85,7 +85,9 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
     // Guessing the barcode length. 
     int blen=0;
     if (_barcodelen==R_NilValue) {
-        blen=std::ceil(std::log(*std::max_element(encoded.begin(), encoded.end()))/std::log(4));
+        if (encoded.size()) { 
+            blen=std::ceil(std::log(*std::max_element(encoded.begin(), encoded.end()))/std::log(4));
+        }
     } else {
         Rcpp::IntegerVector barcodelen(_barcodelen);
         if (barcodelen.size()!=1) {

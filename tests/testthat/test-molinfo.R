@@ -46,4 +46,21 @@ test_that("Automatic detection of the molecule information fields works correctl
     }
 })
 
+set.seed(907)
+test_that("read10xMolInfo works with silly inputs containing no molecules", {
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode=barcode)
+    out <- read10xMolInfo(out.paths, barcode=barcode)
+    expect_identical(nrow(out$data), 0L)
+    expect_identical(length(out$genes), ngenes)
+
+    # Checking that it doesn't throw up with automatic barcode detection.
+    out2 <- read10xMolInfo(out.paths)
+    expect_identical(out, out2)
+   
+    # Checking  that it behaves when there aren't even any genes. 
+    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
+    out <- read10xMolInfo(out.paths, barcode=barcode)
+    expect_identical(nrow(out$data), 0L)
+    expect_identical(length(out$genes), 0L)
+})
 
