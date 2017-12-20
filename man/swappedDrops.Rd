@@ -6,13 +6,13 @@
 \description{Remove the effects of barcode swapping on droplet-based single-cell RNA-seq data, specifically 10X Genomics datasets.}
 
 \usage{
-swappedDrops(samples, barcode.length, get.swapped=FALSE, 
+swappedDrops(samples, barcode.length=NULL, get.swapped=FALSE, 
     get.diagnostics=FALSE, min.frac=0.8)
 }
 
 \arguments{
 \item{samples}{A character vector containing paths to the molecule information HDF5 files, produced by CellRanger for 10X Genomics data.}
-\item{barcode.length}{An integer scalar specifying the length of the cell barcode.}
+\item{barcode.length}{An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.}
 \item{get.swapped}{A logical scalar indicating whether the UMI counts corresponding to swapped molecules should also be returned.}
 \item{get.diagnostics}{A logical scalar indicating whether to return the number of reads for each swapped molecule in each sample.}
 \item{min.frac}{A numeric scalar specifying the minimum fraction of reads required for a swapped molecule to be assigned to a sample.}
@@ -30,8 +30,6 @@ The fraction of reads in each sample is calculated, and the molecule is assigned
 This assumes that the swapping rate is low, so the true sample of origin for a molecule should contain the majority of the reads.
 Setting \code{min.frac=1} will effectively remove all molecules that appear in multiple samples.
 We do not recommend setting \code{min.frac} lower than 0.5.
-
-The \code{barcode.length} parameter needs to be set manually as the length of the cell barcode changes between versions of the 10X Genomics chemistry.
 } 
 
 \value{
@@ -54,19 +52,16 @@ with modifications by Aaron Lun
 }
 
 \seealso{
-\code{\link{sim10xMolInfo}}
+\code{\link{sim10xMolInfo}},
+\code{\link{read10xMolInfo}}
 }
 
 \examples{
-# Setting up some temporary molInfo files.
-tmpdir <- tempfile()
-dir.create(tmpdir)
-curfiles <- sim10xMolInfo(tmpdir)
+curfiles <- sim10xMolInfo(prefix=tempfile())
 
-# Getting swapped matrices, barcode length of 4 bp.
-out <- swappedDrops(curfiles, 4)
+out <- swappedDrops(curfiles)
 lapply(out, dim)
 
-out <- swappedDrops(curfiles, 4, get.swapped=TRUE)
+out <- swappedDrops(curfiles, get.swapped=TRUE, get.diagnostics=TRUE)
 names(out)
 }

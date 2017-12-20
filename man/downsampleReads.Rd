@@ -5,12 +5,12 @@
 \description{Generate a UMI count matrix after downsampling reads from the molecule information file produced by CellRanger for 10X Genomics data.}
 
 \usage{
-downsampleReads(sample, barcode.length, prop, bycol=FALSE)
+downsampleReads(sample, prop, barcode.length=NULL, bycol=FALSE)
 }
 
 \arguments{
 \item{sample}{A string containing the path to the molecule information HDF5 file.}
-\item{barcode.length}{An integer scalar specifying the length of the cell barcode.}
+\item{barcode.length}{An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.}
 \item{prop}{A numeric scalar or, if \code{bycol=TRUE}, a vector of length \code{ncol(x)}.
 All values should lie in [0, 1] specifying the downsampling proportion for the matrix or for each cell.}
 \item{bycol}{A logical scalar indicating whether downsampling should be performed on a column-by-column basis.}
@@ -39,7 +39,8 @@ A numeric sparse matrix containing the downsampled UMI counts for each gene (row
 }
 
 \seealso{
-\code{\link{downsampleMatrix}}
+\code{\link{downsampleMatrix}},
+\code{\link{read10xMolInfo}}
 }
 
 \author{
@@ -47,11 +48,6 @@ Aaron Lun
 }
 
 \examples{
-# Mocking up some data.
-tmpdir <- tempfile()
-dir.create(tmpdir)
-out <- sim10xMolInfo(tmpdir, nsamples=1)
-
-# Downsampling based on the reads.
+out <- sim10xMolInfo(prefix=tempfile(), nsamples=1)
 downsampleReads(out, barcode.length=4, prop=0.5)
 }

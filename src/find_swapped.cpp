@@ -57,12 +57,6 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
         throw std::runtime_error("dataset name should be a string");
     }
 
-    Rcpp::IntegerVector barcodelen(_barcodelen);
-    if (barcodelen.size()!=1) {
-        throw std::runtime_error("barcode length should be an integer vector");
-    }
-    const int blen=barcodelen[0];
-
     // Setting the file input parameters.
     std::string curfile=Rcpp::as<std::string>(fname[0]);
     std::string curdata=Rcpp::as<std::string>(dname[0]);
@@ -88,7 +82,19 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
     std::vector<uint64_t> encoded(dims_out);
     h5data.read(encoded.data(), H5::PredType::NATIVE_INT64, memspace, dataspace);
    
-    // Iterating across the output and taking pairs of bits.
+    // Guessing the barcode length. 
+    int blen=0;
+    if (_barcodelen==R_NilValue) {
+        blen=std::ceil(std::log(*std::max_element(encoded.begin(), encoded.end()))/std::log(4));
+    } else {
+        Rcpp::IntegerVector barcodelen(_barcodelen);
+        if (barcodelen.size()!=1) {
+            throw std::runtime_error("barcode length should be an integer vector or NULL");
+        }
+        blen=barcodelen[0];
+    }
+
+   // Iterating across the output and taking pairs of bits.
     Rcpp::StringVector output(dims_out);
     auto oIt=output.begin();
     std::vector<char> ref(blen+1, '\0');   
