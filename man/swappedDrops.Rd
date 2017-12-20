@@ -33,15 +33,15 @@ We do not recommend setting \code{min.frac} lower than 0.5.
 } 
 
 \value{
-If \code{get.swapped=FALSE} and \code{get.diagnostics=FALSE}, a list of sparse matrices is returned.
+A list is returned with the \code{cleaned} element, itself a list of sparse matrices is returned.
 Each matrix corresponds to a sample and contains the UMI count for each gene (row) and barcode (column) after removing swapped molecules.
 All barcodes that were originally observed are reported as columns, though note that it is possible for some barcodes to contain no counts.
 
-Otherwise, a list is returned containing a \code{cleaned} element, which is the same as the list described above. 
-If \code{get.swapped=TRUE}, a \code{swapped} element is included that contains sample-specific sparse matrices of UMI counts corresponding to the swapped molecules.
+If \code{get.swapped=TRUE}, a \code{swapped} element is returned in the top-level list.
+This contains sample-specific sparse matrices of UMI counts corresponding to the swapped molecules.
 Adding the cleaned and swapped matrices for each sample should yield the total UMI count prior to removal of swapped molecules. 
 
-If \code{get.diagnostics=TRUE}, the list will contain an additional \code{diagnostics} matrix.
+If \code{get.diagnostics=TRUE}, the top-level list will also contain an additional \code{diagnostics} matrix.
 Each entry of this matrix contains the number of reads for each molecule (row) in each sample (column).
 This can be useful for examining the level of swapping across samples on a molecule-by-molecule basis.
 }

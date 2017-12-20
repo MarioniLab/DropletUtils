@@ -20,25 +20,28 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
     }
         
     # Identifying swapped molecules.
-    swap.marks <- nreads <- vector("list", length(samples))
+    cells <- umis <- genes <- nreads <- vector("list", length(samples))
     for (i in seq_along(tabs)) {
         current <- tabs[[i]]$data
-        swap.marks[[i]] <- paste(current$cell, current$umi, current$gene)
+        cells[[i]] <- current$cell
+        umis[[i]] <- current$umi
+        genes[[i]] <- current$gene
         nreads[[i]] <- current$reads
     }
-    
-    swap.marks <- unlist(swap.marks)
+
+    cells <- unlist(cells)
+    umis <- unlist(umis)
+    genes <- unlist(genes)
     nreads <- unlist(nreads)
-    swap <- .findSwapped(swap.marks, nreads, min.frac)
+    swap.out <- .findSwapped(cells, umis, genes, nreads, min.frac, get.group=get.diagnostics)
+    is.swap <- swap.out$swapped
 
     # Printing out per-molecule read counts. 
     if (get.diagnostics) {
-        sample.ids <- rep(seq_along(tabs), unlist(lapply(tabs, FUN=function(x) { length(x$data[[1]]) })))
-        all.molecules <- sort(unique(swap.marks))
-        m <- match(swap.marks, all.molecules)
-        diagnostics <- sparseMatrix(i=m, j=sample.ids, x=nreads, 
-                                    dims=c(length(all.molecules), length(samples)))
-        rownames(diagnostics) <- all.molecules
+        sample.ids <- rep(seq_along(tabs), unlist(lapply(tabs, FUN=function(x) { nrow(x$data) })))
+        nmolecules <- if (length(swap.out$group)) max(swap.out$group) else 0
+        diagnostics <- sparseMatrix(i=swap.out$group, j=sample.ids, x=nreads, 
+                                    dims=c(nmolecules, length(samples)))
         colnames(diagnostics) <- names(samples)
     }
 
@@ -50,7 +53,7 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         current <- tabs[[i]]$data
         all.genes <- tabs[[i]]$genes
         all.cells <- sort(unique(current$cell))
-        curswap <- swap[last + seq_along(current[[1]])]
+        curswap <- is.swap[last + seq_along(current[[1]])]
 
         mat <- sparseMatrix(i=current$gene[!curswap], 
                             j=match(current$cell[!curswap], all.cells),
@@ -79,27 +82,45 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
     }
 
     # Figuring out what kind of output to return.
-    if (!get.swapped && !get.diagnostics) {
-        return(cleaned)
-    } else {
-        output <- list(cleaned=cleaned)
-        if (get.swapped){  
-            output$swapped <- swapped
-        } 
-        if (get.diagnostics) { 
-            output$diagnostics <- diagnostics
-        }
-        return(output)
+    output <- list(cleaned=cleaned)
+    if (get.swapped){  
+        output$swapped <- swapped
+    } 
+    if (get.diagnostics) { 
+        output$diagnostics <- diagnostics
     }
+    return(output)
 }
 
-.findSwapped <- function(swap.marks, reads, min.frac=0.8, get.diagnostics=FALSE) { 
-    # Identifies the molecules that are swapped or not. Technically we could 
-    # use sparse matrices and max.col() to do this, but max.col() isn't supported
-    # natively for sparse matrices and would call as.matrix() instead.
-    o <- order(swap.marks)
-    rout <- rle(swap.marks[o])
-    is.swap <- .Call(cxx_find_swapped, rout$lengths, reads[o], min.frac)
+.findSwapped <- function(cells, umis, genes, reads, min.frac=0.8, get.group=FALSE)  
+# Identifies the molecules that are swapped or not. Technically we could 
+# use sparse matrices and max.col() to do this, but max.col() isn't supported
+# natively for sparse matrices and would call as.matrix() instead.
+{
+    o <- order(cells, umis, genes)
+    cells <- cells[o]
+    umis <- umis[o]
+    genes <- genes[o]
+    reads <- reads[o]
+
+    # Figures out the runs of the same type of cell/umi/gene combination.
+    N <- length(o)
+    if (N) { 
+        is.diff <- cells[-N]!=cells[-1] | umis[-N]!=umis[-1] | genes[-N]!=genes[-1]
+        runs <- diff(c(0L, which(is.diff), N))
+    } else {
+        runs <- integer(0)
+    }
+
+    # Identifying putative swapped reads.
+    is.swap <- .Call(cxx_find_swapped, runs, reads, min.frac)
     is.swap[o] <- is.swap
-    return(is.swap)
+    output <- list(swapped=is.swap) 
+
+    if (get.group) {
+        grouping <- rep(seq_along(runs), runs)
+        grouping[o] <- grouping
+        output$group <- grouping
+    }
+    return(output)
 }

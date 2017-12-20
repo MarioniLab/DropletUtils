@@ -39,7 +39,7 @@ REFFUN <- function(original, swapped, min.frac) {
     }
 
     # Checking that the logical vector is correct.
-    obs.swapped <- DropletUtils:::.findSwapped(marking, combined$reads, min.frac)
+    obs.swapped <- DropletUtils:::.findSwapped(combined$cell, combined$umi, combined$gene, combined$reads, min.frac)$swapped
     expect_identical(obs.swapped, is.swapped)
     return(all.counts)
 }
@@ -101,7 +101,7 @@ test_that("Removal of swapped drops works correctly", {
         min.frac <- 0.9
         observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
         observed2 <- swappedDrops(output$files, barcode, min.frac=min.frac)
-        expect_equal(observed$cleaned, observed2)
+        expect_equal(observed$cleaned, observed2$cleaned)
         
         observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, get.diagnostics=TRUE, min.frac=min.frac)
         expect_equal(observed$cleaned, observed3$cleaned)
@@ -112,7 +112,7 @@ test_that("Removal of swapped drops works correctly", {
         best.in.class <- max.col(top.prop)
         best.prop <- top.prop[(best.in.class - 1L) * nrow(top.prop) + seq_along(best.in.class)]
         for (s in seq_along(reference)) {
-            expect_equal(sum(observed2[[s]]), sum(best.in.class==s & best.prop >= min.frac))
+            expect_equal(sum(observed2$cleaned[[s]]), sum(best.in.class==s & best.prop >= min.frac))
         }
     }
 })
@@ -120,13 +120,13 @@ test_that("Removal of swapped drops works correctly", {
 test_that("swappedDrops functions correctly for silly inputs", {
     output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
     deswapped <- swappedDrops(output)
-    for (ref in deswapped) {
+    for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(ngenes, 0L))
     }   
 
     output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
     deswapped <- swappedDrops(output)
-    for (ref in deswapped) {
+    for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(0L, 0L))
     }   
 })
