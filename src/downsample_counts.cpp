@@ -18,27 +18,26 @@ void downsample_counts (IN iIt, IN iend, OUT oIt,
 
     // Sampling scheme adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
     while (num_selected < num_sample) {
-        const double u = unif_rand(); 
 
-        if ( (num_total - offset)*u < num_sample - num_selected) {
-            /* Current read is selected, we advance to that read's "index" (if we had instantiated the full [0, num_total) array).
-             * Note that the second clause below should never trigger, but this assumes exact arithmetic in the probability calculations. 
-             * Thus, we add the second clause to provide some protection against segfaults, just in case.
-             */
-            while (cumulative <= offset && iIt!=iend) { 
-                cumulative+=(*iIt);
-                ++iIt;
-                ++oIt;
-            }
+        /* Advancing to that read's "index" (if we had instantiated the full [0, num_total) array).
+         * Note that we need to use a while loop and <=, just in case there's a whole bunch of zeroes.
+         */
+        while (cumulative<=offset && iIt!=iend) {
+            cumulative+=(*iIt);
+            ++iIt;
+            ++oIt;
+        }
+
+        // Deciding whether or not to keep this read.
+        if ( (num_total - offset)*R::unif_rand() < num_sample - num_selected) {
             ++(*oIt);
             ++num_selected;
         }
       
-        // Bailing out if we've reached the end of the vector. 
         ++offset;
-        if (offset>=cumulative && iIt==iend) {
+        if (cumulative==offset && iIt==iend) { 
             break;
-        } 
+        }
     }
     return;
 }  
