@@ -1,0 +1,225 @@
+<!--
+%\VignetteIndexEntry{Handling droplet-based single-cell RNA-seq data}
+%\VignettePackage{BiocStyle}
+%\VignetteEngine{knitr::knitr}
+-->
+
+```{r, echo=FALSE, results="hide", message=FALSE}
+require(knitr)
+opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+```
+
+```{r style, echo=FALSE, results='asis'}
+BiocStyle::markdown()
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+library(DropletUtils)
+```
+
+# Utilities for handling droplet-based single-cell RNA-seq data
+Package: `r Biocpkg("DropletUtils")` <br />
+Author: Aaron Lun (alun@wehi.edu.au) <br />
+Compilation date: `r Sys.Date()`
+
+# Introduction
+
+Droplet-based single-cell RNA sequencing (scRNA-seq) technologies allow researchers to obtain transcriptome-wide expression profiles for thousands of cells at once.
+Briefly, each cell is encapsulated in a droplet in a oil-water emulsion, along with a bead containing reverse transcription primers with a unique barcode sequence.
+After reverse transcription inside the droplet, each cell's cDNA is labelled with that barcode (referred to a "cell barcode").
+Bursting of the droplets yields a pool of cDNA for library preparation and sequencing.
+Debarcoding of the sequences can then be performed to obtain the expression profile for each cell.
+
+This package implements some general utilities for handling these data after quantification of expression.
+In particular, we focus on the 10X Genomics platform, providing functions to load in the matrix of unique molecule identifier (UMI) counts as well as the raw molecule information.
+Functions are also available for downsampling the UMI count matrix or the raw reads;
+for distinguishing cells from empty droplets, based on the UMI counts;
+and to eliminate the effects of barcode swapping on Illumina 4000 sequencing machine.
+
+# Reading in 10X Genomics data
+
+## From the UMI count matrix
+
+The _CellRanger_ pipeline from 10X Genomics will process the raw sequencing data and produce a matrix of UMI counts.
+Each row of this matrix corresponds to a gene, while each column corresponds to a cell barcode.
+We can load this into memory using the `read10xResults` function:
+
+```{r, echo=FALSE}
+set.seed(1000)
+example(read10xResults, echo=FALSE) # to generate my files.
+dir.name <- tmpdir
+```
+
+```{r}
+sce <- read10xResults(dir.name)
+```
+
+The `dir.name` variable should hold the file path to the subdirectory of the CellRanger output containing the count matrices.
+This will usually be something like `<OUTPUT>/outs/filtered_gene_bc_matrices/<GENOME>`.
+If you use the "filtered" matrix, each column corresponds to a putative cell.
+If you use the "raw" matrix, all barcodes are loaded, and no distinction is made between cells and empty droplets.
+
+The function itself returns a `SingleCellExperiment` object containing all of the relevant information.
+This includes the barcode sequence for each cell (column), as well as the identifier and symbol for each gene (row).
+
+```{r}
+sce
+```
+
+The counts themselves are loaded as a sparse matrix, specifically a `dgCMatrix` from the `r CRANpkg("Matrix")` package.
+This reduces memory usage by only storing the non-zero counts, which is useful for sparse scRNA-seq data with lots of dropouts.
+
+```{r}
+class(counts(sce))
+```
+
+Users can also load multiple results in at once, by supplying a character vector to `read10xResults`.
+This will return a single `SingleCellExperiment` where all of the individual matrices are combined by column.
+Obviously, this only makes sense when the same set of genes is being used across samples.
+
+## From the molecule information file
+
+_CellRanger_ will also produce a molecule information file (`molecule_info.h5`) that contains... well, information about the transcript molecules.
+This includes the UMI sequence, the cell barcode sequence, the gene to which it was assigned, and the number of reads covering the molecule.
+(The use of UMIs allows reads from different PCR amplicons to be unambiguously assigned to the same original molecule.)
+We can load this information into memory using the `read10xMolInfo` function:
+
+```{r, echo=FALSE}
+mol.info.file <- sim10xMolInfo(tempfile(), nsamples=1)
+```
+
+```{r}
+mol.info <- read10xMolInfo(mol.info.file)
+mol.info
+```
+
+This information can be useful for quality control purposes, especially when the underlying read counts are required, e.g., to investigate sequencing saturation.
+Note that the function will automatically guess the length of the barcode sequence, as this is not formally defined in the molecule information file.
+For most experiments, the guess is correct, but users can force the function to use a known barcode length with the `barcode.length` argument.
+
+# Downsampling across batches
+
+## From the count matrix
+
+Given multiple batches of very different sequencing depths, it can be beneficial to downsample the deepest batches to match the coverage of the shallowest batches. 
+This avoids differences in technical noise that can drive clustering by batch.
+We can achieve this using the `downsampleMatrix` function on the count matrix:
+
+```{r}
+set.seed(100)
+new.counts <- downsampleMatrix(counts(sce), prop=0.5)
+library(Matrix)
+colSums(counts(sce))
+colSums(new.counts)
+```
+
+The above code will downsample the counts for each cell such that the total count is halved.
+Calculation of an appropriate `prop` is the responsibility of the user, depending on the number of batches in their experiment and which ones have the lowest coverage.
+You can also downsample with cell-specific proportions by supplying a vector to `prop`.
+
+## From the reads
+
+Technically, downsampling on the reads is more appropriate as it recapitulates the effect of differences in sequencing depth per cell.
+This can be achieved by applying the `downsampleReads` function to the molecule information file containing the read counts:
+
+```{r}
+set.seed(100)
+no.sampling <- downsampleReads(mol.info.file, prop=1)
+sum(no.sampling)
+with.sampling <- downsampleReads(mol.info.file, prop=0.5)
+sum(with.sampling)
+```
+
+The above code will downsample the **reads** to 50% of the original coverage across the experiment.
+However, the function will return a matrix of **UMI counts**, so the final total count may not actually decrease if sequencing saturation is high!
+Users should use `downsampleMatrix` instead if they want to guarantee similar total counts after downsampling.
+
+# Detecting empty droplets
+
+Empty droplets often contain RNA from the ambient solution, resulting in non-zero counts after debarcoding.
+The `emptyDrops` function is designed to distinguish between empty droplets and cells.
+It does so by testing each barcode's expression profile for significant deviation from the ambient profile.
+Given a count matrix of all barcodes (e.g., from `raw_gene_bc_matrices`, for 10X data), we call:
+
+```{r, echo=FALSE}
+library(Matrix)
+set.seed(100)
+ngenes <- 100
+ambient.prof <- runif(ngenes)
+ambient.counts <- matrix(rpois(ngenes*1000, lambda=ambient.prof), 
+    ncol=1000, nrow=ngenes)
+ambient.counts <- as(ambient.counts, "dgCMatrix")
+    
+empty.counts <- matrix(rpois(ngenes*100, lambda=ambient.prof*20),
+    ncol=100, nrow=ngenes)
+empty.counts <- as(empty.counts, "dgCMatrix")
+
+my.counts <- cbind(ambient.counts, empty.counts, 
+    rpois(ngenes, lambda=runif(ngenes)*20)) # An actual cell! 
+```
+
+```{r}
+set.seed(100)
+e.out <- emptyDrops(my.counts)
+e.out
+```
+
+Droplets with significant deviations from the ambient profile are detected at a specified FDR threshold, e.g., with `FDR` below 5%.
+These can be considered to be cell-containing droplets, with a frequency of false positives (i.e., empty droplets) at the specified FDR.
+Furthermore, droplets with very large counts are automatically retained by setting their _p_-values to zero.
+This avoids discarding droplets containing cells that are very similar to the ambient profile.
+
+```{r}
+which(e.out$FDR <= 0.05)
+```
+
+The _p_-values are calculated by permutation testing, hence the need to set a seed.
+The `Limited` field indicates whether a lower p-value could be obtained by increasing the number of permutations.
+If there are any entries with `FDR` above the desired threshold and `Limited==TRUE`, it indicates that `npts` should be increased in the `emptyDrops` call.
+
+```{r}
+table(Limited=e.out$Limited, Significant=e.out$FDR <= 0.05)
+```
+
+We also recommend making some diagnostic plots, such as the total count against the deviance.
+Droplets detected as cells should show up with large deviances, though the example below is based on simulated data and is quite exaggerated.
+
+```{r}
+plot(e.out$Total, e.out$Deviance, xlab="Total count", ylab="Deviance",
+    col=ifelse(e.out$FDR <= 0.05, "red", "black"), pch=16)
+o <- order(e.out$Total)
+lines(e.out$Total[o], e.out$Expected[o], col="dodgerblue", lwd=2)
+```
+
+# Removing the effect of barcode swapping
+
+Barcode swapping is a phenomenon that occurs upon multiplexing samples on the Illumina 4000 sequencer.
+Specifically, molecules from one sample are incorrectly labelled with _sample_ barcodes from another sample, resulting in their misassignment upon demultiplexing.
+Fortunately, droplet experiments provide a unique opportunity to eliminate this effect.
+This is based on the assumption that it is effectively impossible to generate multiple molecules with the same combination of cell barcode, assigned gene and UMI sequence.
+Thus, any molecules with the same combination across multiple samples are likely to arise from barcode swapping.
+
+The `swappedDrops` function will identify overlapping combinations in the molecule information files of all multiplexed samples sequenced on the same run.
+It will then remove these combinations and return "cleaned" UMI count matrices for all samples to use in downstream analyses.
+This is demonstrated below, assuming a vector of file paths in `mult.mol.info`:
+
+```{r, echo=FALSE}
+set.seed(1000)
+mult.mol.info <- sim10xMolInfo(prefix=tempfile(), nsamples=3)
+```
+
+```{r}
+s.out <- swappedDrops(mult.mol.info, min.frac=0.9)
+length(s.out$cleaned)
+class(s.out$cleaned[[1]])
+```
+
+For combinations where 90% of the reads belong to a single sample, the molecule is assigned to that sample rather than being removed.
+This assumes that swapping is relatively rare, so that the read count should be highest in the sample of origin.
+The exact percentage can be tuned by altering `min.frac` in the `swappedDrops` call.
+
+# Session information
+
+```{r}
+sessionInfo()
+```
