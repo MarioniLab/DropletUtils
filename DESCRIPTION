@@ -10,7 +10,7 @@ Maintainer: Aaron Lun <alun@wehi.edu.au>
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, SummarizedExperiment, Matrix, methods, 
     utils, stats, edgeR, Rcpp, rhdf5
-Suggests: testthat, beachmat, knitr
+Suggests: testthat, beachmat, knitr, BiocStyle
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
 Description: Provides a number of utility functions for handling 
