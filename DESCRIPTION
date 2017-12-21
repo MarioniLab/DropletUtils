@@ -1,16 +1,18 @@
 Package: DropletUtils
-Version: 1.0.0
+Version: 0.99.0
 Date: 2017-12-18
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), 
-    email = "alun@wehi.edu.au"), person("Davis", "McCarthy",
+    email = "alun@wehi.edu.au"), person("Jonathan",
+    "Griffiths", role="ctb"), person("Davis", "McCarthy",
     role="ctb"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, SummarizedExperiment, Matrix, methods, 
-    stats, edgeR, Rcpp, rhdf5
+    utils, stats, edgeR, Rcpp, rhdf5
 Suggests: testthat, beachmat, knitr
-biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, Transcriptomics
+biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, 
+    Transcriptomics, DataImport, Coverage
 Description: Provides a number of utility functions for handling 
     single-cell (RNA-seq) data from droplet technologies such as 10X
     Genomics. This includes data loading, identification of cells from 

@@ -1,6 +1,6 @@
 sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4, 
-                          ngenes=20, nmolecules=10000, swap.frac=0.2, 
-                          ave.read=10, return.tab=FALSE)
+    ngenes=20, nmolecules=10000, swap.frac=0.2, 
+    ave.read=10, return.tab=FALSE)
 # A function that creates a HDF5 file mimicking the molecule information from CellRanger.
 # Used for testing the correctness of the swapping removal algorithm.   
 #

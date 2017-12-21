@@ -22,7 +22,7 @@ A numeric matrix of downsampled counts, of the same type as \code{x}.
 }
 
 \details{
-Given multiple 10X batches of very different sequencing depths, it can be beneficial to downsample the deepest batches to match the coverage of the shallowest batches. 
+Given multiple batches of very different sequencing depths, it can be beneficial to downsample the deepest batches to match the coverage of the shallowest batches. 
 This avoids differences in technical noise that can drive clustering by batch.
 
 If \code{bycol=TRUE}, sampling without replacement is performed on the count vector for each cell.
