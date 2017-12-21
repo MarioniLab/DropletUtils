@@ -1,4 +1,5 @@
 #include "DropletUtils.h"
+#include "c++/H5Cpp.h"
 #include <cstdint> 
 
 SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
