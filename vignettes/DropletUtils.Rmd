@@ -139,23 +139,10 @@ Users should use `downsampleMatrix` instead if they want to guarantee similar to
 Empty droplets often contain RNA from the ambient solution, resulting in non-zero counts after debarcoding.
 The `emptyDrops` function is designed to distinguish between empty droplets and cells.
 It does so by testing each barcode's expression profile for significant deviation from the ambient profile.
-Given a count matrix of all barcodes (e.g., from `raw_gene_bc_matrices`, for 10X data), we call:
+Given a matrix `my.counts` containing UMI counts for **all** barcodes (e.g., from `raw_gene_bc_matrices` for 10X data), we call:
 
 ```{r, echo=FALSE}
-library(Matrix)
-set.seed(100)
-ngenes <- 100
-ambient.prof <- runif(ngenes)
-ambient.counts <- matrix(rpois(ngenes*1000, lambda=ambient.prof), 
-    ncol=1000, nrow=ngenes)
-ambient.counts <- as(ambient.counts, "dgCMatrix")
-    
-empty.counts <- matrix(rpois(ngenes*100, lambda=ambient.prof*20),
-    ncol=100, nrow=ngenes)
-empty.counts <- as(empty.counts, "dgCMatrix")
-
-my.counts <- cbind(ambient.counts, empty.counts, 
-    rpois(ngenes, lambda=runif(ngenes)*20)) # An actual cell! 
+source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
 ```
 
 ```{r}
@@ -164,13 +151,14 @@ e.out <- emptyDrops(my.counts)
 e.out
 ```
 
-Droplets with significant deviations from the ambient profile are detected at a specified FDR threshold, e.g., with `FDR` below 5%.
+Droplets with significant deviations from the ambient profile are detected at a specified FDR threshold, e.g., with `FDR` below 1%.
 These can be considered to be cell-containing droplets, with a frequency of false positives (i.e., empty droplets) at the specified FDR.
 Furthermore, droplets with very large counts are automatically retained by setting their _p_-values to zero.
 This avoids discarding droplets containing cells that are very similar to the ambient profile.
 
 ```{r}
-which(e.out$FDR <= 0.05)
+is.cell <- e.out$FDR <= 0.01
+sum(is.cell, na.rm=TRUE)
 ```
 
 The _p_-values are calculated by permutation testing, hence the need to set a seed.
@@ -178,17 +166,28 @@ The `Limited` field indicates whether a lower p-value could be obtained by incre
 If there are any entries with `FDR` above the desired threshold and `Limited==TRUE`, it indicates that `npts` should be increased in the `emptyDrops` call.
 
 ```{r}
-table(Limited=e.out$Limited, Significant=e.out$FDR <= 0.05)
+table(Limited=e.out$Limited, Significant=is.cell)
 ```
 
-We also recommend making some diagnostic plots, such as the total count against the deviance.
+We also recommend making some diagnostic plots such as the total count against the deviance (below left).
 Droplets detected as cells should show up with large deviances, though the example below is based on simulated data and is quite exaggerated.
+Another useful plot is the total count against the rank (right), to check that the knee point is correctly detected by the function.
 
-```{r}
-plot(e.out$Total, e.out$Deviance, xlab="Total count", ylab="Deviance",
-    col=ifelse(e.out$FDR <= 0.05, "red", "black"), pch=16)
+```{r, fig.wide=TRUE}
+par(mfrow=c(1,2))
+
+# Total against the deviance.
+plot(e.out$Total, e.out$Deviance, col=ifelse(is.cell, "red", "black"),
+    xlab="Total UMI count", ylab="Deviance")
 o <- order(e.out$Total)
 lines(e.out$Total[o], e.out$Expected[o], col="dodgerblue", lwd=2)
+
+# Finds the transition between the small and large droplets.
+K <- findKneePoint(my.counts)
+totals <- colSums(my.counts)
+plot(seq_along(totals), sort(totals, decreasing=TRUE), log="xy", 
+    xlab="Rank", ylab="Total UMI count", type="b")
+abline(h=K, col="red")
 ```
 
 # Removing the effect of barcode swapping
