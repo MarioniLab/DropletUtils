@@ -57,7 +57,7 @@ with modifications by Aaron Lun
 }
 
 \examples{
-curfiles <- sim10xMolInfo(prefix=tempfile())
+curfiles <- sim10xMolInfo(prefix=tempfile(), nsamples=3)
 
 out <- swappedDrops(curfiles)
 lapply(out, dim)
