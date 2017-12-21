@@ -65,3 +65,9 @@ lapply(out, dim)
 out <- swappedDrops(curfiles, get.swapped=TRUE, get.diagnostics=TRUE)
 names(out)
 }
+
+\references{
+Griffiths JA, Lun ATL, Richard AC, Bach K, Marioni JC (2017).
+Detection and removal of barcode swapping in single-cell RNA-seq data.
+\emph{biorXiv} 177048.
+}

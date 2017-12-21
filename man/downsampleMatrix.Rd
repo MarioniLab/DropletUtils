@@ -37,6 +37,8 @@ which may or may not be more appropriate than \code{bycol=TRUE} for particular a
 
 Technically, downsampling on the reads with \code{\link{downsampleReads}} is more appropriate as it recapitulates the effect of differences in sequencing depth per cell.
 However, in practice, the aim is to obtain cells that have similar total counts across batches, for which downsampling on the UMI counts is a more direct approach.
+
+Note that this function was originally implemented in the \pkg{scater} package as \code{downsampleCounts}.
 }
 
 \author{

@@ -24,7 +24,8 @@ Columns are named with the cell barcode if \code{sample} contains one element; o
 }
 
 \details{
-This function was developed from the \code{Read10X} function from the \pkg{Seurat} package.
+This function was originally developed from the \code{Read10X} function from the \pkg{Seurat} package.
+It was then taken from the \code{read10xResults} implementation in the \pkg{scater} package.
 }
 
 \author{
@@ -58,4 +59,14 @@ sce10x <- read10xResults(tmpdir)
 
 # Column names are dropped with multiple 'samples'.
 sce10x2 <- read10xResults(c(tmpdir, tmpdir))
+}
+
+\references{
+Zheng GX, Terry JM, Belgrader P, and others (2017).
+Massively parallel digital transcriptional profiling of single cells. 
+\emph{Nat Commun} 8:14049.
+
+10X Genomics (2017).
+Gene-Barcode Matrices.
+\url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/matrices}
 }

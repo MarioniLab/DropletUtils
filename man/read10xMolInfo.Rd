@@ -53,3 +53,12 @@ out <- sim10xMolInfo(prefix=tempfile())
 read10xMolInfo(out)
 }
 
+\references{
+Zheng GX, Terry JM, Belgrader P, and others (2017).
+Massively parallel digital transcriptional profiling of single cells. 
+\emph{Nat Commun} 8:14049.
+
+10X Genomics (2017).
+Molecule info.
+\url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/molecule_info}
+}

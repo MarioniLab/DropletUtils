@@ -111,7 +111,7 @@ abline(h=K, col="red")
 }
 
 \references{
-Phipson B and Smyth GK (2010).
+Phipson B, Smyth GK (2010).
 Permutation P-values should never be zero: calculating exact P-values when permutations are randomly drawn.
 \emph{Stat. Appl. Genet. Mol. Biol.} 9:Article 39.
 }
