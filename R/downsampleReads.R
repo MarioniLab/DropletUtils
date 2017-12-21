@@ -25,13 +25,6 @@ downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE)
 
     # Assembling into a sparse matrix.
     keep <- new.read.counts>0L
-    rid <- incoming$data$gene[o[keep]]
-    cid <- match(cell.id[keep], all.cells)
-
-    out <- sparseMatrix(i=rid, j=cid, x=rep(1, length(rid)),
-                        dims=c(length(incoming$genes), length(all.cells)),
-                        use.last.ij=FALSE, giveCsparse=TRUE)
-    rownames(out) <- incoming$genes
-    colnames(out) <- all.cells
-    return(out)
+    makeCountMatrix(incoming$data$gene[o[keep]], cell.id[keep], 
+                    all.genes=incoming$genes, all.cells=all.cells)
 }

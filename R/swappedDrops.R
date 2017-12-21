@@ -45,7 +45,7 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         colnames(diagnostics) <- names(samples)
     }
 
-    # Producing an output sparseMatrix.
+    # Iterating through the samples.
     cleaned <- swapped <- vector("list", length(samples))
     names(cleaned) <- names(swapped) <- names(samples)
     last <- 0L
@@ -53,29 +53,14 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         current <- tabs[[i]]$data
         all.genes <- tabs[[i]]$genes
         all.cells <- sort(unique(current$cell))
+
+        # Forming count matrices from unswapped and swapped molecules. 
         curswap <- is.swap[last + seq_along(current[[1]])]
-
-        mat <- sparseMatrix(i=current$gene[!curswap], 
-                            j=match(current$cell[!curswap], all.cells),
-                            x=rep(1, sum(!curswap)),
-                            dims=c(length(all.genes), length(all.cells)),
-                            use.last.ij=FALSE, # Adds up the duplicates.
-                            giveCsparse=TRUE)
-        rownames(mat) <- all.genes
-        colnames(mat) <- all.cells
-        cleaned[[i]] <- mat
-
-        # Adding up the reads to discard if requested.
+        cleaned[[i]] <- makeCountMatrix(current$gene[!curswap], current$cell[!curswap], 
+                                        all.genes=all.genes, all.cells=all.cells)
         if (get.swapped) {
-            mat <- sparseMatrix(i=current$gene[curswap], 
-                                j=match(current$cell[curswap], all.cells),
-                                x=rep(1, sum(curswap)),
-                                dims=c(length(all.genes), length(all.cells)),
-                                use.last.ij=FALSE, # Adds up the duplicates.
-                                giveCsparse=TRUE)
-            rownames(mat) <- all.genes
-            colnames(mat) <- all.cells
-            swapped[[i]] <- mat
+            swapped[[i]] <- makeCountMatrix(current$gene[curswap], current$cell[curswap], 
+                                            all.genes=all.genes, all.cells=all.cells)
         }
 
         last <- last + length(current[[1]])
