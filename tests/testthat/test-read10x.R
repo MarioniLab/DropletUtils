@@ -27,17 +27,23 @@ test_that("read10xResults works correctly", {
     sce10x <- read10xResults(tmpdir)
     alt.counts <- my.counts
     rownames(alt.counts) <- gene.ids
-    colnames(alt.counts) <- cell.ids
+    colnames(alt.counts) <- NULL
     expect_equal(counts(sce10x), alt.counts)
     expect_identical(rowData(sce10x)$ID, gene.ids)
     expect_identical(rowData(sce10x)$Symbol, gene.symb)
     expect_identical(sce10x$Sample, rep(tmpdir, ncol(my.counts)))
     expect_identical(sce10x$Barcode, cell.ids)
 
-    # Reading it in, twice!
+    # Reading it in, twice; and checking it makes sense.
     sce10x2 <- read10xResults(c(tmpdir, tmpdir))
     ref <- sce10x
     colnames(ref) <- NULL
     ref <- BiocGenerics::cbind(ref, ref)
     expect_equal(ref, sce10x2)
+
+    # Checking that column names work.
+    sce10x <- read10xResults(tmpdir, col.names=TRUE)
+    expect_identical(colnames(sce10x), sce10x$Barcode)
+    sce10x <- read10xResults(c(tmpdir, tmpdir), col.names=TRUE)
+    expect_identical(colnames(sce10x), NULL)
 })

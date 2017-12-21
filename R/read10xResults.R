@@ -1,4 +1,4 @@
-read10xResults <- function(samples) 
+read10xResults <- function(samples, col.names=FALSE) 
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.
 #
@@ -20,10 +20,10 @@ read10xResults <- function(samples)
         ## read sparse count matrix and cell barcodes.
         data_mat <- readMM(matrix.loc)
         data_mat <- as(data_mat, "dgCMatrix")
-        cell.names <- read.table(barcode.loc, header = FALSE, colClasses = "character")[[1]]
+        cell.names <- read.table(barcode.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE)[[1]]
 
         full_data[[i]] <- data_mat
-        gene_info_list[[i]] <- read.table(gene.loc, header = FALSE, colClasses = "character")
+        gene_info_list[[i]] <- read.table(gene.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE)
         cell_info_list[[i]] <- DataFrame(Sample = run, Barcode = cell.names)
     }
 
@@ -41,7 +41,7 @@ read10xResults <- function(samples)
 
     # Adding the cell data (only using as colnames if there is only 1 set - guaranteed unique).
     cell_info <- do.call(rbind, cell_info_list)
-    if (nsets == 1L) {
+    if (col.names && nsets == 1L) {
         colnames(full_data) <- cell_info$Barcode
     }
 
