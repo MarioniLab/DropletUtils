@@ -41,3 +41,28 @@ test_that("p-value calculations are correct", {
     expect_equal(stats$p.value, p)
     expect_identical(stats$limited, limited)
 })
+
+test_that("emptyDrops runs to completion", {
+    # Mocking up some counts.
+    source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
+    limit <- 100
+    e.out <- emptyDrops(my.counts, lower=limit, scale=1)
+    
+    totals <- colSums(my.counts)
+    expect_identical(totals, e.out$Total)
+    expect_true(all(is.na(e.out$Deviance[totals<=limit])))
+    expect_true(all(!is.na(e.out$Deviance[totals>limit])))
+    
+    K <- findKneePoint(my.counts, lower=limit)
+    expect_true(all(e.out$FDR[totals >= K]==0))
+
+    # Checking ambient tests.
+    e.out2 <- emptyDrops(my.counts, test.ambient=TRUE)
+    expect_identical(e.out$Total, e.out2$Total)
+    expect_identical(e.out$Deviance[totals>limit], e.out2$Deviance[totals>limit])
+    expect_true(all(!is.na(e.out2$Deviance[totals>0])))
+
+    # Checking scaling options.
+    e.out <- emptyDrops(my.counts, scale=0.6)
+    expect_true(all(e.out$FDR[totals >= K*0.6]==0))
+})

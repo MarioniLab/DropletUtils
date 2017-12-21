@@ -1,4 +1,4 @@
-testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=FALSE, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -6,16 +6,22 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, BPPARAM=Seria
 {
     discard <- rowSums(m) == 0
     m <- m[!discard,,drop=FALSE]
+    ncells <- ncol(m)
 
-    # Computing the average profile.
+    # Computing the average profile from the ambient cells.
     umi.sum <- colSums(m)
-    ambient <- (umi.sum <= lower) # lower => "T" in the text.
+    ambient <- umi.sum <= lower # lower => "T" in the text.
     ambient.cells <- m[,ambient]
     ambient.prof <- rowSums(ambient.cells)
     ambient.prop <- goodTuringProportions(ambient.prof)
 
-    # Removing cells from the ambient.
-    obs <- m[,!ambient,drop=FALSE]
+    # Removing supposed ambient cells from the matrix.
+    if (!test.ambient) {
+        keep <- !ambient
+    } else {
+        keep <- umi.sum > 0
+    }
+    obs <- m[,keep,drop=FALSE]
     obs.totals <- colSums(obs)
 
     # Calculating the likelihood ratio.
@@ -59,12 +65,12 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, BPPARAM=Seria
     p <- stats$p.value
 
     # Collating into some sensible output.
-    all.p <- all.lr <- all.exp <- rep(NA_real_, length(ambient))
-    all.lim <- rep(NA, length(ambient))
-    all.p[!ambient] <- p
-    all.lr[!ambient] <- obs.LR
-    all.exp[!ambient] <- expected.LR
-    all.lim[!ambient] <- limited
+    all.p <- all.lr <- all.exp <- rep(NA_real_, ncells)
+    all.lim <- rep(NA, ncells)
+    all.p[keep] <- p
+    all.lr[keep] <- obs.LR
+    all.exp[keep] <- expected.LR
+    all.lim[keep] <- limited
     return(DataFrame(Total=umi.sum, Deviance=all.lr, Expected=all.exp, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
 }
 
@@ -109,7 +115,7 @@ findKneePoint <- function(m, lower=100)
     return(unname(exp(threshold)))
 }
 
-emptyDrops <- function(m, lower=100, scale=5, ...) 
+emptyDrops <- function(m, lower=100, scale=1, ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 

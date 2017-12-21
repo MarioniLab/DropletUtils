@@ -8,19 +8,20 @@
 
 \usage{
 testEmptyDrops(m, lower=100, span=sqrt(2), npts=10000, 
-    BPPARAM=SerialParam()) 
+    test.ambient=FALSE, BPPARAM=SerialParam()) 
 
 findKneePoint(m, lower=100) 
 
-emptyDrops(m, lower=100, scale=5, ...) 
+emptyDrops(m, lower=100, scale=1, ...) 
 }
 
 \arguments{
 \item{m}{A real sparse matrix object, either a dgTMatrix or dgCMatrix.
 Columns represent barcoded droplets, rows represent cells.
 }
-\item{lower}{A numeric scalar specifying the lower bound on the total UMI count, below which all barcodes are assumed to correspond to empty droplets.}
+\item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{span, npts}{Numeric scalars controlling the accuracy of the p-value calculation.}
+\item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{scale}{A numeric scalar specifying the fold-change about the knee-point for the total UMI count, above which all barcodes are assumed to contain cells.}
 \item{...}{Further arguments to pass to \code{testEmptyDrops}.}
@@ -67,13 +68,13 @@ This ensures that cells with profiles that are very similar to the ambient pool 
 \item{\code{PValue}:}{Numeric, the p-value computed using the simulated droplets.}
 \item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{npts}.}
 }
-For droplets with counts below \code{lower}, \code{NA} values are returned for all fields.
+For droplets with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
 This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
 
 \code{findKneePoint} will return a numeric scalar containing the total UMI count at the knee point.
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
-Any droplets with counts larger than the product of \code{scale} and the knee point total count are assigned p-values of zero.
+Any droplets with counts larger than the product of \code{scale} and the knee point total count are assigned FDR values of zero.
 }
 
 \author{
@@ -81,33 +82,20 @@ Aaron Lun
 }
 
 \examples{
-library(Matrix)
-set.seed(100)
-ngenes <- 100
-ambient.prof <- runif(ngenes)
-ambient.counts <- matrix(rpois(ngenes*1000, lambda=ambient.prof), 
-    ncol=1000, nrow=ngenes)
-ambient.counts <- as(ambient.counts, "dgCMatrix")
-
-empty.counts <- matrix(rpois(ngenes*100, lambda=ambient.prof*20), 
-    ncol=100, nrow=ngenes)
-empty.counts <- as(empty.counts, "dgCMatrix")
-
-my.counts <- cbind(ambient.counts, empty.counts, 
-    rpois(ngenes, lambda=runif(ngenes)*20)) # An actual cell! 
+# Mocking up some data: generates a count matrix named 'my.counts'.
+source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
+class(my.counts)
 
 # Identify likely cell-containing droplets. 
-(out <- emptyDrops(my.counts))
+out <- emptyDrops(my.counts)
+out
+
+is.cell <- out$FDR <= 0.01
+sum(is.cell, na.rm=TRUE)
 
 # Check if p-values are lower-bounded by 'npts'
-# (increase 'npts' if Limited is TRUE and FDR <= 0.01 is FALSE)
-table(out$FDR <= 0.01, out$Limited)
-
-# Finds the transition between the small and large ambient pool.
-K <- findKneePoint(my.counts) 
-totals <- colSums(my.counts)
-plot(rank(-totals), totals, log="xy")
-abline(h=K, col="red")
+# (increase 'npts' if any Limited==TRUE and Sig==FALSE)
+table(Sig=is.cell, Limited=out$Limited)
 }
 
 \references{
