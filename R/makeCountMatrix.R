@@ -42,14 +42,14 @@ makeCountMatrix <- function(gene, cell, all.genes=NULL, all.cells=NULL, value=NU
         }
         val <- match(val, tab)
         if (any(is.na(val))) {
-            stop(sprintf("entry of '%s' not in 'all.%s'", err))
+            stop(sprintf("entry of '%s' not in 'all.%ss'", err, err))
         }
         nvals <- length(tab)
     } else {
         if (!is.null(tab)) {
             nvals <- length(tab)
             if (length(val) && length(tab)<max(val)) {
-                stop(sprintf("length of 'all.%s' is less than 'max(%s)'", err))
+                stop(sprintf("length of 'all.%ss' is less than 'max(%s)'", err, err))
             }
         } else {
             if (length(val)) { 
@@ -58,7 +58,7 @@ makeCountMatrix <- function(gene, cell, all.genes=NULL, all.cells=NULL, value=NU
                 nvals <- 0L
             }
         }
-        if (min(val)<=0) {
+        if (length(val) && min(val)<=0) {
             stop(sprintf("indices in '%s' must be positive", err))
         }
     }

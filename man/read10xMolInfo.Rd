@@ -45,7 +45,8 @@ based on code by Jonathan Griffiths
 }
 
 \seealso{
-\code{\link{sim10xMolInfo}}
+\code{\link{sim10xMolInfo}},
+\code{\link{makeCountMatrix}}
 }
 
 \examples{
