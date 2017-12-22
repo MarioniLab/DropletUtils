@@ -96,23 +96,20 @@ findKneePoint <- function(m, lower=100)
 {
     totals <- colSums(m)
     totals <- totals[totals >= lower]
-    
-    stuff <- rle(sort(totals, decreasing=TRUE))
+    totals <- sort(totals, decreasing=TRUE)
+
+    stuff <- rle(totals)
     y <- log(stuff$values)
-    x <- log(cumsum(stuff$lengths))
+    x <- log(cumsum(stuff$lengths) - (stuff$lengths-1)/2) # Get mid-rank of each run.
 
-    d1 <- diff(y)/diff(x)
-    x.mid <- x[-length(x)] 
-    d1FUN <- splinefun(x.mid, d1)
+    # Smoothing to avoid error multiplication upon differentiation.
+    fit <- smooth.spline(x, y)
+    d1 <- predict(fit, deriv=1)$y
+    d2 <- predict(fit, deriv=2)$y
 
-    d2 <- diff(d1)/diff(x.mid)
-    x.mid2 <- x.mid[-length(x.mid)] 
-    d2FUN <- splinefun(x.mid2, d2)
-
-    curvature <- abs(d2FUN(x.mid2))/(1 + d1FUN(x.mid2)^2)^1.5
-    x.pos <- x.mid2[which.max(curvature)]
-    threshold <- spline(x, y, xout=x.pos)$y
-    return(unname(exp(threshold)))
+    # Maximizing the curvature and returning the total at which this occurs.
+    curvature <- abs(d2)/(1 + d1^2)^1.5
+    return(exp(y[which.max(curvature)]))
 }
 
 emptyDrops <- function(m, lower=100, scale=1, ...) 
