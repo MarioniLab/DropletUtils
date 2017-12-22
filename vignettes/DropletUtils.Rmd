@@ -134,16 +134,41 @@ The above code will downsample the **reads** to 50% of the original coverage acr
 However, the function will return a matrix of **UMI counts**, so the final total count may not actually decrease if sequencing saturation is high!
 Users should use `downsampleMatrix` instead if they want to guarantee similar total counts after downsampling.
 
+# Computing barcode ranks
+
+A useful diagnostic for droplet-based data is the barcode rank plot, which shows the (log-)total UMI count for each barcode on the x-axis and the (log-)rank on the y-axis.
+This is effectively a transposed empirical cumulative density plot with log-transformed axes.
+It is useful as it allows users to examine the distribution of total counts across barcodes, focusing on those with the largest counts.
+Given a matrix `my.counts` containing UMI counts for **all** barcodes (e.g., from `raw_gene_bc_matrices` for 10X data), we can generate the plot as follows:
+
+```{r, echo=FALSE}
+source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
+```
+
+```{r}
+# Calculating the statistics.
+br.out <- barcodeRanks(my.counts)
+
+# Making a plot.
+plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
+o <- order(br.out$rank)
+lines(br.out$rank[o], br.out$fitted[o], col="red")
+abline(h=br.out$knee, col="dodgerblue", lty=2)
+abline(h=br.out$inflection, col="forestgreen", lty=2)
+legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
+    legend=c("knee", "inflection"))
+```
+
+The knee and inflection points on the curve provide an indication of the transition between two components of the total count distribution.
+This is assumed to represent the difference between empty droplets with little RNA and cell-containing droplets with much more RNA,
+though a more rigorous method for distinguishing between these two possibilities is discussed below.
+
 # Detecting empty droplets
 
 Empty droplets often contain RNA from the ambient solution, resulting in non-zero counts after debarcoding.
 The `emptyDrops` function is designed to distinguish between empty droplets and cells.
 It does so by testing each barcode's expression profile for significant deviation from the ambient profile.
-Given a matrix `my.counts` containing UMI counts for **all** barcodes (e.g., from `raw_gene_bc_matrices` for 10X data), we call:
-
-```{r, echo=FALSE}
-source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
-```
+Again, given a matrix `my.counts` containing UMI counts for **all** barcodes, we call:
 
 ```{r}
 set.seed(100)
@@ -169,25 +194,15 @@ If there are any entries with `FDR` above the desired threshold and `Limited==TR
 table(Limited=e.out$Limited, Significant=is.cell)
 ```
 
-We also recommend making some diagnostic plots such as the total count against the deviance (below left).
-Droplets detected as cells should show up with large deviances, though the example below is based on simulated data and is quite exaggerated.
-Another useful plot is the total count against the rank (right), to check that the knee point is correctly detected by the function.
+We recommend making some diagnostic plots such as the total count against the deviance.
+Droplets detected as cells should show up with large deviances _or_ very large total counts (based on the knee point reported by `barcodeRanks`).
+Note that the example below is based on simulated data and is quite exaggerated.
 
-```{r, fig.wide=TRUE}
-par(mfrow=c(1,2))
-
-# Total against the deviance.
+```{r}
 plot(e.out$Total, e.out$Deviance, col=ifelse(is.cell, "red", "black"),
     xlab="Total UMI count", ylab="Deviance")
 o <- order(e.out$Total)
 lines(e.out$Total[o], e.out$Expected[o], col="dodgerblue", lwd=2)
-
-# Finds the transition between the small and large droplets.
-K <- findKneePoint(my.counts)
-totals <- colSums(my.counts)
-plot(seq_along(totals), sort(totals, decreasing=TRUE), log="xy", 
-    xlab="Rank", ylab="Total UMI count", type="b")
-abline(h=K, col="red")
 ```
 
 # Removing the effect of barcode swapping
