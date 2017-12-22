@@ -7,7 +7,7 @@ importFrom("SummarizedExperiment", colData, rowData)
 importFrom("S4Vectors", DataFrame)
 importFrom("Matrix", colSums, rowSums, readMM, sparseMatrix)
 importFrom("methods", is, as)
-importFrom("stats", lowess, spline, p.adjust, aggregate, splinefun, rpois)
+importFrom("stats", lowess, spline, p.adjust, aggregate, rpois, smooth.spline, predict)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
 importFrom("utils", read.table)
@@ -18,5 +18,6 @@ export(
     read10xResults, read10xMolInfo, 
     downsampleMatrix, downsampleReads,
     swappedDrops, sim10xMolInfo,
-    testEmptyDrops, findKneePoint, emptyDrops
+    barcodeRanks,
+    testEmptyDrops, emptyDrops
 )

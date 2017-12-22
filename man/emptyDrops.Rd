@@ -1,7 +1,6 @@
 \name{emptyDrops}
 \alias{emptyDrops}
 \alias{testEmptyDrops}
-\alias{findKneePoint}
 
 \title{Identify empty droplets}
 \description{Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.}
@@ -10,9 +9,8 @@
 testEmptyDrops(m, lower=100, span=sqrt(2), npts=10000, 
     test.ambient=FALSE, BPPARAM=SerialParam()) 
 
-findKneePoint(m, lower=100) 
-
-emptyDrops(m, lower=100, scale=1, ...) 
+emptyDrops(m, lower=100, scale=1, test.args=list(),
+    barcode.args=list()) 
 }
 
 \arguments{
@@ -24,7 +22,8 @@ Columns represent barcoded droplets, rows represent cells.
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{scale}{A numeric scalar specifying the fold-change about the knee-point for the total UMI count, above which all barcodes are assumed to contain cells.}
-\item{...}{Further arguments to pass to \code{testEmptyDrops}.}
+\item{test.args}{Further arguments to pass to \code{testEmptyDrops}.}
+\item{barcode.args}{Further arguments to pass to \code{\link{barcodeRanks}}.}
 }
 
 \details{
@@ -46,16 +45,11 @@ The number of simulated droplets is chosen such that there will always be \code{
 Increasing \code{npts} will improve the precision and reproducibility of the p-values, at the cost of increasing the run-time.
 It will also reduce the lower bound on the permutation p-values (see Phipson and Smyth, 2010).
 
-The \code{findKneePoint} function will examine the curve of log-total count against the log-rank,
-and will identify the knee point, i.e., the point on the curve where the curvature is maximized.
-The total count at the knee point corresponds to a sharp transition between two components of the total count distribution, 
-presumably reflecting the difference between empty droplets with little RNA and cell-containing droplets with much more RNA.
-
-The \code{emptyDrops} function combines the results from the two other functions to identify droplets that are likely to be cells.
-The Benjamini-Hochberg correction is applied to the p-values from \code{testEmptyDrops} to correct for multiple testing.
-Cells can then be defined by taking all droplets with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
-This function will also call \code{findKneePoint} to obtain a total count \code{K}, and droplets that contain more than \code{scale*K} total counts are always retained.
+The \code{emptyDrops} function combines the test results with distributional information from \code{\link{barcodeRanks}} to identify droplets that are likely to be cells.
+Specifically, the total count at the knee point \code{K} is determined, and droplets that contain more than \code{scale*K} total counts are always retained.
 This ensures that cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
+The Benjamini-Hochberg correction is also applied to the p-values from \code{testEmptyDrops} to correct for multiple testing.
+Cells can then be defined by taking all droplets with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
 }
 
 \value{
@@ -70,8 +64,6 @@ This ensures that cells with profiles that are very similar to the ambient pool 
 }
 For droplets with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
 This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
-
-\code{findKneePoint} will return a numeric scalar containing the total UMI count at the knee point.
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
 Any droplets with counts larger than the product of \code{scale} and the knee point total count are assigned FDR values of zero.
@@ -104,3 +96,6 @@ Permutation P-values should never be zero: calculating exact P-values when permu
 \emph{Stat. Appl. Genet. Mol. Biol.} 9:Article 39.
 }
 
+\seealso{
+\code{\link{barcodeRanks}}
+}

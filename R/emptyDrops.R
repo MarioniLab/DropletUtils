@@ -88,39 +88,15 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     return(list(limited=limited, p.value=p))
 }
 
-findKneePoint <- function(m, lower=100) 
-# A function to identify the knee point from a reverse cumulative distribution.
-# 
-# written by Aaron Lun
-# created 7 August 2017    
-{
-    totals <- colSums(m)
-    totals <- totals[totals >= lower]
-    totals <- sort(totals, decreasing=TRUE)
-
-    stuff <- rle(totals)
-    y <- log(stuff$values)
-    x <- log(cumsum(stuff$lengths) - (stuff$lengths-1)/2) # Get mid-rank of each run.
-
-    # Smoothing to avoid error multiplication upon differentiation.
-    fit <- smooth.spline(x, y)
-    d1 <- predict(fit, deriv=1)$y
-    d2 <- predict(fit, deriv=2)$y
-
-    # Maximizing the curvature and returning the total at which this occurs.
-    curvature <- abs(d2)/(1 + d1^2)^1.5
-    return(exp(y[which.max(curvature)]))
-}
-
-emptyDrops <- function(m, lower=100, scale=1, ...) 
+emptyDrops <- function(m, lower=100, scale=1, test.args=list(), barcode.args=list()) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
 # created 7 August 2017
 {
-    stats <- testEmptyDrops(m, lower=lower, ...)
-    kneept <- findKneePoint(m, lower=lower)
+    stats <- do.call(testEmptyDrops, c(list(m, lower=lower), test.args))
+    kneept <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))$knee
     always <- stats$Total >= kneept*scale
     tmp <- stats$PValue
     tmp[always] <- 0

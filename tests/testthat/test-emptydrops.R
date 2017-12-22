@@ -52,12 +52,19 @@ test_that("emptyDrops runs to completion", {
     expect_identical(totals, e.out$Total)
     expect_true(all(is.na(e.out$Deviance[totals<=limit])))
     expect_true(all(!is.na(e.out$Deviance[totals>limit])))
-    
-    K <- findKneePoint(my.counts, lower=limit)
+
+    # Testing barcode ranks.    
+    brout <- barcodeRanks(my.counts, lower=limit)
+    expect_identical(brout$total, totals)
+    expect_identical(brout$rank, rank(-totals, ties.method="average"))
+    expect_true(all(is.na(brout$fitted[totals <= limit])))
+    expect_true(all(!is.na(brout$fitted[totals > limit])))
+
+    K <- brout$knee
     expect_true(all(e.out$FDR[totals >= K]==0))
 
     # Checking ambient tests.
-    e.out2 <- emptyDrops(my.counts, test.ambient=TRUE)
+    e.out2 <- emptyDrops(my.counts, test.args=list(test.ambient=TRUE))
     expect_identical(e.out$Total, e.out2$Total)
     expect_identical(e.out$Deviance[totals>limit], e.out2$Deviance[totals>limit])
     expect_true(all(!is.na(e.out2$Deviance[totals>0])))
