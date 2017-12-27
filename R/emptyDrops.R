@@ -42,21 +42,8 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     obs.P <- numeric(length(obs.totals))
     obs.P[by.col$Col] <- by.col$x
 
-    # Calculating the p-values using a Monte Carlo approach.
-    o <- order(obs.totals, obs.P)
-    re.P <- obs.P[o]
-    re.totals <- rle(obs.totals[o]) # Ensure identity upon comparison.
-
-    nworkers <- bpworkers(BPPARAM)
-    per.core <- rep(ceiling(npts/nworkers), nworkers)
-    per.core[1] <- npts - sum(per.core[-1]) # Making sure that we get exactly 'npts' iterations.
-
-    out.values <- bplapply(per.core, FUN=.monte_carlo_pval, total.val=re.totals$values,
-                           total.len=re.totals$lengths, P=re.P, ambient=ambient.prop, BPPARAM=BPPARAM)
-    n.above <- Reduce("+", out.values)
-    n.above[o] <- n.above
-
     # Computing a p-value for each observed probability 
+    n.above <- .permute_counter(totals=obs.totals, probs=obs.P, ambient=ambient.prop, iter=npts, BPPARAM=BPPARAM)
     limited <- n.above==0L
     pval <- (n.above+1)/(npts+1)
 
@@ -66,11 +53,29 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     all.p[keep] <- pval
     all.lr[keep] <- obs.P + lfactorial(obs.totals)
     all.lim[keep] <- limited
-    return(DataFrame(Total=umi.sum, Probability=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
+    return(DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
+}
+
+.permute_counter <- function(totals, probs, ambient, iter, BPPARAM=SerialParam()) 
+# Calculating the p-values using a Monte Carlo approach.
+{
+    o <- order(totals, probs)
+    re.P <- probs[o]
+    re.totals <- rle(totals[o]) # Ensure identity upon comparison.
+
+    nworkers <- bpworkers(BPPARAM)
+    per.core <- rep(ceiling(iter/nworkers), nworkers)
+    per.core[1] <- iter - sum(per.core[-1]) # Making sure that we get the exact number of iterations.
+
+    out.values <- bplapply(per.core, FUN=.monte_carlo_pval, total.val=re.totals$values,
+                           total.len=re.totals$lengths, P=re.P, ambient=ambient, BPPARAM=BPPARAM)
+    n.above <- Reduce("+", out.values)
+    n.above[o] <- n.above
+    return(n.above)
 }
 
 .monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations) { 
-    .Call(cxx_calculate_pval, total.val, total.len, P, ambient, iterations) 
+    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
 }
 
 emptyDrops <- function(m, lower=100, scale=1, test.args=list(), barcode.args=list()) 

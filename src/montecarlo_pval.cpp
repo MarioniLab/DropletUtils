@@ -1,6 +1,6 @@
 #include "DropletUtils.h"
 
-SEXP calculate_pval (SEXP _totalval, SEXP _totallen, SEXP _P, SEXP _ambient, SEXP _iter) { 
+SEXP montecarlo_pval (SEXP _totalval, SEXP _totallen, SEXP _P, SEXP _ambient, SEXP _iter) { 
     BEGIN_RCPP
     Rcpp::IntegerVector totalval(_totalval);
     Rcpp::IntegerVector totallen(_totallen);
@@ -38,6 +38,7 @@ SEXP calculate_pval (SEXP _totalval, SEXP _totallen, SEXP _P, SEXP _ambient, SEX
     std::vector<double> cumprob(ngenes);
     std::partial_sum(ambient.begin(), ambient.end(), cumprob.begin());
     const double sumprob=cumprob.back();
+    Rcpp::RNGScope rng; // after the IntegerVector!
 
     // Looping across iterations. 
     for (int it=0; it<niter; ++it) {
@@ -63,7 +64,7 @@ SEXP calculate_pval (SEXP _totalval, SEXP _totallen, SEXP _P, SEXP _ambient, SEX
             }
 
             // Figuring out where it lies in the probability vector.
-            size_t higher=std::upper_bound(pIt, pIt+curlen, curp) - pIt;
+            size_t higher=std::lower_bound(pIt, pIt+curlen, curp) - pIt;
             if (higher<curlen) { 
                 ++(*(abIt+higher));
             }

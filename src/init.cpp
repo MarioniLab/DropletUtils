@@ -9,7 +9,7 @@ extern "C" {
 static const R_CallMethodDef all_call_entries[] = {
     REGISTER(downsample_matrix, 3),
     REGISTER(downsample_runs, 4),
-    REGISTER(calculate_pval, 5),
+    REGISTER(montecarlo_pval, 5),
     REGISTER(find_swapped, 3),
     REGISTER(get_cell_barcodes, 3),
     {NULL, NULL, 0}
