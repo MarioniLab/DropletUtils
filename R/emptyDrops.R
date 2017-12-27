@@ -1,4 +1,4 @@
-testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=FALSE, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -43,9 +43,9 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     obs.P[by.col$Col] <- by.col$x
 
     # Computing a p-value for each observed probability 
-    n.above <- .permute_counter(totals=obs.totals, probs=obs.P, ambient=ambient.prop, iter=npts, BPPARAM=BPPARAM)
+    n.above <- .permute_counter(totals=obs.totals, probs=obs.P, ambient=ambient.prop, iter=niters, BPPARAM=BPPARAM)
     limited <- n.above==0L
-    pval <- (n.above+1)/(npts+1)
+    pval <- (n.above+1)/(niters+1)
 
     # Collating into some sensible output.
     all.p <- all.lr <- all.exp <- rep(NA_real_, ncells)

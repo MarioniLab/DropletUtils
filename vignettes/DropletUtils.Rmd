@@ -194,15 +194,13 @@ If there are any entries with `FDR` above the desired threshold and `Limited==TR
 table(Limited=e.out$Limited, Significant=is.cell)
 ```
 
-We recommend making some diagnostic plots such as the total count against the deviance.
-Droplets detected as cells should show up with large deviances _or_ very large total counts (based on the knee point reported by `barcodeRanks`).
+We recommend making some diagnostic plots such as the total count against the negative log-probability. 
+Droplets detected as cells should show up with large negative log-probabilities _or_ very large total counts (based on the knee point reported by `barcodeRanks`).
 Note that the example below is based on simulated data and is quite exaggerated.
 
 ```{r}
-plot(e.out$Total, e.out$Deviance, col=ifelse(is.cell, "red", "black"),
-    xlab="Total UMI count", ylab="Deviance")
-o <- order(e.out$Total)
-lines(e.out$Total[o], e.out$Expected[o], col="dodgerblue", lwd=2)
+plot(e.out$Total, -e.out$LogProb, col=ifelse(is.cell, "red", "black"),
+    xlab="Total UMI count", ylab="-Log Probability")
 ```
 
 # Removing the effect of barcode swapping

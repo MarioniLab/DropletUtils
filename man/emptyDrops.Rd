@@ -6,8 +6,8 @@
 \description{Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.}
 
 \usage{
-testEmptyDrops(m, lower=100, span=sqrt(2), npts=10000, 
-    test.ambient=FALSE, BPPARAM=SerialParam()) 
+testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
+    BPPARAM=SerialParam()) 
 
 emptyDrops(m, lower=100, scale=1, test.args=list(),
     barcode.args=list()) 
@@ -18,7 +18,7 @@ emptyDrops(m, lower=100, scale=1, test.args=list(),
 Columns represent barcoded droplets, rows represent cells.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
-\item{span, npts}{Numeric scalars controlling the accuracy of the p-value calculation.}
+\item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{scale}{A numeric scalar specifying the fold-change about the knee-point for the total UMI count, above which all barcodes are assumed to contain cells.}
@@ -27,46 +27,38 @@ Columns represent barcoded droplets, rows represent cells.
 }
 
 \details{
-The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the droplets with total UMI counts below \code{lower}.
+The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts below \code{lower}.
 This assumes that a cell-containing droplet would generally be able to achieve some minimum count.
-The low-count droplets are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link[edgeR]{goodTuringProportions}}. 
-The count vector for each droplet above \code{lower} is then tested for a significant deviation from these proportions,
-under a Poisson sampling scheme for inclusion of transcript molecules into a droplet.
+Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link[edgeR]{goodTuringProportions}}. 
+The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
 
-The distribution of the deviances under the null Poisson model follows a chi-squared distribution based on the saddlepoint approximation.
-In practice, this approximation fails at low counts and a parametric simulation is instead required to obtain a null distribution.
-This is done by simulating Poisson counts for droplets with the same composition as the ambient pool but at a range of total UMI counts.
-The p-value for each real droplet is calculated by taking all simulated droplets within \code{span}-fold of the total UMI count,
-and calculating the proportion of those simulated droplets that have deviances greater than the observed value.
+The null hypothesis is that transcript molecules are included into droplets by multinomial sampling from the ambient profile.
+For each barcode, the probability of obtaining its count vector based on the null model is computed.
+Then, \code{niters} count vectors are simulated from the null model.
+The proportion of simulated vectors with probabilities lower than the observed multinomial probability for that barcode is used to calculate the p-value.
+We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate. 
 
-For this calculation, a \code{span} value is used as the variance of the deviance is dependent on the total count.
-Reducing the \code{span} will yield a more accurate p-value for each droplet.
-The number of simulated droplets is chosen such that there will always be \code{npts} values within \code{span} at any total UMI count above \code{lower}.
-Increasing \code{npts} will improve the precision and reproducibility of the p-values, at the cost of increasing the run-time.
-It will also reduce the lower bound on the permutation p-values (see Phipson and Smyth, 2010).
-
-The \code{emptyDrops} function combines the test results with distributional information from \code{\link{barcodeRanks}} to identify droplets that are likely to be cells.
-Specifically, the total count at the knee point \code{K} is determined, and droplets that contain more than \code{scale*K} total counts are always retained.
+The \code{emptyDrops} function combines the test results with distributional information from \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
+Specifically, the total count at the knee point \code{K} is determined, and barcodes that contain more than \code{scale*K} total counts are always retained.
 This ensures that cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
 The Benjamini-Hochberg correction is also applied to the p-values from \code{testEmptyDrops} to correct for multiple testing.
-Cells can then be defined by taking all droplets with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
+Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
 }
 
 \value{
 \code{testEmptyDrops} will return a DataFrame with the following components:
 \describe{
-\item{\code{Total}:}{Integer, the total UMI count for each droplet.}
+\item{\code{Total}:}{Integer, the total UMI count for each barcode.}
 
-\item{\code{Deviance}:}{Numeric, the observed deviance of the droplet count vector from the ambient profile.}
-\item{\code{Expected}:}{Numeric, the expected deviance under a null model of Poisson sampling.}
-\item{\code{PValue}:}{Numeric, the p-value computed using the simulated droplets.}
+\item{\code{LogProb}:}{Numeric, the log-probability of observing the barcode's count vector under the null model.}
+\item{\code{PValue}:}{Numeric, the Monte Carlo p-value against the null model.}
 \item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{npts}.}
 }
-For droplets with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
+For barcodes with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
 This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
-Any droplets with counts larger than the product of \code{scale} and the knee point total count are assigned FDR values of zero.
+Any barcodes with counts larger than the product of \code{scale} and the knee point total count are assigned FDR values of zero.
 }
 
 \author{
