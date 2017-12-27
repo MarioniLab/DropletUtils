@@ -9,7 +9,7 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     ncells <- ncol(m)
 
     # Computing the average profile from the ambient cells.
-    umi.sum <- colSums(m)
+    umi.sum <- as.integer(round(colSums(m)))
     ambient <- umi.sum <= lower # lower => "T" in the text.
     ambient.cells <- m[,ambient]
     ambient.prof <- rowSums(ambient.cells)
@@ -19,12 +19,12 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     if (!test.ambient) {
         keep <- !ambient
     } else {
-        keep <- umi.sum > 0
+        keep <- umi.sum > 0L
     }
     obs <- m[,keep,drop=FALSE]
-    obs.totals <- colSums(obs)
+    obs.totals <- umi.sum[keep]
 
-    # Calculating the likelihood ratio.
+    # Calculating the log-multinomial probability for each cell.
     if (is(obs, "dgCMatrix")) {
         i <- obs@i + 1L
         j <- rep(seq_len(ncol(obs)), diff(obs@p)) 
@@ -36,56 +36,41 @@ testEmptyDrops <- function(m, lower=100, span=sqrt(2), npts=10000, test.ambient=
     } else {
         stop("unsupported matrix type")
     }
-    
-    p.n0 <- x * log(x/(ambient.prop[i]*obs.totals[j])) 
+   
+    p.n0 <- x * log(ambient.prop[i]) - lfactorial(x)
     by.col <- aggregate(p.n0, list(Col=j), sum)
-    obs.LR <- numeric(length(obs.totals))
-    obs.LR[by.col$Col] <- by.col$x
+    obs.P <- numeric(length(obs.totals))
+    obs.P[by.col$Col] <- by.col$x
 
-    # Computing a simulation with "npts" entries for any "span"-fold interval around the interrogation point..
-    span <- log2(span)
-    lower.pt <- log2(min(obs.totals))-span
-    upper.pt <- log2(max(obs.totals))+span
-    S <- round(npts * (upper.pt - lower.pt)/(2*span)) # npts => R in the text.
-    sim.totals <- 2^seq(from=lower.pt, to=upper.pt, length.out=S)
+    # Calculating the p-values using a Monte Carlo approach.
+    o <- order(obs.totals, obs.P)
+    re.P <- obs.P[o]
+    re.totals <- rle(obs.totals[o]) # Ensure identity upon comparison.
 
-    # Computing the deviance estimate for simulated runs.
-    sim.LR <- bpvec(sim.totals, FUN=.simulate_dev, prop=ambient.prop, BPPARAM=BPPARAM)
+    nworkers <- bpworkers(BPPARAM)
+    per.core <- rep(ceiling(npts/nworkers), nworkers)
+    per.core[1] <- npts - sum(per.core[-1]) # Making sure that we get exactly 'npts' iterations.
 
-    # Modelling the total-dependent trend in the simulated LR (and the variance around the trend).
-    log.totals <- log2(sim.totals)
-    trend.fit <- lowess(x=log.totals, y=sim.LR, f=0.2)
-    sim.spread <- sim.LR/trend.fit$y
-    expected.LR <- spline(trend.fit$x, trend.fit$y, xout=log2(obs.totals))$y  
-    obs.spread <- obs.LR/expected.LR
+    out.values <- bplapply(per.core, FUN=.monte_carlo_pval, total.val=re.totals$values,
+                           total.len=re.totals$lengths, P=re.P, ambient=ambient.prop, BPPARAM=BPPARAM)
+    n.above <- Reduce("+", out.values)
+    n.above[o] <- n.above
 
-    # Computing a p-value for each observed value.
-    stats <- .compute_P(obs.totals, obs.spread, sim.totals, sim.spread, span)
-    limited <- stats$limited
-    p <- stats$p.value
+    # Computing a p-value for each observed probability 
+    limited <- n.above==0L
+    pval <- (n.above+1)/(npts+1)
 
     # Collating into some sensible output.
     all.p <- all.lr <- all.exp <- rep(NA_real_, ncells)
     all.lim <- rep(NA, ncells)
-    all.p[keep] <- p
-    all.lr[keep] <- obs.LR
-    all.exp[keep] <- expected.LR
+    all.p[keep] <- pval
+    all.lr[keep] <- obs.P + lfactorial(obs.totals)
     all.lim[keep] <- limited
-    return(DataFrame(Total=umi.sum, Deviance=all.lr, Expected=all.exp, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
+    return(DataFrame(Total=umi.sum, Probability=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
 }
 
-.simulate_dev <- function(totals, prop) {
-    .Call(cxx_calculate_random_dev, totals, prop)
-}
-
-.compute_P <- function(obs.totals, obs.spread, sim.totals, sim.spread, span) {
-    o <- order(obs.totals, obs.spread)
-    perm.stats <- .Call(cxx_calculate_pval, obs.totals[o], obs.spread[o], sim.totals, sim.spread, 2^-span)
-    perm.stats[[1]][o] <- perm.stats[[1]]
-    perm.stats[[2]][o] <- perm.stats[[2]]
-    limited <- perm.stats[[1]]==0L
-    p <- (perm.stats[[1]]+1)/(perm.stats[[2]]+1)
-    return(list(limited=limited, p.value=p))
+.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations) { 
+    .Call(cxx_calculate_pval, total.val, total.len, P, ambient, iterations) 
 }
 
 emptyDrops <- function(m, lower=100, scale=1, test.args=list(), barcode.args=list()) 
