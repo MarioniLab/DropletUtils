@@ -78,7 +78,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, BPPAR
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
 }
 
-emptyDrops <- function(m, lower=100, scale=1, test.args=list(), barcode.args=list()) 
+emptyDrops <- function(m, lower=100, retain=NULL, test.args=list(), barcode.args=list()) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 
@@ -86,8 +86,10 @@ emptyDrops <- function(m, lower=100, scale=1, test.args=list(), barcode.args=lis
 # created 7 August 2017
 {
     stats <- do.call(testEmptyDrops, c(list(m, lower=lower), test.args))
-    kneept <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))$knee
-    always <- stats$Total >= kneept*scale
+    if (is.null(retain)) {
+        retain <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))$knee
+    }
+    always <- stats$Total >= retain
     tmp <- stats$PValue
     tmp[always] <- 0
     stats$FDR <- p.adjust(tmp, method="BH")

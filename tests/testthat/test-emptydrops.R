@@ -95,7 +95,7 @@ test_that("emptyDrops runs to completion", {
     # Mocking up some counts.
     source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
     limit <- 100
-    e.out <- emptyDrops(my.counts, lower=limit, scale=1)
+    e.out <- emptyDrops(my.counts, lower=limit)
     
     totals <- colSums(my.counts)
     expect_identical(as.integer(totals), e.out$Total)
@@ -127,7 +127,7 @@ test_that("emptyDrops runs to completion", {
     expect_identical(e.out$Deviance[totals>limit], e.out2$Deviance[totals>limit])
     expect_true(all(!is.na(e.out2$LogProb[totals>0])))
 
-    # Checking scaling options.
-    e.out <- emptyDrops(my.counts, scale=0.6)
+    # Checking automatic retention options.
+    e.out <- emptyDrops(my.counts, retain=K*0.6)
     expect_true(all(e.out$FDR[totals >= K*0.6]==0))
 })

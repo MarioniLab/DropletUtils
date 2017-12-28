@@ -9,7 +9,7 @@
 testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
     BPPARAM=SerialParam()) 
 
-emptyDrops(m, lower=100, scale=1, test.args=list(),
+emptyDrops(m, lower=100, retain=NULL, test.args=list(),
     barcode.args=list()) 
 }
 
@@ -21,7 +21,7 @@ Columns represent barcoded droplets, rows represent cells.
 \item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
-\item{scale}{A numeric scalar specifying the fold-change about the knee-point for the total UMI count, above which all barcodes are assumed to contain cells.}
+\item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
 \item{test.args}{Further arguments to pass to \code{testEmptyDrops}.}
 \item{barcode.args}{Further arguments to pass to \code{\link{barcodeRanks}}.}
 }
@@ -39,17 +39,22 @@ The proportion of simulated vectors with probabilities lower than the observed m
 We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate. 
 
 The \code{emptyDrops} function combines the test results with distributional information from \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
-Specifically, the total count at the knee point \code{K} is determined, and barcodes that contain more than \code{scale*K} total counts are always retained.
+Specifically, the total count \code{K} at the knee point is determined, and barcodes that contain more than \code{K} total counts are always retained.
 This ensures that cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
+If \code{retain} is specified, this is used instead of \code{K}, which may be useful if the knee point was not correctly identified in complex log-rank curves.
+Users can set \code{retain=Inf} to disable automatic retention of barcodes with large totals.
+
 The Benjamini-Hochberg correction is also applied to the p-values from \code{testEmptyDrops} to correct for multiple testing.
 Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
+All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
+This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
+Nonetheless, their original Monte Carlo p-values are still reported in the output.
 }
 
 \value{
 \code{testEmptyDrops} will return a DataFrame with the following components:
 \describe{
 \item{\code{Total}:}{Integer, the total UMI count for each barcode.}
-
 \item{\code{LogProb}:}{Numeric, the log-probability of observing the barcode's count vector under the null model.}
 \item{\code{PValue}:}{Numeric, the Monte Carlo p-value against the null model.}
 \item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{npts}.}
@@ -58,7 +63,6 @@ For barcodes with counts below \code{lower}, \code{NA} values are returned for a
 This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
-Any barcodes with counts larger than the product of \code{scale} and the knee point total count are assigned FDR values of zero.
 }
 
 \author{
