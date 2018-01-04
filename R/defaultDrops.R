@@ -6,11 +6,11 @@ defaultDrops <- function(m, expected = 3000, upper.quant = 0.99, lower.prop = 0.
 {
   
   if(upper.quant > 1 | upper.quant < 0){
-    stop("'upper' should be a numeric value between 0 and 1")
+    stop("'upper.quant' should be a numeric value between 0 and 1")
   }
   
   if(lower.prop > 1 | lower.prop < 0){
-    stop("'lower' should be a numeric value between 0 and 1")
+    stop("'lower.prop' should be a numeric value between 0 and 1")
   }
   
   libs <- colSums(m)
