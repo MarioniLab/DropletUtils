@@ -14,8 +14,8 @@ Columns represent barcoded droplets, rows represent cells.
 The matrix should correspond to an individual sample.
 }
 \item{expected}{A numeric scalar specifying the expected number of cells in this sample, as specified in the call to CellRanger.}
-\item{upper.quant}{A numeric scalar between 0 and 1 specifying the quantile of the top \code{exp.cells} to consider for the first step of the algorithm}
-\item{lower.prop}{A numeric scalar between 0 and 1 specifying the fraction of molecules of the \code{upper} quantile result for a barcode to be called as a cell}
+\item{upper.quant}{A numeric scalar between 0 and 1 specifying the quantile of the top \code{expected} to consider for the first step of the algorithm}
+\item{lower.prop}{A numeric scalar between 0 and 1 specifying the fraction of molecules of the \code{upper.quant} quantile result for a barcode to be called as a cell}
 }
 
 \details{
