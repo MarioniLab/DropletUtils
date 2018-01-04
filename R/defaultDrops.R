@@ -1,4 +1,4 @@
-cellrangerCall <- function(m, exp.cells = 3000, upper = 0.99, lower = 0.1)
+defaultDrops <- function(m, exp.cells = 3000, upper.pct = 0.99, lower.prop = 0.1)
 # A function to call cells on library size, as performed by CellRanger
 # 
 # written by Jonathan Griffiths
@@ -13,9 +13,9 @@ cellrangerCall <- function(m, exp.cells = 3000, upper = 0.99, lower = 0.1)
     stop("'lower' should be a numeric value between 0 and 1")
   }
   
-  libs <- Matrix::colSums(m)
+  libs <- colSums(m)
   
-  top <- libs[order(libs, decreasing = TRUE)][1:exp.cells]
+  top <- libs[order(libs, decreasing = TRUE)[seq_len(exp.cells)]]
   
   threshold <- quantile(top, upper)*lower
   

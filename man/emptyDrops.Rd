@@ -93,7 +93,6 @@ Permutation P-values should never be zero: calculating exact P-values when permu
 }
 
 \seealso{
-\code{\link{barcodeRanks}}
-
+\code{\link{barcodeRanks}}, 
 \code{\link{defaultDrops}}
 }
