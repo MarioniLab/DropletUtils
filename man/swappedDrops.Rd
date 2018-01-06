@@ -52,13 +52,14 @@ with modifications by Aaron Lun
 }
 
 \seealso{
-\code{\link{sim10xMolInfo}},
 \code{\link{read10xMolInfo}}
 }
 
 \examples{
-curfiles <- sim10xMolInfo(prefix=tempfile(), nsamples=3)
+# Mocking up some 10x HDF5-formatted data, with swapping.
+curfiles <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=3)
 
+# Obtaining count matrices with swapping removed.
 out <- swappedDrops(curfiles)
 lapply(out, dim)
 

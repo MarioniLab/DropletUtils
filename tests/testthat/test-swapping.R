@@ -50,7 +50,7 @@ library(Matrix)
 set.seed(5717)
 test_that("Removal of swapped drops works correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3,
+        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3,
                                 ngenes=ngenes, nmolecules=nmolecules)
 
         # Figuring out the correspondence between cell ID and the reported barcode.
@@ -118,13 +118,13 @@ test_that("Removal of swapped drops works correctly", {
 })
 
 test_that("swappedDrops functions correctly for silly inputs", {
-    output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
     deswapped <- swappedDrops(output)
     for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(ngenes, 0L))
     }   
 
-    output <- sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
     deswapped <- swappedDrops(output)
     for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(0L, 0L))

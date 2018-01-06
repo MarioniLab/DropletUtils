@@ -8,7 +8,7 @@ barcode <- 4L
 
 set.seed(909)
 test_that("Extraction of molecule information fields works correctly", {
-    output <- sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode, nsamples=3)
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode, nsamples=3)
     for (i in seq_along(output$files)) {
         ref.original <- output$original[output$original$sample==i,]        
         ref.swapped <- output$swapped[output$swapped$sample==i,]
@@ -40,7 +40,7 @@ set.seed(908)
 test_that("Automatic detection of the molecule information fields works correctly", {
     # Checking automatic detection of the barcode length works.
     for (blen in c(4L, 6L, 8L)) { 
-        output <- sim10xMolInfo(tmpdir, barcode=blen)
+        output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=blen)
         current <- read10xMolInfo(output)
         expect_true(all(nchar(current$data$cell)==blen))
     }
@@ -48,7 +48,7 @@ test_that("Automatic detection of the molecule information fields works correctl
 
 set.seed(907)
 test_that("read10xMolInfo works with silly inputs containing no molecules", {
-    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode=barcode)
+    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode=barcode)
     out <- read10xMolInfo(out.paths, barcode=barcode)
     expect_identical(nrow(out$data), 0L)
     expect_identical(length(out$genes), ngenes)
@@ -58,7 +58,7 @@ test_that("read10xMolInfo works with silly inputs containing no molecules", {
     expect_identical(out, out2)
    
     # Checking  that it behaves when there aren't even any genes. 
-    out.paths <- sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
+    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
     out <- read10xMolInfo(out.paths, barcode=barcode)
     expect_identical(nrow(out$data), 0L)
     expect_identical(length(out$genes), 0L)

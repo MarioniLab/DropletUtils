@@ -82,11 +82,15 @@ Obviously, this only makes sense when the same set of genes is being used across
 _CellRanger_ will also produce a molecule information file (`molecule_info.h5`) that contains... well, information about the transcript molecules.
 This includes the UMI sequence, the cell barcode sequence, the gene to which it was assigned, and the number of reads covering the molecule.
 (The use of UMIs allows reads from different PCR amplicons to be unambiguously assigned to the same original molecule.)
-We can load this information into memory using the `read10xMolInfo` function:
+For demonstration purposes, we create an example molecule information file below:
 
-```{r, echo=FALSE}
-mol.info.file <- sim10xMolInfo(tempfile(), nsamples=1)
+```{r}
+set.seed(1000)
+mol.info.file <- DropletUtils:::sim10xMolInfo(tempfile())
+mol.info.file
 ```
+
+We can subsequently load this information into our R session using the `read10xMolInfo` function:
 
 ```{r}
 mol.info <- read10xMolInfo(mol.info.file)
@@ -206,19 +210,22 @@ plot(e.out$Total, -e.out$LogProb, col=ifelse(is.cell, "red", "black"),
 # Removing the effect of barcode swapping
 
 Barcode swapping is a phenomenon that occurs upon multiplexing samples on the Illumina 4000 sequencer.
-Specifically, molecules from one sample are incorrectly labelled with _sample_ barcodes from another sample, resulting in their misassignment upon demultiplexing.
-Fortunately, droplet experiments provide a unique opportunity to eliminate this effect.
-This is based on the assumption that it is effectively impossible to generate multiple molecules with the same combination of cell barcode, assigned gene and UMI sequence.
+Molecules from one sample are incorrectly labelled with _sample_ barcodes from another sample, resulting in their misassignment upon demultiplexing.
+Fortunately, droplet experiments provide a unique opportunity to eliminate this effect,
+by assuming that it is effectively impossible to generate multiple molecules with the same combination of cell barcode, assigned gene and UMI sequence.
 Thus, any molecules with the same combination across multiple samples are likely to arise from barcode swapping.
 
-The `swappedDrops` function will identify overlapping combinations in the molecule information files of all multiplexed samples sequenced on the same run.
-It will then remove these combinations and return "cleaned" UMI count matrices for all samples to use in downstream analyses.
-This is demonstrated below, assuming a vector of file paths in `mult.mol.info`:
+The `swappedDrops` function will identify overlapping combinations in the molecule information files of all multiplexed 10X samples sequenced on the same run.
+It will remove these combinations and return "cleaned" UMI count matrices for all samples to use in downstream analyses.
+To demonstrate, we mock up a set of molecule information files for three multiplexed 10X samples:
 
-```{r, echo=FALSE}
+```{r}
 set.seed(1000)
-mult.mol.info <- sim10xMolInfo(prefix=tempfile(), nsamples=3)
+mult.mol.info <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=3)
+mult.mol.info
 ```
+
+We then apply `swappedDrops` to these files to remove the effect of swapping in our count matrices.
 
 ```{r}
 s.out <- swappedDrops(mult.mol.info, min.frac=0.9)
