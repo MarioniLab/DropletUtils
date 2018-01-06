@@ -33,7 +33,6 @@ read10xCounts <- function(samples, col.names=FALSE)
     }
     gene_info <- gene_info_list[[1]]
     colnames(gene_info) <- c("ID", "Symbol")
-    rownames(gene_info) <- gene_info$id
     
     # Forming the full data matrix.
     full_data <- do.call(cbind, full_data)

@@ -16,6 +16,7 @@ importFrom("rhdf5", h5write, h5read, h5createFile, h5write.default)
 export(
     makeCountMatrix,
     read10xCounts, read10xMolInfo, 
+    write10xCounts,
     downsampleMatrix, downsampleReads,
     swappedDrops, 
     barcodeRanks,

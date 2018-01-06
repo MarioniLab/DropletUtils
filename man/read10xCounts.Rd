@@ -37,25 +37,7 @@ Davis McCarthy, with modifications from Aaron Lun
 
 \examples{
 # Mocking up some 10X genomics output.
-tmpdir <- tempfile()
-dir.create(tmpdir)
-
-library(Matrix)
-my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-my.counts <- as(my.counts, "dgCMatrix")
-writeMM(my.counts, file=file.path(tmpdir, "matrix.mtx"))
-
-ngenes <- nrow(my.counts)
-gene.ids <- paste0("GENE", seq_len(ngenes))
-gene.symb <- paste0(sample(LETTERS, replace=TRUE, ngenes),
-    sample(LETTERS, replace=TRUE, ngenes),
-    sample(LETTERS, replace=TRUE, ngenes), "-",
-    sample(9, replace=TRUE, ngenes))
-write.table(data.frame(gene.ids, gene.symb), file=file.path(tmpdir, "genes.tsv"),
-    quote=FALSE, col.names=FALSE, row.names=FALSE)   
-
-cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
-write(cell.ids, file=file.path(tmpdir, "barcodes.tsv"))
+example(write10xCounts)
 
 # Reading it in.
 sce10x <- read10xCounts(tmpdir)
