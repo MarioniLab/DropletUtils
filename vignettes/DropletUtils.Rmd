@@ -1,26 +1,24 @@
-<!--
-%\VignetteIndexEntry{Handling droplet-based single-cell RNA-seq data}
-%\VignettePackage{BiocStyle}
-%\VignetteEngine{knitr::knitr}
--->
+---
+title: "Utilities for handling droplet-based single-cell RNA-seq data"
+author: "Aaron Lun"
+package: DropletUtils
+output: 
+  BiocStyle::html_document
+vignette: >
+  %\VignetteIndexEntry{Utilities for handling droplet-based single-cell RNA-seq data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}  
+---
+
 
 ```{r, echo=FALSE, results="hide", message=FALSE}
 require(knitr)
 opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
 ```
 
-```{r style, echo=FALSE, results='asis'}
-BiocStyle::markdown()
-```
-
 ```{r setup, echo=FALSE, message=FALSE}
 library(DropletUtils)
 ```
-
-# Utilities for handling droplet-based single-cell RNA-seq data
-Package: `r Biocpkg("DropletUtils")` <br />
-Author: Aaron Lun (alun@wehi.edu.au) <br />
-Compilation date: `r Sys.Date()`
 
 # Introduction
 
@@ -42,27 +40,22 @@ and to eliminate the effects of barcode swapping on Illumina 4000 sequencing mac
 
 The _CellRanger_ pipeline from 10X Genomics will process the raw sequencing data and produce a matrix of UMI counts.
 Each row of this matrix corresponds to a gene, while each column corresponds to a cell barcode.
-We can load this into memory using the `read10xCounts` function:
-
-```{r, echo=FALSE}
-set.seed(1000)
-example(read10xCounts, echo=FALSE) # to generate my files.
-dir.name <- tmpdir
-```
+This is saved in a single directory for each sample, usually named like `<OUTPUT>/outs/filtered_gene_bc_matrices/<GENOME>`^[If you use the "filtered" matrix, each column corresponds to a putative cell. If you use the "raw" matrix, all barcodes are loaded, and no distinction is made between cells and empty droplets.].
+We mock up an example directory below using some simulated data:
 
 ```{r}
-sce <- read10xCounts(dir.name)
+# To generate the files.
+example(write10xCounts, echo=FALSE) 
+dir.name <- tmpdir
+list.files(dir.name)
 ```
 
-The `dir.name` variable should hold the file path to the subdirectory of the CellRanger output containing the count matrices.
-This will usually be something like `<OUTPUT>/outs/filtered_gene_bc_matrices/<GENOME>`.
-If you use the "filtered" matrix, each column corresponds to a putative cell.
-If you use the "raw" matrix, all barcodes are loaded, and no distinction is made between cells and empty droplets.
-
-The function itself returns a `SingleCellExperiment` object containing all of the relevant information.
+The `matrix.mtx` file contains the UMI counts, while the other two files contain the cell barcodes and the gene annotation.
+We can load this into memory using the `read10xCounts` function, which returns a `SingleCellExperiment` object containing all of the relevant information.
 This includes the barcode sequence for each cell (column), as well as the identifier and symbol for each gene (row).
 
 ```{r}
+sce <- read10xCounts(dir.name)
 sce
 ```
 
@@ -73,15 +66,14 @@ This reduces memory usage by only storing the non-zero counts, which is useful f
 class(counts(sce))
 ```
 
-Users can also load multiple results in at once, by supplying a character vector to `read10xCounts`.
+Users can also load multiple samples at once by supplying a character vector to `read10xCounts`.
 This will return a single `SingleCellExperiment` where all of the individual matrices are combined by column.
 Obviously, this only makes sense when the same set of genes is being used across samples.
 
 ## From the molecule information file
 
 _CellRanger_ will also produce a molecule information file (`molecule_info.h5`) that contains... well, information about the transcript molecules.
-This includes the UMI sequence, the cell barcode sequence, the gene to which it was assigned, and the number of reads covering the molecule.
-(The use of UMIs allows reads from different PCR amplicons to be unambiguously assigned to the same original molecule.)
+This includes the UMI sequence^[For readers who are unfamiliar with UMIs, they allow reads from different PCR amplicons to be unambiguously assigned to the same original molecule.], the cell barcode sequence, the gene to which it was assigned, and the number of reads covering the molecule.
 For demonstration purposes, we create an example molecule information file below:
 
 ```{r}
@@ -174,7 +166,7 @@ though a more rigorous method for distinguishing between these two possibilities
 Empty droplets often contain RNA from the ambient solution, resulting in non-zero counts after debarcoding.
 The `emptyDrops` function is designed to distinguish between empty droplets and cells.
 It does so by testing each barcode's expression profile for significant deviation from the ambient profile.
-Again, given a matrix `my.counts` containing UMI counts for **all** barcodes, we call:
+Given a matrix `my.counts` containing UMI counts for **all** barcodes, we call:
 
 ```{r}
 set.seed(100)
