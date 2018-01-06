@@ -1,28 +1,51 @@
 # Testing the read10xCounts function.
 # library(DropletUtils); library(testthat); source("test-read10x.R")
 
+set.seed(1000)
+library(Matrix)
+tmpdir <- tempfile()
+
+# Mocking up some 10X genomics output.
+my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
+my.counts <- as(my.counts, "dgCMatrix")
+
+ngenes <- nrow(my.counts)
+gene.ids <- paste0("GENE", seq_len(ngenes))
+gene.symb <- paste0(sample(LETTERS, replace=TRUE, ngenes),
+                    sample(LETTERS, replace=TRUE, ngenes),
+                    sample(LETTERS, replace=TRUE, ngenes), "-",
+                    sample(9, replace=TRUE, ngenes))
+
+cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
+    
+test_that("write10xCounts works correctly", {
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    expect_identical(sort(list.files(tmpdir)), c("barcodes.tsv", "genes.tsv", "matrix.mtx"))
+    all.sizes <- file.info(list.files(tmpdir, full=TRUE))$size
+
+    # Checking overwrite.
+    expect_error(write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids),
+                 "specified 'path' already exists", fixed=TRUE)
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids, overwrite=TRUE)
+    expect_identical(all.sizes, file.info(list.files(tmpdir, full=TRUE))$size)
+
+    # Checking lengths.
+    expect_error(write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb), "barcodes")
+    expect_error(write10xCounts(path=tmpdir, my.counts, barcodes=cell.ids, gene.symbol=gene.symb), "lengths of 'gene.id' and 'gene.symbol'")
+    expect_error(write10xCounts(path=tmpdir, my.counts, barcodes=cell.ids, gene.id=gene.ids, gene.symbol=""), "lengths of 'gene.id' and 'gene.symbol'")
+
+    all.sizes <- file.info(list.files(tmpdir, full=TRUE))$size # files should still be there after all those errors.
+    expect_identical(all.sizes, file.info(list.files(tmpdir, full=TRUE))$size)
+
+    # Checking default arguments.
+    new.counts <- my.counts
+    rownames(new.counts) <- gene.ids
+    colnames(new.counts) <- cell.ids
+    write10xCounts(path=tmpdir, new.counts, gene.symbol=gene.symb, overwrite=TRUE)
+    expect_identical(all.sizes, file.info(list.files(tmpdir, full=TRUE))$size)
+})
+
 test_that("read10xCounts works correctly", {
-    # Mocking up some 10X genomics output.
-    tmpdir <- tempfile()
-    dir.create(tmpdir)
-
-    library(Matrix)
-    my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-    my.counts <- as(my.counts, "dgCMatrix")
-    writeMM(my.counts, file=file.path(tmpdir, "matrix.mtx"))
-
-    ngenes <- nrow(my.counts)
-    gene.ids <- paste0("GENE", seq_len(ngenes))
-    gene.symb <- paste0(sample(LETTERS, replace=TRUE, ngenes),
-                        sample(LETTERS, replace=TRUE, ngenes),
-                        sample(LETTERS, replace=TRUE, ngenes), "-",
-                        sample(9, replace=TRUE, ngenes))
-    write.table(data.frame(gene.ids, gene.symb), file=file.path(tmpdir, "genes.tsv"),
-                    quote=FALSE, col.names=FALSE, row.names=FALSE)   
-
-    cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
-    write(cell.ids, file=file.path(tmpdir, "barcodes.tsv"))
-
     # Reading it in.
     sce10x <- read10xCounts(tmpdir)
     alt.counts <- my.counts
@@ -47,3 +70,6 @@ test_that("read10xCounts works correctly", {
     sce10x <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
     expect_identical(colnames(sce10x), NULL)
 })
+
+
+

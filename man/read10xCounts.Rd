@@ -35,6 +35,10 @@ It was then taken from the \code{read10xResults} implementation in the \pkg{scat
 Davis McCarthy, with modifications from Aaron Lun
 }
 
+\seealso{
+\code{\link{write10xCounts}}
+}
+
 \examples{
 # Mocking up some 10X genomics output.
 example(write10xCounts)

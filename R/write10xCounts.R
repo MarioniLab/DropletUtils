@@ -27,11 +27,12 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     write.table(data.frame(gene.id, gene.symbol), file=file.path(temp.path, "genes.tsv"),
                 row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")    
 
-    # Naturally fails if 'path' already exists and overwrite=FALSE.
     # We don't put this at the top as the write functions might fail; 
-    # in which case, we would have deleted the existing path for nothing.
+    # in which case, we would have deleted the existing 'path' for nothing.
     if (overwrite) {
         unlink(path, recursive=TRUE)
+    } else if (file.exists(path)) { 
+        stop("specified 'path' already exists")
     }
     file.rename(temp.path, path)
     return(invisible(TRUE))
