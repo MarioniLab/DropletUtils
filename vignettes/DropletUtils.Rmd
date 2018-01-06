@@ -42,16 +42,16 @@ and to eliminate the effects of barcode swapping on Illumina 4000 sequencing mac
 
 The _CellRanger_ pipeline from 10X Genomics will process the raw sequencing data and produce a matrix of UMI counts.
 Each row of this matrix corresponds to a gene, while each column corresponds to a cell barcode.
-We can load this into memory using the `read10xResults` function:
+We can load this into memory using the `read10xCounts` function:
 
 ```{r, echo=FALSE}
 set.seed(1000)
-example(read10xResults, echo=FALSE) # to generate my files.
+example(read10xCounts, echo=FALSE) # to generate my files.
 dir.name <- tmpdir
 ```
 
 ```{r}
-sce <- read10xResults(dir.name)
+sce <- read10xCounts(dir.name)
 ```
 
 The `dir.name` variable should hold the file path to the subdirectory of the CellRanger output containing the count matrices.
@@ -73,7 +73,7 @@ This reduces memory usage by only storing the non-zero counts, which is useful f
 class(counts(sce))
 ```
 
-Users can also load multiple results in at once, by supplying a character vector to `read10xResults`.
+Users can also load multiple results in at once, by supplying a character vector to `read10xCounts`.
 This will return a single `SingleCellExperiment` where all of the individual matrices are combined by column.
 Obviously, this only makes sense when the same set of genes is being used across samples.
 

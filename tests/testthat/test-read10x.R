@@ -1,7 +1,7 @@
-# Testing the read10xResults function.
+# Testing the read10xCounts function.
 # library(DropletUtils); library(testthat); source("test-read10x.R")
 
-test_that("read10xResults works correctly", {
+test_that("read10xCounts works correctly", {
     # Mocking up some 10X genomics output.
     tmpdir <- tempfile()
     dir.create(tmpdir)
@@ -24,7 +24,7 @@ test_that("read10xResults works correctly", {
     write(cell.ids, file=file.path(tmpdir, "barcodes.tsv"))
 
     # Reading it in.
-    sce10x <- read10xResults(tmpdir)
+    sce10x <- read10xCounts(tmpdir)
     alt.counts <- my.counts
     rownames(alt.counts) <- gene.ids
     colnames(alt.counts) <- NULL
@@ -35,15 +35,15 @@ test_that("read10xResults works correctly", {
     expect_identical(sce10x$Barcode, cell.ids)
 
     # Reading it in, twice; and checking it makes sense.
-    sce10x2 <- read10xResults(c(tmpdir, tmpdir))
+    sce10x2 <- read10xCounts(c(tmpdir, tmpdir))
     ref <- sce10x
     colnames(ref) <- NULL
     ref <- BiocGenerics::cbind(ref, ref)
     expect_equal(ref, sce10x2)
 
     # Checking that column names work.
-    sce10x <- read10xResults(tmpdir, col.names=TRUE)
+    sce10x <- read10xCounts(tmpdir, col.names=TRUE)
     expect_identical(colnames(sce10x), sce10x$Barcode)
-    sce10x <- read10xResults(c(tmpdir, tmpdir), col.names=TRUE)
+    sce10x <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
     expect_identical(colnames(sce10x), NULL)
 })

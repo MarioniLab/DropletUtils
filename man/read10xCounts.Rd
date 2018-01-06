@@ -1,5 +1,5 @@
-\name{read10xResults}
-\alias{read10xResults}
+\name{read10xCounts}
+\alias{read10xCounts}
 
 \title{Load in data from 10x experiment}
 \description{
@@ -7,7 +7,7 @@ Creates a SingleCellExperiment from the CellRanger output files for 10X Genomics
 }
 
 \usage{
-read10xResults(samples, col.names=FALSE)
+read10xCounts(samples, col.names=FALSE)
 }
 
 \arguments{
@@ -58,10 +58,10 @@ cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 write(cell.ids, file=file.path(tmpdir, "barcodes.tsv"))
 
 # Reading it in.
-sce10x <- read10xResults(tmpdir)
+sce10x <- read10xCounts(tmpdir)
 
 # Column names are dropped with multiple 'samples'.
-sce10x2 <- read10xResults(c(tmpdir, tmpdir))
+sce10x2 <- read10xCounts(c(tmpdir, tmpdir))
 }
 
 \references{

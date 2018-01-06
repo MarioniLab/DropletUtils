@@ -50,6 +50,6 @@ Aaron Lun
 }
 
 \examples{
-example(read10xResults)
+example(read10xCounts)
 downsampled <- downsampleMatrix(counts(sce10x), prop = 0.5)
 }

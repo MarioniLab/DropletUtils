@@ -1,4 +1,4 @@
-read10xResults <- function(samples, col.names=FALSE) 
+read10xCounts <- function(samples, col.names=FALSE) 
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.
 #
