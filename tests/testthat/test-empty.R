@@ -132,3 +132,25 @@ test_that("emptyDrops runs to completion", {
     e.out <- emptyDrops(my.counts, retain=K*0.6)
     expect_true(all(e.out$FDR[totals >= K*0.6]==0))
 })
+
+test_that("defaultDrops runs to completion", {
+    # Mock up counts
+    set.seed(1000)
+    my.counts <- DropletUtils:::simCounts()
+    out <- defaultDrops(my.counts)
+   
+    # Should always call at least one cell (100th %ile cell)
+    expect_true(sum(out)>0)
+
+    lib.sizes <- Matrix::colSums(my.counts)
+    out <- defaultDrops(my.counts, lower.prop=0)
+    expect_true(all(out | lib.sizes==0))
+
+    out <- defaultDrops(my.counts, upper.quant=1, lower.prop=1) # as it's >, not >=.
+    expect_true(!any(out))
+
+    # Works alright on silly inputs.
+    expect_identical(logical(0), defaultDrops(my.counts[,0]))
+    expect_identical(logical(ncol(my.counts)), defaultDrops(my.counts[0,]))
+
+})
