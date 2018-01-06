@@ -19,25 +19,27 @@ void downsample_counts (IN iIt, IN iend, OUT oIt,
     // Sampling scheme adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
     while (num_selected < num_sample) {
 
-        /* Advancing to that read's "index" (if we had instantiated the full [0, num_total) array).
-         * Note that we need to use a while loop and <=, just in case there's a whole bunch of zeroes.
+        /* Advancing to that point's "index" (if we had instantiated the full [0, num_total) array).
+         * Note that we need to use a while loop just in case there's a whole bunch of zeroes.
          */
-        while (cumulative<=offset && iIt!=iend) {
+        while (cumulative==offset && iIt!=iend) {
             cumulative+=(*iIt);
             ++iIt;
             ++oIt;
         }
 
-        // Deciding whether or not to keep this read.
+        // Breaking if all points have been iterated over.
+        if (cumulative==offset && iIt==iend) { 
+            break;
+        }
+
+        // Deciding whether or not to keep this point.
         if ( (num_total - offset)*R::unif_rand() < num_sample - num_selected) {
             ++(*oIt);
             ++num_selected;
         }
       
-        ++offset;
-        if (cumulative==offset && iIt==iend) { 
-            break;
-        }
+        ++offset; 
     }
     return;
 }  
