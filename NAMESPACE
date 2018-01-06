@@ -5,12 +5,12 @@ import(SingleCellExperiment)
 
 importFrom("SummarizedExperiment", colData, rowData)
 importFrom("S4Vectors", DataFrame)
-importFrom("Matrix", colSums, rowSums, readMM, sparseMatrix)
+importFrom("Matrix", colSums, rowSums, readMM, sparseMatrix, writeMM)
 importFrom("methods", is, as)
 importFrom("stats", p.adjust, aggregate, smooth.spline, predict, fitted, quantile)
 importFrom("Rcpp", sourceCpp)
 importFrom("edgeR", goodTuringProportions)
-importFrom("utils", read.table, head)
+importFrom("utils", read.table, head, write.table)
 importFrom("rhdf5", h5write, h5read, h5createFile, h5write.default)
 
 export(
