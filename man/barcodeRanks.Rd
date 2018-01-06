@@ -50,10 +50,11 @@ Aaron Lun
 }
 
 \examples{
-# Mocking up some data: generates a count matrix named 'my.counts'.
-source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
-class(my.counts)
+# Mocking up some data: 
+set.seed(2000)
+my.counts <- DropletUtils:::simCounts()
 
+# Computing barcode rank statistics:
 br.out <- barcodeRanks(my.counts)
 names(br.out)
 

@@ -93,11 +93,12 @@ test_that("p-value calculations are correct", {
 
 test_that("emptyDrops runs to completion", {
     # Mocking up some counts.
-    source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
+    set.seed(1000)
+    my.counts <- DropletUtils:::simCounts()
     limit <- 100
     e.out <- emptyDrops(my.counts, lower=limit)
-    
-    totals <- colSums(my.counts)
+   
+    totals <- Matrix::colSums(my.counts)
     expect_identical(as.integer(totals), e.out$Total)
     expect_true(all(is.na(e.out$LogProb[totals<=limit])))
     expect_true(all(!is.na(e.out$LogProb[totals>limit])))

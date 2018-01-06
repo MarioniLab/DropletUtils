@@ -5,7 +5,7 @@
 \description{Call cells according to the number of UMIs associated with each barcode, as implemented in CellRanger.}
 
 \usage{
-defaultDrops(m, expected = 3000, upper.quant = 0.99, lower.prop = 0.1)
+defaultDrops(m, expected=3000, upper.quant=0.99, lower.prop=0.1)
 }
 
 \arguments{
@@ -37,15 +37,15 @@ Jonathan Griffiths
 }
 
 \examples{
-# Mocking up some data: generates a count matrix named 'my.counts'.
-source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
-class(my.counts)
+# Mocking up some data: 
+set.seed(0)
+my.counts <- DropletUtils:::simCounts()
 
 # Identify likely cell-containing droplets. 
 called <- defaultDrops(my.counts)
 table(called)
 
-# Get matrix of called cells
+# Get matrix of called cells.
 cell.counts <- my.counts[, called]
 }
 

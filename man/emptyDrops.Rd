@@ -70,9 +70,9 @@ Aaron Lun
 }
 
 \examples{
-# Mocking up some data: generates a count matrix named 'my.counts'.
-source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
-class(my.counts)
+# Mocking up some data: 
+set.seed(0)
+my.counts <- DropletUtils:::simCounts()
 
 # Identify likely cell-containing droplets. 
 out <- emptyDrops(my.counts)

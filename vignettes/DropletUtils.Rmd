@@ -143,14 +143,16 @@ Users should use `downsampleMatrix` instead if they want to guarantee similar to
 A useful diagnostic for droplet-based data is the barcode rank plot, which shows the (log-)total UMI count for each barcode on the x-axis and the (log-)rank on the y-axis.
 This is effectively a transposed empirical cumulative density plot with log-transformed axes.
 It is useful as it allows users to examine the distribution of total counts across barcodes, focusing on those with the largest counts.
-Given a matrix `my.counts` containing UMI counts for **all** barcodes (e.g., from `raw_gene_bc_matrices` for 10X data), we can generate the plot as follows:
-
-```{r, echo=FALSE}
-source(system.file("scripts", "mock_empty.R", package="DropletUtils"))
-```
+To demonstrate, let us mock up a count matrix:
 
 ```{r}
-# Calculating the statistics.
+set.seed(0)
+my.counts <- DropletUtils:::simCounts()
+```
+
+We compute the statistics using the `barcodeRanks` function, and then create the plot as shown below.
+
+```{r}
 br.out <- barcodeRanks(my.counts)
 
 # Making a plot.
@@ -163,7 +165,7 @@ legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"),
     legend=c("knee", "inflection"))
 ```
 
-The knee and inflection points on the curve provide an indication of the transition between two components of the total count distribution.
+The knee and inflection points on the curve mark the transition between two components of the total count distribution.
 This is assumed to represent the difference between empty droplets with little RNA and cell-containing droplets with much more RNA,
 though a more rigorous method for distinguishing between these two possibilities is discussed below.
 
