@@ -1,4 +1,4 @@
-barcodeRanks <- function(m, lower=100, ...) 
+barcodeRanks <- function(m, lower=200, df=50, ...) 
 # Returning statistics to construct a barcode-rank plot. Also calculates
 # the knee and inflection points for further use.
 #
@@ -17,16 +17,16 @@ barcodeRanks <- function(m, lower=100, ...)
     x <- log10(run.rank[keep]) 
     
     # Smoothing to avoid error multiplication upon differentiation.
-    fit <- smooth.spline(x, y, ...)
+    fit <- smooth.spline(x, y, df=df, ...)
     d1 <- predict(fit, deriv=1)$y
     d2 <- predict(fit, deriv=2)$y
 
-    # Maximizing the curvature and returning the total for the knee point.
-    curvature <- abs(d2)/(1 + d1^2)^1.5
-    knee <- 10^(y[which.max(curvature)])
+    # Minimizing the signed curvature and returning the total for the knee point.
+    curvature <- d2/(1 + d1^2)^1.5
+    knee <- 10^(y[which.min(curvature)])
 
-    # Maximizing the second derivative to get the total for the inflection point.
-    inflection <- 10^(y[which.max(d2)])
+    # Minimizing the first derivative to get the total for the inflection point.
+    inflection <- 10^(y[which.min(d1)])
 
     # Returning a whole stack of useful stats.
     fitted.vals <- rep(NA_real_, length(keep))
