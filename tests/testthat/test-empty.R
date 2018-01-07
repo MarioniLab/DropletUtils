@@ -123,10 +123,21 @@ test_that("emptyDrops runs to completion", {
     expect_true(all(e.out$FDR[totals >= K]==0))
 
     # Checking ambient tests.
-    e.out2 <- emptyDrops(my.counts, test.args=list(test.ambient=TRUE))
+    e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE)
     expect_identical(e.out$Total, e.out2$Total)
-    expect_identical(e.out$Deviance[totals>limit], e.out2$Deviance[totals>limit])
+    expect_identical(e.out$LogProb[totals>limit], e.out2$LogProb[totals>limit])
     expect_true(all(!is.na(e.out2$LogProb[totals>0])))
+
+    # Checking the ignore argument works correctly.
+    set.seed(1001)
+    e.out3a <- emptyDrops(my.counts, lower=limit, ignore=200)
+    e.out3a$FDR <- NULL
+    set.seed(1001)
+    survivors <- totals <= 100 | totals > 200
+    new.counts <- my.counts[,survivors]
+    e.out3b <- emptyDrops(new.counts, lower=limit, ignore=NULL)
+    e.out3b$FDR <- NULL
+    expect_equal(e.out3a[survivors,], e.out3b) 
 
     # Checking automatic retention options.
     e.out <- emptyDrops(my.counts, retain=K*0.6)

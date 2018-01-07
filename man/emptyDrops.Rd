@@ -7,10 +7,9 @@
 
 \usage{
 testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
-    BPPARAM=SerialParam()) 
+    ignore=NULL, BPPARAM=SerialParam()) 
 
-emptyDrops(m, lower=100, retain=NULL, test.args=list(),
-    barcode.args=list()) 
+emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 }
 
 \arguments{
@@ -20,15 +19,16 @@ Columns represent barcoded droplets, rows represent cells.
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
+\item{ignore}{A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
-\item{test.args}{Further arguments to pass to \code{testEmptyDrops}.}
 \item{barcode.args}{Further arguments to pass to \code{\link{barcodeRanks}}.}
+\item{...}{Further arguments to pass to \code{testEmptyDrops}.}
 }
 
-\details{
+\section{Details about \code{testEmptyDrops}}{
 The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts below \code{lower}.
-This assumes that a cell-containing droplet would generally be able to achieve some minimum count.
+This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link[edgeR]{goodTuringProportions}}. 
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
 
@@ -38,13 +38,20 @@ Then, \code{niters} count vectors are simulated from the null model.
 The proportion of simulated vectors with probabilities lower than the observed multinomial probability for that barcode is used to calculate the p-value.
 We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate. 
 
-The \code{emptyDrops} function combines the test results with distributional information from \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
+The \code{ignore} argument can also be set to ignore barcodes with total counts less than or equal to \code{ignore}.
+This differs from the \code{lower} argument in that the ignored barcodes are not necessarily used to compute the ambient profile.
+Users can interpret \code{ignore} as the minimum total count required for a barcode to be considered as a potential cell.
+In contrast, \code{lower} is the maximum total count below which all barcodes are assumed to be empty droplets.
+}
+
+\section{Details about \code{emptyDrops}}{
+The \code{emptyDrops} function combines the results of \code{testEmptyDrops} with \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
 Specifically, the total count \code{K} at the knee point is determined, and barcodes that contain more than \code{K} total counts are always retained.
 This ensures that cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
 If \code{retain} is specified, this is used instead of \code{K}, which may be useful if the knee point was not correctly identified in complex log-rank curves.
 Users can set \code{retain=Inf} to disable automatic retention of barcodes with large totals.
 
-The Benjamini-Hochberg correction is also applied to the p-values from \code{testEmptyDrops} to correct for multiple testing.
+The Benjamini-Hochberg correction is also applied to the Monte Carlo p-values to correct for multiple testing.
 Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
 All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.

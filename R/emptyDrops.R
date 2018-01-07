@@ -1,4 +1,4 @@
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -16,10 +16,14 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, BPPAR
     ambient.prop <- goodTuringProportions(ambient.prof)
 
     # Removing supposed ambient cells from the matrix.
+    # Also removing additional cells that don't pass some total count threshold, if required.
     if (!test.ambient) {
         keep <- !ambient
     } else {
         keep <- umi.sum > 0L
+    }
+    if (!is.null(ignore)) { 
+        keep <- keep & umi.sum > ignore
     }
     obs <- m[,keep,drop=FALSE]
     obs.totals <- umi.sum[keep]
@@ -78,20 +82,22 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, BPPAR
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
 }
 
-emptyDrops <- function(m, lower=100, retain=NULL, test.args=list(), barcode.args=list()) 
+emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
 # created 7 August 2017
 {
-    stats <- do.call(testEmptyDrops, c(list(m, lower=lower), test.args))
+    stats <- testEmptyDrops(m, lower=lower, ...)
+    tmp <- stats$PValue
+    
     if (is.null(retain)) {
         retain <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))$knee
     }
     always <- stats$Total >= retain
-    tmp <- stats$PValue
     tmp[always] <- 0
+
     stats$FDR <- p.adjust(tmp, method="BH")
     return(stats)
 }
