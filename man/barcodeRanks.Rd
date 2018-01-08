@@ -5,7 +5,7 @@
 \description{Compute barcode rank statistics and identifry the knee and inflection points on the total count curve.}
 
 \usage{
-barcodeRanks(m, lower=100, df=20, fit.bounds=NULL, ...) 
+barcodeRanks(m, lower=100, fit.bounds=NULL, df=20, ...) 
 }
 
 \arguments{
@@ -14,7 +14,7 @@ Columns represent barcoded droplets, rows represent cells.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{fit.bounds}{A numeric vector of length 2, specifying the lower and upper bouunds on the total UMI count for spline fitting.}
-\item{df}{Further arguments to pass to \code{\link{smooth.spline}}.}
+\item{df, ...}{Further arguments to pass to \code{\link{smooth.spline}}.}
 }
 
 \details{
