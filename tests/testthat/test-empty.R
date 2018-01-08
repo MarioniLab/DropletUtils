@@ -112,16 +112,6 @@ test_that("emptyDrops runs to completion", {
     }
     expect_equal(e.out$LogProb[valid], collected[valid])
 
-    # Testing barcode ranks.    
-    brout <- barcodeRanks(my.counts, lower=limit)
-    expect_identical(brout$total, totals)
-    expect_identical(brout$rank, rank(-totals, ties.method="average"))
-    expect_true(all(is.na(brout$fitted[totals <= limit])))
-    expect_true(all(!is.na(brout$fitted[totals > limit])))
-
-    K <- brout$knee
-    expect_true(all(e.out$FDR[totals >= K]==0))
-
     # Checking ambient tests.
     e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE)
     expect_identical(e.out$Total, e.out2$Total)
@@ -139,29 +129,13 @@ test_that("emptyDrops runs to completion", {
     e.out3b$FDR <- NULL
     expect_equal(e.out3a[survivors,], e.out3b) 
 
-    # Checking automatic retention options.
-    e.out <- emptyDrops(my.counts, retain=K*0.6)
-    expect_true(all(e.out$FDR[totals >= K*0.6]==0))
+    # Checking retention options.
+    K <- barcodeRanks(my.counts, lower=limit)$knee
+    expect_true(all(e.out$FDR[totals >= K]==0))
+    expect_true(!all(e.out$FDR[totals < K]==0))
+
+    e.outK <- emptyDrops(my.counts, retain=K*0.6)
+    expect_true(all(e.outK$FDR[totals >= K*0.6]==0))
+    expect_true(!all(e.outK$FDR[totals < K*0.6]==0))
 })
 
-test_that("defaultDrops runs to completion", {
-    # Mock up counts
-    set.seed(1000)
-    my.counts <- DropletUtils:::simCounts()
-    out <- defaultDrops(my.counts)
-   
-    # Should always call at least one cell (100th %ile cell)
-    expect_true(sum(out)>0)
-
-    lib.sizes <- Matrix::colSums(my.counts)
-    out <- defaultDrops(my.counts, lower.prop=0)
-    expect_true(all(out | lib.sizes==0))
-
-    out <- defaultDrops(my.counts, upper.quant=1, lower.prop=1) # as it's >, not >=.
-    expect_true(!any(out))
-
-    # Works alright on silly inputs.
-    expect_identical(logical(0), defaultDrops(my.counts[,0]))
-    expect_identical(logical(ncol(my.counts)), defaultDrops(my.counts[0,]))
-
-})
