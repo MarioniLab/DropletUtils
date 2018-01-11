@@ -35,8 +35,8 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
     H5::DataSpace memspace(1, &dims_out);
     memspace.selectAll();
     dataspace.selectAll();
-    std::vector<uint64_t> encoded(dims_out);
-    h5data.read(encoded.data(), H5::PredType::NATIVE_INT64, memspace, dataspace);
+    std::vector<std::uint64_t> encoded(dims_out);
+    h5data.read(encoded.data(), H5::PredType::NATIVE_UINT64, memspace, dataspace);
    
     // Guessing the barcode length. 
     int blen=0;
