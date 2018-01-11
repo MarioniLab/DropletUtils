@@ -125,7 +125,7 @@ test_that("Removal of swapped drops works correctly", {
         }
 
         # Further input/output tests.
-        min.frac <- 0.9
+        min.frac <- 0.9001
         observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
         observed2 <- swappedDrops(output$files, barcode, min.frac=min.frac)
         expect_equal(observed$cleaned, observed2$cleaned)
