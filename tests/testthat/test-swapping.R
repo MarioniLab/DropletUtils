@@ -1,13 +1,40 @@
 # This tests that swappedDrops works correctly.
 # library(DropletUtils); library(testthat); source("test-swapping.R")
 
+##########################################
+
+test_that("barcode extraction is working correctly", {
+    library(rhdf5)
+    for (blen in c(4, 7, 10)) {
+         all.barcodes <- sample(4^blen, 10000, replace=TRUE)
+    
+         out.file <- tempfile(fileext="h5")
+         h5 <- h5createFile(out.file)
+         h5write(all.barcodes, out.file, "barcode")
+
+         out <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", blen)
+         guess <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", NULL)
+         expect_identical(out, guess)
+
+         # Manually doing the bit masks.
+         progressive <- ""
+         tmp <- all.barcodes
+         for (i in seq_len(blen)) {
+             remainder <- tmp %% 4 + 1
+             progressive <- paste0(c("A", "C", "G", "T")[remainder], progressive)
+             tmp <- floor(tmp/4)
+         }
+         expect_identical(out, progressive)
+    }
+})
+
+##########################################
+
 tmpdir <- tempfile()
 dir.create(tmpdir)
 ngenes <- 20L
 barcode <- 4L
 ncells <- 4L^barcode
-
-##########################################
 
 # Defining a reference function to compare the results.
 REFFUN <- function(original, swapped, min.frac) {
@@ -111,7 +138,7 @@ test_that("Removal of swapped drops works correctly", {
         top.prop <- as.matrix(observed3$diagnostics)/rowSums(observed3$diagnostics)
         best.in.class <- max.col(top.prop)
         best.prop <- top.prop[(best.in.class - 1L) * nrow(top.prop) + seq_along(best.in.class)]
-        for (s in seq_along(reference)) {
+        for (s in seq_along(observed2$cleaned)) {
             expect_equal(sum(observed2$cleaned[[s]]), sum(best.in.class==s & best.prop >= min.frac))
         }
     }
