@@ -29,7 +29,7 @@ Columns represent barcoded droplets, rows represent cells.
 \section{Details about \code{testEmptyDrops}}{
 The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts below \code{lower}.
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
-Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link[edgeR]{goodTuringProportions}}. 
+Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}. 
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
 
 The null hypothesis is that transcript molecules are included into droplets by multinomial sampling from the ambient profile.
