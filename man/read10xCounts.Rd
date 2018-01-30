@@ -30,6 +30,9 @@ It was then taken from the \code{read10xResults} implementation in the \pkg{scat
 
 If \code{col.names=TRUE} and \code{length(sample)==1}, each column is named by the cell barcode.
 For multiple samples, the columns are unnamed to avoid problems with non-unique barcodes across samples.
+
+Note that user-level manipulation of sparse matrices requires loading of the \pkg{Matrix} package.
+Otherwise, calculation of \code{rowSums}, \code{colSums}, etc. will result in errors.
 }
 
 \author{
