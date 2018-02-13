@@ -109,6 +109,15 @@ test_that("p-value calculations are correct", {
     set.seed(100)
     stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=500)
     expect_identical(stats, ref)
+
+    # Checking for uniformity:
+#    set.seed(0)
+#    sim <- SIMSTUFF(10000, 1000)
+#    totals <- sim$totals
+#    probs <- sim$probs
+#    ambient.prof <- sim$ambient
+#    set.seed(100)
+#    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=1000)
 })
 
 test_that("emptyDrops runs to completion", {
