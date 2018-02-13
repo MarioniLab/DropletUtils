@@ -28,25 +28,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     obs <- m[,keep,drop=FALSE]
     obs.totals <- umi.sum[keep]
 
-    # Calculating the log-multinomial probability for each cell.
-    if (is(obs, "dgCMatrix")) {
-        i <- obs@i + 1L
-        j <- rep(seq_len(ncol(obs)), diff(obs@p)) 
-        x <- obs@x
-    } else if (is(obs, "dgTMatrix")) {
-        i <- obs@i + 1L
-        j <- obs@j + 1L
-        x <- obs@x
-    } else {
-        stop("unsupported matrix type")
-    }
-   
-    p.n0 <- x * log(ambient.prop[i]) - lfactorial(x)
-    by.col <- aggregate(p.n0, list(Col=j), sum)
-    obs.P <- numeric(length(obs.totals))
-    obs.P[by.col$Col] <- by.col$x
-
-    # Computing a p-value for each observed probability 
+    # Calculating the log-multinomial probability for each cell, and the p-value for each observed probability 
+    obs.P <- .compute_multinom_prob(obs, ambient.prop)
     n.above <- .permute_counter(totals=obs.totals, probs=obs.P, ambient=ambient.prop, iter=niters, BPPARAM=BPPARAM)
     limited <- n.above==0L
     pval <- (n.above+1)/(niters+1)
@@ -80,6 +63,24 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 .monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations) { 
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
+}
+
+.compute_multinom_prob <- function(mat, prop) 
+# Provides an efficient calculation of the multinomial
+# probability for certain types of matrices.
+{
+    if (is(mat, "dgTMatrix")) {
+        i <- mat@i + 1L
+        j <- mat@j + 1L
+        x <- mat@x
+        p.n0 <- x * log(prop[i]) - lfactorial(x)
+        by.col <- aggregate(p.n0, list(Col=j), sum)
+        obs.P <- numeric(ncol(mat))
+        obs.P[by.col$Col] <- by.col$x
+    } else {
+        obs.P <- .Call(cxx_compute_multinom, mat, prop)
+    }
+    return(obs.P)
 }
 
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 

@@ -20,7 +20,11 @@ SEXP downsample_matrix(SEXP, SEXP, SEXP);
 
 SEXP downsample_runs(SEXP, SEXP, SEXP, SEXP);
 
+
 SEXP montecarlo_pval(SEXP, SEXP, SEXP, SEXP, SEXP);
+
+SEXP compute_multinom(SEXP, SEXP);
+
 
 SEXP find_swapped(SEXP, SEXP, SEXP);
 

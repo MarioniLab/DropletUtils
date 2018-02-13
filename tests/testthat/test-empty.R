@@ -1,8 +1,28 @@
 # This tests that the C++ code for emptyDrops does what it says it does.
-# library(DropletUtils); library(testthat); source("test-emptydrops.R")
+# library(DropletUtils); library(testthat); source("test-empty.R")
+
+test_that("multinomial calculations are correct", {
+    set.seed(1000)
+    prop <- runif(100)
+    X <- matrix(rpois(100000, lambda=prop*2), nrow=length(prop))
+
+    # Assumes that input has sum of 1!
+    prop <- prop/sum(prop)
+
+    # Checking it's the same regardless of the input matrix.
+    dense.out <- DropletUtils:::.compute_multinom_prob(X, prop)
+    sparse.out1 <- DropletUtils:::.compute_multinom_prob(as(X, "dgCMatrix"), prop)
+    expect_equal(dense.out, sparse.out1)
+    sparse.out2 <- DropletUtils:::.compute_multinom_prob(as(X, "dgTMatrix"), prop)
+    expect_equal(dense.out, sparse.out2)
+
+    # Checking it's the same compared to a reference.
+    ref <- apply(X, 2, dmultinom, prob=prop, log=TRUE)
+    expect_equal(ref, dense.out+lfactorial(colSums(X)))
+})
 
 test_that("p-value calculations are correct", {
-    # Simulating some counts.
+    # Simulating some multinomial probabilities. 
     SIMSTUFF <- function(nbarcodes, ngenes) { 
         totals <- sample(1000, nbarcodes, replace=TRUE)
         ambient <- runif(ngenes)
