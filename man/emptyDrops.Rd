@@ -13,7 +13,7 @@ emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...)
 }
 
 \arguments{
-\item{m}{A real sparse matrix object, either a dgTMatrix or dgCMatrix.
+\item{m}{A numeric matrix object, usually a dgTMatrix or dgCMatrix.
 Columns represent barcoded droplets, rows represent cells.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
