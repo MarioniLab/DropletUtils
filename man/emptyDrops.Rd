@@ -14,7 +14,7 @@ emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...)
 
 \arguments{
 \item{m}{A numeric matrix object, usually a dgTMatrix or dgCMatrix.
-Columns represent barcoded droplets, rows represent cells.
+Columns represent barcoded droplets, rows represent genes. 
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
