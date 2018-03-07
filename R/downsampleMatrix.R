@@ -1,3 +1,4 @@
+#' @export
 downsampleMatrix <- function(x, prop, bycol=TRUE) 
 # Downsamples the count matrix to the specified proportion.
 # This is done on a per-cell basis, possibly with cell-specific 'prop',

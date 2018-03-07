@@ -1,3 +1,5 @@
+#' @export
+#' @importFrom stats smooth.spline predict fitted
 barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...) 
 # Returning statistics to construct a barcode-rank plot. Also calculates
 # the knee and inflection points for further use.

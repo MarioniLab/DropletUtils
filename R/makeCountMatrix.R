@@ -1,3 +1,5 @@
+#' @export
+#' @importFrom Matrix sparseMatrix
 makeCountMatrix <- function(gene, cell, all.genes=NULL, all.cells=NULL, value=NULL) 
 # This makes a count matrix from per-molecule information,
 # namely the gene and cell to which each molecule is assigned.

@@ -1,3 +1,5 @@
+#' @importFrom rhdf5 h5write h5createFile h5write.default
+#' @importFrom stats rpois
 sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4, 
     ngenes=20, nmolecules=10000, swap.frac=0.2, ave.read=10, return.tab=FALSE)
 # A function that creates a HDF5 file mimicking the molecule information from CellRanger.
@@ -40,7 +42,7 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
     }
     
     # Simulating the number of reads (swapped reads only get 1).
-    original$reads <- stats::rpois(nrow(original), lambda = ave.read) + 1L
+    original$reads <- rpois(nrow(original), lambda = ave.read) + 1L
     swapped$reads <- rep(1L, nrow(swapped))
     fulltab <- rbind(original, swapped)
 

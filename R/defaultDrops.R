@@ -1,3 +1,6 @@
+#' @export
+#' @importFrom stats quantile
+#' @importFrom utils head
 defaultDrops <- function(m, expected = 3000, upper.quant = 0.99, lower.prop = 0.1)
 # A function to call cells on library size, as performed by CellRanger
 # 

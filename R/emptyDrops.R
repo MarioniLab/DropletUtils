@@ -1,3 +1,7 @@
+#' @export
+#' @importFrom BiocParallel SerialParam
+#' @importFrom S4Vectors DataFrame
+#' @importFrom edgeR goodTuringProportions
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
@@ -43,6 +47,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
 }
 
+#' @importFrom BiocParallel bpworkers SerialParam bplapply
 .permute_counter <- function(totals, probs, ambient, iter, BPPARAM=SerialParam()) 
 # Calculating the p-values using a Monte Carlo approach.
 {
@@ -65,6 +70,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
 }
 
+#' @importFrom methods is
+#' @importFrom stats aggregate
 .compute_multinom_prob <- function(mat, prop) 
 # Provides an efficient calculation of the multinomial
 # probability for certain types of matrices.
@@ -83,6 +90,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(obs.P)
 }
 
+#' @export
+#' @importFrom stats p.adjust
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 

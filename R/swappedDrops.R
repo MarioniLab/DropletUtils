@@ -1,3 +1,5 @@
+#' @export
+#' @importFrom Matrix sparseMatrix
 swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.diagnostics=FALSE, min.frac=0.8)
 # This function removes swapped reads between samples in 10X Genomics data.
 #

@@ -1,3 +1,9 @@
+#' @export
+#' @importFrom S4Vectors DataFrame
+#' @importFrom utils read.table
+#' @importFrom Matrix readMM
+#' @importFrom methods as
+#' @importFrom SingleCellExperiment SingleCellExperiment
 read10xCounts <- function(samples, col.names=FALSE) 
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.

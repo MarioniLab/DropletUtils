@@ -1,3 +1,6 @@
+#' @export
+#' @importFrom rhdf5 h5read
+#' @importFrom S4Vectors DataFrame
 read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE) 
 # Utility function to read useful information from a 10X molecule information file.
 #

@@ -1,3 +1,6 @@
+#' @export
+#' @importFrom utils write.table
+#' @importFrom Matrix writeMM
 write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), gene.symbol=gene.id, overwrite=FALSE)
 # Writes a count matrix to the specified path in the 10x style.   
 # This allows us to easily create things for testing read10xCounts. 
