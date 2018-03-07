@@ -1,5 +1,6 @@
 #' @importFrom stats rexp rgamma runif rpois
 #' @importFrom methods as
+#' @importClassesFrom Matrix dgCMatrix
 simCounts <- function(ngenes=100, nempty=10000, empty.prof=seq_len(ngenes), empty.rate=0.04,
                       nsmall=100, small.prof=runif(ngenes), small.shape=20, small.rate=0.1,
                       nlarge=1000, large.prof=empty.prof, large.shape=10, large.rate=0.01) 

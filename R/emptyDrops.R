@@ -71,6 +71,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 }
 
 #' @importFrom methods is
+#' @importClassesFrom Matrix dgTMatrix
 #' @importFrom stats aggregate
 .compute_multinom_prob <- function(mat, prop) 
 # Provides an efficient calculation of the multinomial
