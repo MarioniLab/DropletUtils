@@ -36,6 +36,7 @@ Aaron Lun
 }
 
 \seealso{
+\code{\link{readMM}},
 \code{\link{read10xCounts}}
 }
 

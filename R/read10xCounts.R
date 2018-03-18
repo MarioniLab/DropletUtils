@@ -1,11 +1,9 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
 #' @importFrom utils read.table
-#' @importFrom Matrix readMM
-#' @importFrom methods as
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importClassesFrom Matrix dgCMatrix
-read10xCounts <- function(samples, col.names=FALSE) 
+read10xCounts <- function(samples, col.names=FALSE, ...) 
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.
 #
@@ -25,8 +23,7 @@ read10xCounts <- function(samples, col.names=FALSE)
         matrix.loc <- file.path(run, "matrix.mtx")
         
         ## read sparse count matrix and cell barcodes.
-        data_mat <- readMM(matrix.loc)
-        data_mat <- as(data_mat, "dgCMatrix")
+        data_mat <- read10xMatrix(matrix.loc, ...)
         cell.names <- read.table(barcode.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE)[[1]]
 
         full_data[[i]] <- data_mat
