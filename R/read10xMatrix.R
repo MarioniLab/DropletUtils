@@ -2,6 +2,7 @@
 #' @importFrom Matrix readMM sparseMatrix
 #' @importFrom methods as
 #' @importFrom utils tail
+# Note that this function is the reason for Suggests: HDF5Array
 read10xMatrix <- function(file, chunk.size=NA, hdf5.out=FALSE) {
     if (is.character(file)) { 
         fhandle <- file(file, open='r')
