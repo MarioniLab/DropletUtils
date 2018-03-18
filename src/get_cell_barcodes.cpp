@@ -45,11 +45,7 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
             blen=std::ceil(std::log(*std::max_element(encoded.begin(), encoded.end()))/std::log(4));
         }
     } else {
-        Rcpp::IntegerVector barcodelen(_barcodelen);
-        if (barcodelen.size()!=1) {
-            throw std::runtime_error("barcode length should be an integer vector or NULL");
-        }
-        blen=barcodelen[0];
+        blen=check_integer_scalar(_barcodelen, "barcode length");
     }
 
    // Iterating across the output and taking pairs of bits.

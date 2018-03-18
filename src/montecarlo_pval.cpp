@@ -15,11 +15,7 @@ SEXP montecarlo_pval (SEXP _totalval, SEXP _totallen, SEXP _P, SEXP _ambient, SE
         throw std::runtime_error("sum of run lengths does not equal length of 'P' vector");
     }
    
-    Rcpp::IntegerVector iter(_iter);
-    if (iter.size()!=1) { 
-        throw std::runtime_error("number of iterations should be an integer scalar");
-    }
-    const int niter=iter[0];
+    const int niter=check_integer_scalar(_iter, "number of iterations");
     if (niter < 1) {
         throw std::runtime_error("number of iterations should be a positive integer");
     }

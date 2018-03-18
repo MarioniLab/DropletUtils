@@ -55,10 +55,8 @@ void downsample_counts (IN iIt, IN iend, OUT oIt, double prop) {
 
 bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
     // Choosing between global downsampling or cell-specific downsampling.
-    if (bycol.size()!=1) {
-        throw std::runtime_error("'bycol' should be a logical scalar");
-    }
-    if (bycol[0]) { 
+    const bool do_bycol=check_logical_scalar(bycol, "per-column specifier");
+    if (do_bycol) { 
         if (prop.size()!=ncells) {
             throw std::runtime_error("length of 'prop' should be equal to number of cells");
         }
@@ -68,15 +66,12 @@ bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::Log
             }
         }
     } else {
-        if (prop.size()!=1) { 
-            throw std::runtime_error("'prop' should be a numeric scalar");
-        }
-        const double curprop=prop[0];
+        const double curprop=check_numeric_scalar(prop, "downsampling proportion");
         if (curprop < 0 || curprop > 1) { 
             throw std::runtime_error("downsampling proportion must lie in [0, 1]");
         }
     }
-    return bycol[0];
+    return do_bycol;
 }
 
 /*************************************************

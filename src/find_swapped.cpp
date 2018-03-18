@@ -10,12 +10,7 @@ SEXP find_swapped(SEXP _groups, SEXP _reads, SEXP _minfrac) {
     if (nmolecules!=reads.size()) {
         throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
     }
-
-    Rcpp::NumericVector minfrac(_minfrac);
-    if (minfrac.size()!=1) { 
-        throw std::runtime_error("minimum fraction should be a numeric scalar");
-    }
-    const double mf=minfrac[0];
+    const double mf=check_numeric_scalar(_minfrac, "minimum fraction");
 
     // Setting up the output.
     Rcpp::LogicalVector output(nmolecules, 1);
