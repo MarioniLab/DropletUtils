@@ -14,7 +14,7 @@ SEXP load_tenx_to_hdf5(SEXP fhandle, SEXP chunksize, SEXP nr, SEXP nc, SEXP nz) 
     Rcpp::LogicalVector reorder(1, 1);
 
     auto omat=beachmat::create_integer_output(NR, NC, beachmat::HDF5_PARAM);
-    Rcpp::IntegerVector output(NR);
+    Rcpp::IntegerVector holding(chunks);
     size_t counter=0;
 
     while (counter < NZ) {
@@ -31,18 +31,22 @@ SEXP load_tenx_to_hdf5(SEXP fhandle, SEXP chunksize, SEXP nr, SEXP nc, SEXP nz) 
         auto IIt=I.begin();
         auto JIt=J.begin();
         auto XIt=X.begin();
-        auto oIt=output.begin()-1; // for zero indexing.
 
         while (JIt!=J.end()) {
             int curcol=*JIt;
-            omat->get_col(curcol-1, output.begin());
+            size_t counter=0;
+            auto hIt=holding.begin();
+
             while (JIt!=J.end() && curcol==*JIt) {
-                *(oIt + *IIt) = *XIt;
-                ++XIt;
-                ++IIt;
+                (*hIt)=*IIt - 1; // zero indexing.
+                ++counter;
                 ++JIt;
+                ++IIt;
+                ++hIt;
             }
-            omat->set_col(curcol-1, output.begin());
+
+            omat->set_col_indexed(curcol-1, counter, holding.begin(), XIt);
+            XIt+=counter;
         }
 
         counter += chunks;
