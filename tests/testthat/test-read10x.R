@@ -74,19 +74,10 @@ test_that("read10xCounts works correctly", {
 test_that("Alternative readMM schemes work correctly", {
     path <- file.path(tmpdir, "matrix.mtx")
     ref <- as(readMM(path), "dgCMatrix")
-    out <- read10xMatrix(path, chunk.size=NA)
+    out <- read10xMatrix(path)
     expect_identical(ref, out)
-    out <- read10xMatrix(path, chunk.size=NA, hdf5.out=TRUE)
-    expect_identical(ref, out)
+    expect_error(read10xMatrix(path, hdf5.out=TRUE), "missing")
 
-    # Chunked reading of a sparse matrix.
-    out <- read10xMatrix(path, chunk.size=10)
-    expect_identical(ref, out)
-    out <- read10xMatrix(path, chunk.size=sum(ref!=0))
-    expect_identical(ref, out)
-    out <- read10xMatrix(path, chunk.size=sum(ref!=0)*10)
-    expect_identical(ref, out)
-   
     # HDF5Matrix output. 
     ref2 <- as.matrix(ref)
     out <- read10xMatrix(path, chunk.size=10, hdf5.out=TRUE)
