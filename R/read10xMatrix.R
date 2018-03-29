@@ -25,8 +25,13 @@ read10xMatrix <- function(file, hdf5.out=FALSE, chunk.size) {
 
     # Checking the input type.
     type <- readLines(fhandle, 1)
-    if (type!="%%MatrixMarket matrix coordinate integer general") {
-        stop("expected integer matrix in MatrixMarket format")
+    if (!grepl("%%MatrixMarket matrix coordinate (real|integer) general", type)) {
+        stop("expected numeric/integer matrix in MatrixMarket format")
+    }
+    if (strsplit(type, split=" ")[[1]][4] == "integer") {
+        input.x <- integer()
+    } else {
+        input.x <- double()
     }
     
     # Checking dimensions.
@@ -35,12 +40,12 @@ read10xMatrix <- function(file, hdf5.out=FALSE, chunk.size) {
     nc <- dims[2]
     nz <- dims[3]
 
-    out <- .Call(cxx_load_tenx_to_hdf5, fhandle, chunk.size, nr, nc, nz)
+    out <- .Call(cxx_load_tenx_to_hdf5, fhandle, chunk.size, input.x, nr, nc, nz)
     return(out)
 }
 
-.scan_mm_file <- function(fhandle, chunk.size, order=FALSE) {
-    out <- scan(fhandle, nmax = chunk.size, quiet = TRUE, what = list(i = integer(), j = integer(), x = integer()))
+.scan_mm_file <- function(fhandle, chunk.size, x.type, order=FALSE) {
+    out <- scan(fhandle, nmax = chunk.size, quiet = TRUE, what = list(i = integer(), j = integer(), x = x.type)) 
     if (order) {
         o <- order(out$j)
         out$i <- out$i[o]
