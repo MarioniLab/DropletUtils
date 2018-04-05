@@ -1,0 +1,18 @@
+citEntry(
+    entry = "article",
+    author = "Aaron Lun and Samantha Riesenfeld and Tallulah Andrews and The Phuong Dao and Tomas Gomes and {{participants in the 1st Human Cell Atlas Jamboree}} and John Marioni",
+    title = "Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data",
+    journal = "biorXiv",
+    year = "2018",
+    textVersion = "Lun A, Riesenfeld S, Andrews T, Dao TP, Gomes T, participants in the 1st Human Cell Atlas Jamboree and Marioni JC (2018). Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data. biorXiv"
+)
+
+citEntry(
+    entry = "article",
+    author = "Jonathan A. Griffiths and Arianne C. Richard and Karsten Bach and Aaron T.L. Lun and John C. Marioni",
+    title = "Detection and removal of barcode swapping in single-cell RNA-seq data",
+    journal = "biorXiv",
+    year = "2017", 
+    textVersion = "Griffiths JA, Richard AC, Bach K, Lun ATL and Marioni JC (2017). Detection and removal of barcode swapping in single-cell RNA-seq data. biorXiv"
+)
+

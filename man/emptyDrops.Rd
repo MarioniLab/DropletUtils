@@ -94,6 +94,10 @@ table(Sig=is.cell, Limited=out$Limited)
 }
 
 \references{
+Lun A, Riesenfeld S, Andrews T, Dao TP, Gomes T, participants in the 1st Human Cell Atlas Jamboree, Marioni JC (2018). 
+Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data. 
+\emph{biorXiv}.
+
 Phipson B, Smyth GK (2010).
 Permutation P-values should never be zero: calculating exact P-values when permutations are randomly drawn.
 \emph{Stat. Appl. Genet. Mol. Biol.} 9:Article 39.
