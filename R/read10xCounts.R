@@ -1,6 +1,6 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
-#' @importFrom utils read.table
+#' @importFrom utils read.delim
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importClassesFrom Matrix dgCMatrix
 read10xCounts <- function(samples, col.names=FALSE, ...) 
@@ -24,10 +24,11 @@ read10xCounts <- function(samples, col.names=FALSE, ...)
         
         ## read sparse count matrix and cell barcodes.
         data_mat <- read10xMatrix(matrix.loc, ...)
-        cell.names <- read.table(barcode.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE)[[1]]
+        cell.names <- readLines(barcode.loc)
+        gene.info <- read.delim(gene.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE, quote="", comment.char="")
 
         full_data[[i]] <- data_mat
-        gene_info_list[[i]] <- read.table(gene.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE)
+        gene_info_list[[i]] <- gene.info 
         cell_info_list[[i]] <- DataFrame(Sample = run, Barcode = cell.names)
     }
 
