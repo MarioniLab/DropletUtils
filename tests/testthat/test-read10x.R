@@ -65,10 +65,21 @@ test_that("read10xCounts works correctly", {
     expect_equal(ref, sce10x2)
 
     # Checking that column names work.
-    sce10x <- read10xCounts(tmpdir, col.names=TRUE)
-    expect_identical(colnames(sce10x), sce10x$Barcode)
-    sce10x <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
-    expect_identical(colnames(sce10x), NULL)
+    sce10x3 <- read10xCounts(tmpdir, col.names=TRUE)
+    expect_identical(colnames(sce10x3), sce10x3$Barcode)
+    sce10x4 <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
+    expect_identical(colnames(sce10x4), NULL)
+
+    # Checking that we are robust to odd symbols in the gene names.
+    tmpdir2 <- tempfile()
+    gene.symb2 <- paste0(gene.symb, sample(c("#", "'", '"', ""), length(gene.ids), replace=TRUE))
+    write10xCounts(path=tmpdir2, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
+    sce10x5 <- read10xCounts(tmpdir2)
+
+    expect_identical(assay(sce10x5), assay(sce10x))
+    expect_identical(colData(sce10x5)$Barcode, colData(sce10x)$Barcode)
+    expect_identical(rowData(sce10x)$ID, rowData(sce10x5)$ID)
+    expect_identical(rowData(sce10x5)$Symbol, gene.symb2)
 })
 
 test_that("Alternative readMM schemes work correctly", {
