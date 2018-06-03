@@ -121,4 +121,12 @@ test_that("Alternative readMM schemes work correctly", {
     ref3 <- ref2
     ref3[ref2!=0] <- ref3[ref2!=0] + 0.5
     expect_equivalent(ref3, as.matrix(out))
+
+    # Supplying a connection rather than a file path.
+    expect_error(read10xMatrix(file(path)), "read mode")
+    expect_error(read10xMatrix(DataFrame(path)), "connection")
+    fhandle <- file(path, open="r")
+    outh <- read10xMatrix(fhandle)
+    close(fhandle)
+    expect_identical(outh, ref)
 })

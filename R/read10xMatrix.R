@@ -1,14 +1,19 @@
 #' @export
 #' @importFrom Matrix readMM sparseMatrix
-#' @importFrom methods as
+#' @importFrom methods as is
 #' @importFrom utils tail
 # Note that this function is the reason for Suggests: HDF5Array
 read10xMatrix <- function(file, hdf5.out=FALSE, chunk.size) {
     if (is.character(file)) { 
         fhandle <- file(file, open='r')
         on.exit(close(fhandle))
-    } else {
+    } else if (is(file, "connection")) {
         fhandle <- file
+        if (!isOpen(fhandle, "read")) {
+            stop("'file' should be a connection in read mode")
+        }
+    } else {
+        stop("'file' should be a connection or a character string")
     }
 
     # Checking if we should chunk.
