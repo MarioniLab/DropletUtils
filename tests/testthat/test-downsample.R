@@ -78,17 +78,13 @@ test_that("downsampling from a count matrix gives expected sums", {
         CHECKSUM(w2, down) 
     }
 
-    # Checking that downsampling preserves relative abundances.
-    set.seed(500)
-    X <- matrix(1:4*100, ncol=500, nrow=4)
-    Y <- downsampleMatrix(X, prop=0.11)
-    expect_true(all(abs(rowMeans(Y) - 0.11*rowMeans(X)) < 1))
-    Y <- downsampleMatrix(X, prop=0.55)
-    expect_true(all(abs(rowMeans(Y) - 0.55*rowMeans(X)) < 1))
-    Y <- downsampleMatrix(X, prop=0.11, bycol=FALSE)
-    expect_true(all(abs(rowMeans(Y) - 0.11*rowMeans(X)) < 1))
-    Y <- downsampleMatrix(X, prop=0.55, bycol=FALSE)
-    expect_true(all(abs(rowMeans(Y) - 0.55*rowMeans(X)) < 1))
+    # Checking that bycol=FALSE behaves consistently with bycol=TRUE. 
+    set.seed(505)
+    out1 <- downsampleMatrix(u1, prop=0.111, bycol=FALSE)
+    set.seed(505)
+    ref <- downsampleMatrix(cbind(as.vector(u1)), prop=0.111, bycol=TRUE)
+    dim(ref) <- dim(out1)
+    expect_identical(ref, out1)
 
     # Checking silly inputs.
     expect_equal(downsampleMatrix(u1[0,,drop=FALSE], prop=0.5), u1[0,,drop=FALSE])
@@ -130,6 +126,18 @@ test_that("downsampling from a count matrix gives expected margins", {
     known <- matrix(100, nrow=1000, ncol=10)
     out <- downsampleMatrix(known, prop, bycol=FALSE)
     expect_true(all(abs(colMeans(out)/colMeans(known)/prop - 1) < 0.01))
+
+    # Checking that downsampling preserves relative abundances.
+    set.seed(500)
+    X <- matrix(1:4*100, ncol=500, nrow=4)
+    Y <- downsampleMatrix(X, prop=0.11)
+    expect_true(all(abs(rowMeans(Y) - 0.11*rowMeans(X)) < 1))
+    Y <- downsampleMatrix(X, prop=0.55)
+    expect_true(all(abs(rowMeans(Y) - 0.55*rowMeans(X)) < 1))
+    Y <- downsampleMatrix(X, prop=0.11, bycol=FALSE)
+    expect_true(all(abs(rowMeans(Y) - 0.11*rowMeans(X)) < 1))
+    Y <- downsampleMatrix(X, prop=0.55, bycol=FALSE)
+    expect_true(all(abs(rowMeans(Y) - 0.55*rowMeans(X)) < 1))
 })
 
 #####################################################
@@ -168,12 +176,27 @@ test_that("downsampling from the reads yields correct results", {
     expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.555, bycol=TRUE)), round(0.555*colSums(full.tab)))
     expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.111, bycol=TRUE)), round(0.111*colSums(full.tab)))
 
+    # Checking behaviour on silly inputs where there are no reads, or no genes.
+    ngenes <- 20L
+    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode.length=barcode) 
+    out <- downsampleReads(out.paths, barcode, prop=0.5)
+    expect_identical(dim(out), c(ngenes, 0L))
+
+    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
+    out <- downsampleReads(out.paths, barcode, prop=0.5)
+    expect_identical(dim(out), c(0L, 0L))
+})
+    
+test_that("downsampling from the reads compares correctly to downsampleMatrix", {
     # Manually creating files for comparison to downsampleMatrix - this relies on ordered 'gene' and 'cell', 
-    # so that the retention probabilities applied to each count are the same across functions.
+    # so that the retention probabilities applied to each molecule is the same across functions.
     ngenes <- 4
     gene.count <- seq_len(ngenes)*100
     ncells <- 200
     nmolecules <- sum(gene.count)*ncells
+
+    tmpdir <- tempfile()
+    dir.create(tmpdir)
     out.file <- file.path(tmpdir, "out.h5")
 
     library(rhdf5)
@@ -182,7 +205,7 @@ test_that("downsampling from the reads yields correct results", {
     h5write(seq_len(nmolecules), out.file, "umi")
     h5write(rep(rep(seq_len(ngenes)-1L, gene.count), ncells), out.file, "gene")
     h5write(rep(1, nmolecules), out.file, "gem_group")
-    h5write(rep(1, nmolecules), out.file, "reads")
+    h5write(rep(1, nmolecules), out.file, "reads") # one read per molecule.
     h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
 
     alt <- read10xMolInfo(out.file)
@@ -199,14 +222,4 @@ test_that("downsampling from the reads yields correct results", {
     set.seed(100)
     Y <- downsampleReads(out.file, prop=0.55, bycol=TRUE)
     expect_equal(Y, Z)
-
-    # Checking behaviour on silly inputs where there are no reads, or no genes.
-    ngenes <- 20L
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode.length=barcode) 
-    out <- downsampleReads(out.paths, barcode, prop=0.5)
-    expect_identical(dim(out), c(ngenes, 0L))
-
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
-    out <- downsampleReads(out.paths, barcode, prop=0.5)
-    expect_identical(dim(out), c(0L, 0L))
 })
