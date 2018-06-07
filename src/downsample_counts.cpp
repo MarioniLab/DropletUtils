@@ -2,59 +2,77 @@
 
 /* Defining some general-purpose downsampling functions. */
 
-template<class IN, class OUT> 
-void downsample_counts (IN iIt, IN iend, OUT oIt, 
-        int num_total, 
-        int num_sample, 
-        int& offset,      // the location of 'iIt' in the total set of points.
-        int& num_selected // number of points already selected.
-        ) {        
+/* This function considers sampling events without replacement from a vector.
+ * Here, though, the vector contains frequencies of events rather than the events themselves.
+ * The sampling scheme is adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
+ * 
+ * freqIt: An iterator pointing to the start of the frequency vector.
+ * freqEnd: An interator pointing to the end of the frequency vector.
+ * freqOut: An iterator pointing to an output vector, indicating how many instances of each event have been sampled.
+ * num_total: An integer scalar specifying the total number of all events.
+ * num_sample: An integer scalar specifying the number of events to sample without replacement.
+ * num_processed: An integer scalar specifying the number of events that have already been considered for selection.
+ * num_selected: An integer scalar specifying the number of events that have already been selected.
+ * 
+ * Note that num_total may not be simply a sum of all values from [freqIt, freqEnd).
+ * This is because we allow multiple applications of this function to sample without replacement from a series of vectors.
+ * We keep track of 'num_processed' and 'num_selected' to ensure correct sampling when moving from one vector to another.
+ */
 
-    if (iIt==iend) { 
+template<class IN, class OUT> 
+void downsample_counts (IN freqIt, IN freqEnd, OUT freqOut, 
+        int num_total, int num_sample, 
+        int& num_processed, int& num_selected) {        
+
+    if (freqIt==freqEnd) { 
         return;
     }
-    int cumulative=offset + *iIt;
-    ++iIt;
+    int end_of_run=num_processed + *freqIt;
+    ++freqIt;
 
-    // Sampling scheme adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
     while (num_selected < num_sample) {
 
-        /* Advancing to that point's "index" (if we had instantiated the full [0, num_total) array).
-         * Note that we need to use a while loop just in case there's a whole bunch of zeroes.
-         */
-        while (cumulative==offset && iIt!=iend) {
-            cumulative+=(*iIt);
-            ++iIt;
-            ++oIt;
+        // Finding the next event with a non-zero frequency.
+        while (end_of_run==num_processed && freqIt!=freqEnd) {
+            end_of_run+=*freqIt;
+            ++freqIt;
+            ++freqOut;
         }
 
         // Breaking if all points have been iterated over.
-        if (cumulative==offset && iIt==iend) { 
+        if (end_of_run==num_processed && freqIt==freqEnd) { 
             break;
         }
 
-        // Deciding whether or not to keep this point.
-        if ( (num_total - offset)*R::unif_rand() < num_sample - num_selected) {
-            ++(*oIt);
+        // Deciding whether or not to keep this instance of this event.
+        // This is a safe way of computing NUM_YET_TO_SELECT/NUM_YET_TO_PROCESS > runif(1), avoiding issues with integer division.
+        if ( (num_total - num_processed)*R::unif_rand() < num_sample - num_selected) {
+            ++(*freqOut);
             ++num_selected;
         }
-      
-        ++offset; 
+     
+        // Moving onto the next instance of the same event.
+        ++num_processed; 
     }
     return;
 }  
 
+/* Convenience wrapper when we're just downsampling in a single vector.
+ * In this case, num_total is just a sum of [freqIt, freqEnd). 
+ * There is also no need for any special values of num_processed and 'num_selected'.
+ */
+
 template<class IN, class OUT> 
-void downsample_counts (IN iIt, IN iend, OUT oIt, double prop) { 
-    // Convenience wrapper, when we're just downsampling in a vector.
-    const int num_total=std::accumulate(iIt, iend, 0), num_sample=std::round(prop*num_total);
-    int offset=0, num_selected=0;
-    downsample_counts(iIt, iend, oIt, num_total, num_sample, offset, num_selected);
+void downsample_counts (IN freqIt, IN freqEnd, OUT oIt, double prop) { 
+    const int num_total=std::accumulate(freqIt, freqEnd, 0), num_sample=std::round(prop*num_total);
+    int num_processed=0, num_selected=0;
+    downsample_counts(freqIt, freqEnd, oIt, num_total, num_sample, num_processed, num_selected);
     return;
 }
 
-bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
-    // Choosing between global downsampling or cell-specific downsampling.
+bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) 
+// Choosing between global downsampling or cell-specific downsampling.
+{
     const bool do_bycol=check_logical_scalar(bycol, "per-column specifier");
     if (do_bycol) { 
         if (prop.size()!=ncells) {
@@ -85,7 +103,7 @@ void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop, Rcpp:
     Rcpp::IntegerVector incoming(ngenes), outgoing(ngenes);
     const size_t ncells=mat->get_ncol();
 
-    int num_total=0, num_sample=0, offset=0, num_selected=0;
+    int num_total=0, num_sample=0, num_processed=0, num_selected=0;
     const bool percol=check_downsampling_mode(ncells, prop, bycol);
     if (!percol) {
         // Getting the total sum of counts in the matrix.
@@ -109,7 +127,7 @@ void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop, Rcpp:
             downsample_counts(incoming.begin(), incoming.end(), outgoing.begin(), *pIt);
             ++pIt;
         } else {
-            downsample_counts(incoming.begin(), incoming.end(), outgoing.begin(), num_total, num_sample, offset, num_selected);
+            downsample_counts(incoming.begin(), incoming.end(), outgoing.begin(), num_total, num_sample, num_processed, num_selected);
         }
 
         output->set_col(i, outgoing.begin());
@@ -156,7 +174,7 @@ SEXP downsample_runs(SEXP _groups, SEXP _reads, SEXP _prop, SEXP _bycol) {
         throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
     }
 
-    int num_total=0, num_sample=0, offset=0, num_selected=0;
+    int num_total=0, num_sample=0, num_processed=0, num_selected=0;
     Rcpp::NumericVector prop(_prop);
     const bool percol=check_downsampling_mode(groups.size(), prop, _bycol);
     if (!percol) {
@@ -177,7 +195,7 @@ SEXP downsample_runs(SEXP _groups, SEXP _reads, SEXP _prop, SEXP _bycol) {
             downsample_counts(rIt, rIt+g, oIt, *pIt);
             ++pIt;
         } else {
-            downsample_counts(rIt, rIt+g, oIt, num_total, num_sample, offset, num_selected);
+            downsample_counts(rIt, rIt+g, oIt, num_total, num_sample, num_processed, num_selected);
         }
         rIt+=g;
         oIt+=g;        
