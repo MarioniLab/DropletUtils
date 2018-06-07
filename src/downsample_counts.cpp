@@ -163,42 +163,41 @@ SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
  ***** Downsampling (each run of) a vector. ******
  *************************************************/
 
-SEXP downsample_runs(SEXP _groups, SEXP _reads, SEXP _prop, SEXP _bycol) {
+SEXP downsample_runs(SEXP cells, SEXP reads, SEXP prop, SEXP bycol) {
     BEGIN_RCPP
 
     // Checking all of the inputs.
-    Rcpp::IntegerVector groups(_groups);
-    Rcpp::IntegerVector reads(_reads);
-    const int nmolecules=std::accumulate(groups.begin(), groups.end(), 0);
-    if (nmolecules!=reads.size()) {
+    Rcpp::IntegerVector cell_vec(cells);
+    Rcpp::IntegerVector read_vec(reads);
+    const int nmolecules=std::accumulate(cell_vec.begin(), cell_vec.end(), 0);
+    if (nmolecules!=read_vec.size()) {
         throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
     }
 
     int num_total=0, num_sample=0, num_processed=0, num_selected=0;
-    Rcpp::NumericVector prop(_prop);
-    const bool percol=check_downsampling_mode(groups.size(), prop, _bycol);
+    Rcpp::NumericVector proportions(prop);
+    const bool percol=check_downsampling_mode(cell_vec.size(), proportions, bycol);
     if (!percol) {
-        // Getting the total sum of counts in the vector.
-        num_total=std::accumulate(reads.begin(), reads.end(), 0);
-        num_sample=std::round(num_total*prop[0]);
+        num_total=std::accumulate(read_vec.begin(), read_vec.end(), 0);
+        num_sample=std::round(num_total*proportions[0]);
     }
 
     // Setting up the output.
-    Rcpp::IntegerVector output(nmolecules, 0);
+    Rcpp::IntegerVector output(nmolecules);
     auto oIt=output.begin();
-    auto rIt=reads.begin();
-    auto pIt=prop.begin();
+    auto rIt=read_vec.begin();
+    auto pIt=proportions.begin();
 
-    // Iterating across the molecule groups and downsampling.
-    for (const auto& g : groups) {
+    // Iterating across the molecule cell_vec and downsampling.
+    for (const auto& cell : cell_vec) {
         if (percol) { 
-            downsample_counts(rIt, rIt+g, oIt, *pIt);
+            downsample_counts(rIt, rIt+cell, oIt, *pIt);
             ++pIt;
         } else {
-            downsample_counts(rIt, rIt+g, oIt, num_total, num_sample, num_processed, num_selected);
+            downsample_counts(rIt, rIt+cell, oIt, num_total, num_sample, num_processed, num_selected);
         }
-        rIt+=g;
-        oIt+=g;        
+        rIt+=cell;
+        oIt+=cell;
     }
 
     return output;
