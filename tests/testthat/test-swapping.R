@@ -117,7 +117,7 @@ test_that("Removal of swapped drops works correctly", {
     
             # Checking that everything adds up to the total.
             for (s in seq_along(reference)) { 
-                total <- (observed$cleaned[[s]] + observed$swapped[[s]])
+                total <- observed$cleaned[[s]] + observed$swapped[[s]]
                 ref.total <- total.mat[[s]][,retainer[[s]]]
                 dimnames(ref.total) <- dimnames(total) 
                 expect_equal(ref.total, total)
@@ -155,7 +155,18 @@ test_that("swappedDrops functions correctly for silly inputs", {
     deswapped <- swappedDrops(output)
     for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(0L, 0L))
-    }   
+    }
+
+    # Fails if you give it samples with different genee sets.
+    tmpdir2 <- tempfile()
+    dir.create(tmpdir2)
+
+    o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=100, nmolecules=0)
+    o2 <- DropletUtils:::sim10xMolInfo(tmpdir2, barcode.length=barcode, nsamples=3, ngenes=10, nmolecules=0)
+    expect_error(swappedDrops(c(o1, o2)), "gene information differs")
+
+    # Spits out a warning if you have multiple GEM groups.
+    o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
+    h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
+    expect_warning(swappedDrops(o1), "contains multiple GEM groups")
 })
-
-
