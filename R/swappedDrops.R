@@ -32,35 +32,22 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
     }
         
     # Identifying swapped molecules.
-    all.nreads <- unlist(nreads)
-    swap.out <- .findSwapped(unlist(cells), unlist(umis), unlist(genes), all.nreads, min.frac, get.group=get.diagnostics)
-    is.swap <- swap.out$swapped
+    swap.out <- .Call(cxx_find_swapped_ultra, cells, umis, genes, nreads, min.frac)
 
-    # Printing out per-molecule read counts. 
-    if (get.diagnostics) {
-        sample.ids <- rep(seq_along(nreads), lengths(nreads))
-        nmolecules <- if (length(swap.out$group)) max(swap.out$group) else 0
-        diagnostics <- sparseMatrix(i=swap.out$group, j=sample.ids, x=all.nreads, dims=c(nmolecules, length(samples)))
-        colnames(diagnostics) <- names(samples)
-    }
-
-    # Iterating through the samples.
     cleaned <- swapped <- vector("list", length(samples))
     names(cleaned) <- names(swapped) <- names(samples)
-    last <- 0L
     for (i in seq_along(samples)) { 
-        all.cells <- sort(unique(cells[[i]]))
         cur.cells <- cells[[i]]
+        all.cells <- sort(unique(cur.cells))
         cur.genes <- genes[[i]]
 
         # Forming count matrices from unswapped and swapped molecules. 
-        curswap <- is.swap[last + seq_along(cur.cells)]
-        cleaned[[i]] <- makeCountMatrix(cur.genes[!curswap], cur.cells[!curswap], all.genes=ref.genes, all.cells=all.cells)
+        notswap <- swap.out[[i]]
+        cleaned[[i]] <- makeCountMatrix(cur.genes[notswap], cur.cells[notswap], all.genes=ref.genes, all.cells=all.cells)
         if (get.swapped) {
+            curswap <- !notswap
             swapped[[i]] <- makeCountMatrix(cur.genes[curswap], cur.cells[curswap], all.genes=ref.genes, all.cells=all.cells)
         }
-
-        last <- last + length(cur.cells)
     }
 
     # Figuring out what kind of output to return.
