@@ -24,7 +24,7 @@ void compare_lists(U left, V right) {
     return;
 }
 
-SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac) {
+SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, SEXP diagnostics) {
     BEGIN_RCPP
 
     auto Cells=process_list<Rcpp::StringVector>(cells);
@@ -32,11 +32,14 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
     auto Umis=process_list<Rcpp::StringVector>(umis);
     auto Reads=process_list<Rcpp::IntegerVector>(reads);
 
-    const double mf=check_numeric_scalar(minfrac, "minimum fraction");
     compare_lists(Cells, Genes);
     compare_lists(Cells, Umis);
     compare_lists(Cells, Reads);
 
+    const double mf=check_numeric_scalar(minfrac, "minimum fraction");
+    const int diagcode=check_numeric_scalar(diagnostics, "diagcode");
+
+    // Setting up the ordering vector.
     const size_t nsamples=Cells.size();
     size_t nmolecules=0;
     for (size_t i=0; i<nsamples; ++i) {
@@ -79,23 +82,29 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
     });
     
     // Setting up the output, indicating which values to keep from each sample.
-    std::vector<Rcpp::LogicalVector> output(nsamples);
+    std::vector<Rcpp::LogicalVector> notswapped(nsamples);
     for (size_t i=0; i<nsamples; ++i) {
-        output[i]=Rcpp::LogicalVector(Cells[i].size());
+        notswapped[i]=Rcpp::LogicalVector(Cells[i].size());
     }
+
+    auto same_combination = [&] (const molecule& left, const molecule& right) {
+        return Genes[left.first][left.second]==Genes[right.first][right.second] 
+            && Umis[left.first][left.second]==Umis[right.first][right.second]
+            && Cells[left.first][left.second]==Cells[right.first][right.second];
+    };
 
     // Iterating across runs of the same UMI/gene/cell combination.
     auto ostart=ordering.begin(), oend=ordering.begin();
+    size_t nunique=0;
+
     while (ostart!=ordering.end()) {
         int max_nread=Reads[ostart->first][ostart->second];
         int total_nreads=max_nread;
         auto best_mol=ostart;
 
-        while (oend!=ordering.end()
-                && Genes[ostart->first][ostart->second]==Genes[oend->first][oend->second] 
-                && Umis[ostart->first][ostart->second]==Umis[oend->first][oend->second]
-                && Cells[ostart->first][ostart->second]==Cells[oend->first][oend->second]) {
-        
+        // ostart is always equal to oend at this point, so incrementing the latter.
+        ++oend; 
+        while (oend!=ordering.end() && same_combination(*ostart, *oend)) { 
             const int current_nread=Reads[oend->first][oend->second];
             if (current_nread > max_nread) {
                 max_nread=current_nread;
@@ -107,17 +116,55 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
         }
 
         if (double(max_nread)/total_nreads >= mf) {
-            output[best_mol->first][best_mol->second]=1;
+            notswapped[best_mol->first][best_mol->second]=1;
+        }
+        if (diagcode) {
+            ++nunique;
         }
         ostart=oend;
     }
 
-    // Creating the output object.
+    // Creating the output list.
     Rcpp::List outlist(nsamples);
     for (size_t i=0; i<nsamples; ++i) {
-        outlist[i]=output[i];
+        outlist[i]=notswapped[i];
     }
-    return outlist;
+    Rcpp::List output(2);
+    output[0]=outlist;
+    output[1]=R_NilValue;
+
+    // Storing diagnostic information.
+    if (diagcode) {
+        Rcpp::IntegerVector indices(nsamples);
+        Rcpp::NumericVector values(nsamples);
+        auto diag_out=beachmat::create_numeric_output(nunique, nsamples, 
+            diagcode==1 ? beachmat::SPARSE_PARAM : beachmat::HDF5_PARAM);
+
+        auto ostart=ordering.begin(), oend=ordering.begin();
+        size_t counter=0;
+        while (ostart!=ordering.end()) {
+            size_t nnzero=0;
+
+            // Adding read counts per molecule, storing them in the matrix, then wiping them.
+            while (oend!=ordering.end() && (ostart==oend || same_combination(*ostart, *oend))) { 
+                if (nnzero >= nsamples) {
+                    throw std::runtime_error("multiple instances of the same combination observed in a single sample");
+                }
+                indices[nnzero]=oend->first;
+                values[nnzero]=Reads[oend->first][oend->second];
+                ++oend;
+                ++nnzero;
+            }
+
+            diag_out->set_row_indexed(counter, nnzero, indices.begin(), values.begin());
+            ostart=oend;
+            ++counter;
+        }
+        
+        output[1]=diag_out->yield();
+    }
+
+    return output;
     END_RCPP
 }
 

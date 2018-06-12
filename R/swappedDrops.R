@@ -1,6 +1,5 @@
 #' @export
-#' @importFrom Matrix sparseMatrix
-swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.diagnostics=FALSE, min.frac=0.8)
+swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
 # Removes swapped reads between samples in 10X Genomics data.
 #
 # written by Jonathan Griffiths
@@ -32,7 +31,8 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
     }
         
     # Identifying swapped molecules.
-    swap.out <- .Call(cxx_find_swapped_ultra, cells, umis, genes, nreads, min.frac)
+    swap.out <- .Call(cxx_find_swapped_ultra, cells, umis, genes, nreads, min.frac, as.integer(get.diagnostics + hdf5.out))
+    unswapped <- swap.out[[1]]
 
     cleaned <- swapped <- vector("list", length(samples))
     names(cleaned) <- names(swapped) <- names(samples)
@@ -42,7 +42,7 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         cur.genes <- genes[[i]]
 
         # Forming count matrices from unswapped and swapped molecules. 
-        notswap <- swap.out[[i]]
+        notswap <- unswapped[[i]]
         cleaned[[i]] <- makeCountMatrix(cur.genes[notswap], cur.cells[notswap], all.genes=ref.genes, all.cells=all.cells)
         if (get.swapped) {
             curswap <- !notswap
@@ -56,7 +56,7 @@ swappedDrops <- function(samples, barcode.length=NULL, get.swapped=FALSE, get.di
         output$swapped <- swapped
     } 
     if (get.diagnostics) { 
-        output$diagnostics <- diagnostics
+        output$diagnostics <- swap.out[[2]]
     }
     return(output)
 }
