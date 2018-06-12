@@ -130,7 +130,7 @@ test_that("Removal of swapped drops works correctly", {
         observed2 <- swappedDrops(output$files, barcode, min.frac=min.frac)
         expect_equal(observed$cleaned, observed2$cleaned)
         
-        observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, get.diagnostics=TRUE, min.frac=min.frac)
+        observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, get.diagnostics=TRUE, min.frac=min.frac, hdf5.out=FALSE)
         expect_equal(observed$cleaned, observed3$cleaned)
         expect_equal(observed$swapped, observed3$swapped)
 
@@ -141,6 +141,10 @@ test_that("Removal of swapped drops works correctly", {
         for (s in seq_along(observed2$cleaned)) {
             expect_equal(sum(observed2$cleaned[[s]]), sum(best.in.class==s & best.prop >= min.frac))
         }
+
+        # Checking that the HDF5 and sparse results are the same.
+        observed4 <- swappedDrops(output$files, barcode, get.swapped=FALSE, get.diagnostics=TRUE, min.frac=min.frac, hdf5.out=TRUE)
+        expect_equivalent(as.matrix(observed3$diagnostics), as.matrix(observed4$diagnostics))
     }
 })
 
