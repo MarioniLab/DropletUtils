@@ -19,7 +19,7 @@ Alternatively, a connection object in text reading mode.}
 }
 
 \value{
-A \code{dgCMatrix} object (or a \code{HDF5Matrix} object, if \code{hdf5.out=TRUE}) containing the counts for each gene (row) and cell barcode (column).
+A \linkS4class{dgCMatrix} object (or a \linkS4class{HDF5Matrix} object, if \code{hdf5.out=TRUE}) containing the counts for each gene (row) and cell barcode (column).
 }
 
 \details{
