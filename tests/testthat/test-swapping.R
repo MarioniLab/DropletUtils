@@ -64,10 +64,6 @@ REFFUN <- function(original, swapped, min.frac) {
             is.swapped[current[chosen]] <- FALSE
         }
     }
-
-    # Checking that the logical vector is correct.
-    obs.swapped <- DropletUtils:::.findSwapped(combined$cell, combined$umi, combined$gene, combined$reads, min.frac)$swapped
-    expect_identical(obs.swapped, is.swapped)
     return(all.counts)
 }
 

@@ -24,7 +24,12 @@ void compare_lists(U left, V right) {
     return;
 }
 
-SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, SEXP diagnostics) {
+/* Identifies which molecules should be retained in which samples,
+ * given the cell, gene and UMI combination for each molecule per sample.
+ * Also returns a diagnostic matrix of molecule-sample read counts.
+ */
+
+SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, SEXP diagnostics) {
     BEGIN_RCPP
 
     auto Cells=process_list<Rcpp::StringVector>(cells);
@@ -102,7 +107,7 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
         int total_nreads=max_nread;
         auto best_mol=ostart;
 
-        // ostart is always equal to oend at this point, so incrementing the latter.
+        // ostart is always equal to oend at this point, so incrementing the latter to get to the next read.
         ++oend; 
         while (oend!=ordering.end() && same_combination(*ostart, *oend)) { 
             const int current_nread=Reads[oend->first][oend->second];
@@ -133,7 +138,7 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
     output[0]=outlist;
     output[1]=R_NilValue;
 
-    // Storing diagnostic information.
+    // Storing diagnostic information about each unique combination.
     if (diagcode) {
         Rcpp::IntegerVector indices(nsamples);
         Rcpp::NumericVector values(nsamples);
@@ -166,45 +171,4 @@ SEXP find_swapped_ultra(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minf
 
     return output;
     END_RCPP
-}
-
-
-SEXP find_swapped(SEXP _groups, SEXP _reads, SEXP _minfrac) {
-    BEGIN_RCPP
-
-    // Checking all of the inputs.
-    Rcpp::IntegerVector groups(_groups);
-    Rcpp::IntegerVector reads(_reads);
-    const int nmolecules=std::accumulate(groups.begin(), groups.end(), 0);
-    if (nmolecules!=reads.size()) {
-        throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
-    }
-    const double mf=check_numeric_scalar(_minfrac, "minimum fraction");
-
-    // Setting up the output.
-    Rcpp::LogicalVector output(nmolecules, 1);
-    auto oIt=output.begin();
-
-    // Iterating across the molecule groups.
-    auto rIt=reads.begin();
-    for (const auto& g : groups) {
-        int topindex=0, topreads=*rIt, totalreads=topreads;
-        ++rIt;
-
-        for (int i=1; i<g; ++i, ++rIt) {
-            if (topreads < *rIt) {
-                topreads=*rIt;
-                topindex=i;
-            }
-            totalreads+=*rIt;
-        }
-        
-        if (double(totalreads)*mf <= double(topreads)) {
-            *(oIt+topindex)=0;
-        }
-        oIt+=g;
-    }
-
-    return output;
-    END_RCPP;
 }

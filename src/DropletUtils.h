@@ -26,9 +26,7 @@ SEXP montecarlo_pval(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP compute_multinom(SEXP, SEXP);
 
 
-SEXP find_swapped(SEXP, SEXP, SEXP);
-
-SEXP find_swapped_ultra(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP find_swapped(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 SEXP get_cell_barcodes(SEXP, SEXP, SEXP);
 

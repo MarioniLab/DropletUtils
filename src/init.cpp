@@ -11,8 +11,7 @@ static const R_CallMethodDef all_call_entries[] = {
     REGISTER(downsample_runs, 4),
     REGISTER(montecarlo_pval, 5),
     REGISTER(compute_multinom, 2),
-    REGISTER(find_swapped, 3),
-    REGISTER(find_swapped_ultra, 6),
+    REGISTER(find_swapped, 6),
     REGISTER(get_cell_barcodes, 3),
     REGISTER(load_tenx_to_hdf5, 6),
     {NULL, NULL, 0}

@@ -31,7 +31,7 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
     }
         
     # Identifying swapped molecules.
-    swap.out <- .Call(cxx_find_swapped_ultra, cells, umis, genes, nreads, min.frac, as.integer(get.diagnostics + hdf5.out))
+    swap.out <- .Call(cxx_find_swapped, cells, umis, genes, nreads, min.frac, as.integer(get.diagnostics + hdf5.out))
     unswapped <- swap.out[[1]]
 
     cleaned <- swapped <- vector("list", length(samples))
@@ -57,39 +57,6 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
     } 
     if (get.diagnostics) { 
         output$diagnostics <- swap.out[[2]]
-    }
-    return(output)
-}
-
-.findSwapped <- function(cells, umis, genes, reads, min.frac=0.8, get.group=FALSE)  
-# Identifies the molecules that are swapped or not. Technically we could 
-# use sparse matrices and max.col() to do this, but max.col() isn't supported
-# natively for sparse matrices and would call as.matrix() instead.
-{
-    o <- order(cells, umis, genes)
-    cells <- cells[o]
-    umis <- umis[o]
-    genes <- genes[o]
-    reads <- reads[o]
-
-    # Figures out the runs of the same type of cell/umi/gene combination.
-    N <- length(o)
-    if (N) { 
-        is.diff <- cells[-N]!=cells[-1] | umis[-N]!=umis[-1] | genes[-N]!=genes[-1]
-        runs <- diff(c(0L, which(is.diff), N))
-    } else {
-        runs <- integer(0)
-    }
-
-    # Identifying putative swapped reads.
-    is.swap <- .Call(cxx_find_swapped, runs, reads, min.frac)
-    is.swap[o] <- is.swap
-    output <- list(swapped=is.swap) 
-
-    if (get.group) {
-        grouping <- rep(seq_along(runs), runs)
-        grouping[o] <- grouping
-        output$group <- grouping
     }
     return(output)
 }
