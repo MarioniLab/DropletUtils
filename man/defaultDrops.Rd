@@ -22,9 +22,11 @@ The matrix should correspond to an individual sample.
 The \code{defaultDrops} function will call cells based on library size similarly to the CellRanger software suite from 10X Genomics.
 Default arguments correspond to an exact reproduction of CellRanger's algorithm, where the number of expected cells was also left at CellRanger default value.
 
-The method considers the \code{upper.quant} quantile of the top \code{expected} barcodes, ordered by decreasing number of UMIs, as a threshold. Any barcodes containing more molecules than \code{lower.prop} times this threshold is considered to be a cell, and is retained for further analysis.
+The method computes the \code{upper.quant} quantile of the top \code{expected} barcodes, ordered by decreasing number of UMIs.
+Any barcodes containing more molecules than \code{lower.prop} times this quantile is considered to be a cell, and is retained for further analysis.
 
-This method may be vulnerable to calling very well-captured background RNA, or missing real cells that were poorly captured. See \code{?\link{emptyDrops}} for an alternative approach.
+This method may be vulnerable to calling very well-captured background RNA as cells, or missing real cells with low RNA content.
+See \code{?\link{emptyDrops}} for an alternative approach for cell calling.
 }
 
 \value{

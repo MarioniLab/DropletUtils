@@ -14,7 +14,7 @@ read10xMatrix(file, hdf5.out=FALSE, chunk.size)
 \arguments{
 \item{file}{String containing the path to a MatrixMarket file, usually named \code{"matrix.mtx"}.
 Alternatively, a connection object in text reading mode.}
-\item{hdf5.out}{A logical scalar indicating whether a \code{\link[HDF5Array:HDF5Array-class]{HDF5Matrix}} object should be produced.}
+\item{hdf5.out}{A logical scalar indicating whether a \linkS4class{HDF5Matrix} object should be produced.}
 \item{chunk.size}{An integer scalar specifying the chunk size when reading in records from \code{file}.}
 }
 
