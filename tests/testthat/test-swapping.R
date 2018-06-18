@@ -122,24 +122,31 @@ test_that("Removal of swapped drops works correctly", {
 
         # Further input/output tests.
         min.frac <- 0.9001
-        observed <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
-        observed2 <- swappedDrops(output$files, barcode, min.frac=min.frac)
-        expect_equal(observed$cleaned, observed2$cleaned)
+        observed <- swappedDrops(output$files, barcode, min.frac=min.frac)
+        expect_equal(observed$swapped, NULL)
+        expect_equal(observed$diagnostics, NULL)
+
+        observed2 <- swappedDrops(output$files, barcode, get.swapped=TRUE, min.frac=min.frac)
+        expect_equal(observed2$cleaned, observed$cleaned)
+        expect_identical(lapply(observed2$swapped, dim), lapply(observed2$cleaned, dim))
+        expect_equal(observed2$diagnostics, NULL)
         
         observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, get.diagnostics=TRUE, min.frac=min.frac, hdf5.out=FALSE)
-        expect_equal(observed$cleaned, observed3$cleaned)
-        expect_equal(observed$swapped, observed3$swapped)
+        expect_s4_class(observed3$diagnostics, "dgCMatrix")
+        expect_equal(observed2$cleaned, observed3$cleaned)
+        expect_equal(observed2$swapped, observed3$swapped)
 
         # Checking that the diagnostic field is consistent with the total.
         top.prop <- as.matrix(observed3$diagnostics)/rowSums(observed3$diagnostics)
         best.in.class <- max.col(top.prop)
         best.prop <- top.prop[(best.in.class - 1L) * nrow(top.prop) + seq_along(best.in.class)]
-        for (s in seq_along(observed2$cleaned)) {
-            expect_equal(sum(observed2$cleaned[[s]]), sum(best.in.class==s & best.prop >= min.frac))
+        for (s in seq_along(observed$cleaned)) {
+            expect_equal(sum(observed$cleaned[[s]]), sum(best.in.class==s & best.prop >= min.frac))
         }
 
         # Checking that the HDF5 and sparse results are the same.
         observed4 <- swappedDrops(output$files, barcode, get.swapped=FALSE, get.diagnostics=TRUE, min.frac=min.frac, hdf5.out=TRUE)
+        expect_s4_class(observed4$diagnostics, "HDF5Array")
         expect_equivalent(as.matrix(observed3$diagnostics), as.matrix(observed4$diagnostics))
     }
 })

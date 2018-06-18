@@ -31,7 +31,8 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
     }
         
     # Identifying swapped molecules.
-    swap.out <- .Call(cxx_find_swapped, cells, umis, genes, nreads, min.frac, as.integer(get.diagnostics + hdf5.out))
+    diag.code <- ifelse(get.diagnostics, 1L + as.integer(hdf5.out), 0L)
+    swap.out <- .Call(cxx_find_swapped, cells, umis, genes, nreads, min.frac, diag.code)
     unswapped <- swap.out[[1]]
 
     cleaned <- swapped <- vector("list", length(samples))
