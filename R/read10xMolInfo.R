@@ -15,11 +15,8 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE)
     reads <- as.vector(h5read(sample, "/reads")) # Maybe useful for selective exclusion
     data <- DataFrame(cell=cell, umi=umi, gene=gene, reads=reads, gem_group=gem_group)
 
-    # Defining the set of all barcodes, and of all genes.
-    all.barcodes <- sort(unique(cell))
+    # Defining the set of all genes, removing unassigned gene entries.
     gene.ids <- h5read(sample, "/gene_ids") 
-
-    # Remove the unassigned gene entries.
     if (!keep.unmapped) { 
         keep <- gene <= length(gene.ids)
         data <- data[keep,]
