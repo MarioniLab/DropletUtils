@@ -3,10 +3,19 @@
 
 ##########################################
 
+BITMASK <- function(idx, blen) {
+    seqs <- vector("list", blen)
+    for (i in seq_len(blen)) {
+        seqs[[i]] <- c("A", "C", "G", "T")[idx %% 4 + 1L]
+        idx <- floor(idx/4)
+    }
+    do.call(paste0, rev(seqs))
+}
+
 test_that("barcode extraction is working correctly", {
     library(rhdf5)
     for (blen in c(4, 7, 10)) {
-         all.barcodes <- sample(4^blen, 10000, replace=TRUE)
+         all.barcodes <- sample(4^blen, 10000, replace=TRUE) - 1L
     
          out.file <- tempfile(fileext="h5")
          h5 <- h5createFile(out.file)
@@ -17,13 +26,7 @@ test_that("barcode extraction is working correctly", {
          expect_identical(out, guess)
 
          # Manually doing the bit masks.
-         progressive <- ""
-         tmp <- all.barcodes
-         for (i in seq_len(blen)) {
-             remainder <- tmp %% 4 + 1
-             progressive <- paste0(c("A", "C", "G", "T")[remainder], progressive)
-             tmp <- floor(tmp/4)
-         }
+         progressive <- BITMASK(all.barcodes, blen)
          expect_identical(out, progressive)
     }
 })
@@ -73,19 +76,19 @@ library(Matrix)
 set.seed(5717)
 test_that("Removal of swapped drops works correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3,
-                                ngenes=ngenes, nmolecules=nmolecules)
+        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
 
-        # Figuring out the correspondence between cell ID and the reported barcode.
-        # This involves a bit of work to decode the barcode.
-        retainer <- vector("list", length(output$files))
-        for (i in seq_along(retainer)) { 
-            info <- read10xMolInfo(output$files[i], barcode)
-            all.cells <- sort(unique(info$data$cell))
-            encoded <- unlist(lapply(strsplit(all.cells, ""), FUN=function(i) { sum(4^(rev(seq_along(i))-1)*c(A=0, C=1, G=2, T=3)[i]) }))
-            retainer[[i]] <- encoded + 1L # to get back to 1-based indexing.
-        }
-    
+        # Figuring out the correspondence between cell ID and the sorted barcode.
+        was.mapped <- c(output$original$gene, output$swapped$gene)!=ngenes
+        f <- factor(c(output$original$sample, output$swapped$sample), levels=seq_along(output$files))
+        retainer <- split(c(output$original$cell, output$swapped$cell)[was.mapped], f[was.mapped], drop=FALSE)
+        retainer <- lapply(retainer, FUN=function(i) {
+            i <- unique(i)
+            collected <- BITMASK(i, barcode)
+            stopifnot(!anyDuplicated(collected))
+            i[order(collected)] + 1L # get back to 1-based indexing.
+        })
+   
         # Constructing total matrices:
         combined <- rbind(output$original, output$swapped)
         combined <- combined[combined$gene<ngenes,] # Removing "unmapped" reads
@@ -108,7 +111,8 @@ test_that("Removal of swapped drops works correctly", {
                 obs.mat <- as.matrix(observed$cleaned[[s]])
                 ref.mat <- reference[[s]][,retainer[[s]]]
                 dimnames(ref.mat) <- dimnames(obs.mat)
-                expect_equal(obs.mat, ref.mat)  
+                expect_equal(obs.mat, ref.mat) 
+                expect_true(all(reference[[s]][,-retainer[[s]]]==0))
             }
     
             # Checking that everything adds up to the total.
@@ -117,6 +121,7 @@ test_that("Removal of swapped drops works correctly", {
                 ref.total <- total.mat[[s]][,retainer[[s]]]
                 dimnames(ref.total) <- dimnames(total) 
                 expect_equal(ref.total, total)
+                expect_true(all(total.mat[[s]][,-retainer[[s]]]==0))
             }
         }
 
