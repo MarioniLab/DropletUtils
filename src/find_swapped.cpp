@@ -34,7 +34,7 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
 
     auto Cells=process_list<Rcpp::StringVector>(cells);
     auto Genes=process_list<Rcpp::IntegerVector>(genes);
-    auto Umis=process_list<Rcpp::StringVector>(umis);
+    auto Umis=process_list<Rcpp::IntegerVector>(umis);
     auto Reads=process_list<Rcpp::IntegerVector>(reads);
 
     compare_lists(Cells, Genes);
