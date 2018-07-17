@@ -124,6 +124,12 @@ test_that("Removal of swapped drops works correctly", {
                 expect_true(all(total.mat[[s]][,-retainer[[s]]]==0))
             }
         }
+    }
+})
+
+test_that("Alternative input/output parameters work correctly", {
+    for (nmolecules in c(10, 100, 1000, 10000)) { 
+        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
 
         # Further input/output tests.
         min.frac <- 0.9001
@@ -169,7 +175,7 @@ test_that("swappedDrops functions correctly for silly inputs", {
         expect_identical(dim(ref), c(0L, 0L))
     }
 
-    # Fails if you give it samples with different genee sets.
+    # Fails if you give it samples with different gene sets.
     tmpdir2 <- tempfile()
     dir.create(tmpdir2)
 
@@ -181,6 +187,12 @@ test_that("swappedDrops functions correctly for silly inputs", {
     o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
     h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
     expect_warning(swappedDrops(o1), "contains multiple GEM groups")
+
+    # Responds to names in the sample paths.
+    new.names <- LETTERS[seq_along(output)]
+    deswapped2 <- swappedDrops(setNames(output, new.names), get.swapped=TRUE)
+    expect_identical(names(deswapped2$cleaned), new.names)
+    expect_identical(names(deswapped2$swapped), new.names)
 
     # removeSwappedDrops is not happy if manually specified lists don't match up.
     expect_error(removeSwappedDrops(cells=list(), umis=list(1L), genes=list(1L), nreads=list(1L), ref.genes=1:10), "lists are not")
