@@ -21,7 +21,7 @@ Each file corresponds to one sample in a multiplexed pool.}
 \item{cells}{A list of character vectors containing cell barcodes. 
 Each vector corresponds to one sample in a multiplexed pool, and each entry of the vector corresponds to one molecule.}
 \item{umis}{A list of integer vectors containing encoded UMI sequences, organized as described for \code{cells}.
-See \code{?\link{encodeSequence}} to convert sequences to integers.}
+See \code{?\link{encodeSequences}} to convert sequences to integers.}
 \item{genes}{A list of integer vectors specifying the gene indices, organized as described for \code{cells}.
 Each index should refer to an element of \code{ref.genes}.}
 \item{nreads}{A list of integer vectors containing the number of reads per molecule, organized as described for \code{cells}.}
@@ -77,7 +77,7 @@ with modifications by Aaron Lun
 
 \seealso{
 \code{\link{read10xMolInfo}},
-\code{\link{encodeSequence}}
+\code{\link{encodeSequences}}
 }
 
 \examples{
