@@ -1,18 +1,31 @@
 \name{swappedDrops}
 \alias{swappedDrops}
+\alias{removeSwappedDrops}
 
 \title{Clean barcode-swapped droplet data}
 
 \description{Remove the effects of barcode swapping on droplet-based single-cell RNA-seq data, specifically 10X Genomics datasets.}
 
 \usage{
-swappedDrops(samples, barcode.length=NULL, min.frac=0.8, get.swapped=FALSE, 
-    get.diagnostics=FALSE, hdf5.out=TRUE) 
+swappedDrops(samples, barcode.length=NULL, ...)
+
+removeSwappedDrops(cells, umis, genes, nreads, ref.genes, min.frac=0.8,
+    get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
 }
 
 \arguments{
-\item{samples}{A character vector containing paths to the molecule information HDF5 files, produced by CellRanger for 10X Genomics data.}
+\item{samples}{A character vector containing paths to the molecule information HDF5 files, produced by CellRanger for 10X Genomics data.
+Each file corresponds to one sample in a multiplexed pool.}
 \item{barcode.length}{An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.}
+\item{...}{Further arguments to be passed to \code{removeSwappedDrops}.}
+\item{cells}{A list of character vectors containing cell barcodes. 
+Each vector corresponds to one sample in a multiplexed pool, and each entry of the vector corresponds to one molecule.}
+\item{umis}{A list of integer vectors containing encoded UMI sequences, organized as described for \code{cells}.
+See \code{?\link{encodeSequence}} to convert sequences to integers.}
+\item{genes}{A list of integer vectors specifying the gene indices, organized as described for \code{cells}.
+Each index should refer to an element of \code{ref.genes}.}
+\item{nreads}{A list of integer vectors containing the number of reads per molecule, organized as described for \code{cells}.}
+\item{ref.genes}{A character vector containing the names or symbols of all genes.}
 \item{min.frac}{A numeric scalar specifying the minimum fraction of reads required for a swapped molecule to be assigned to a sample.}
 \item{get.swapped}{A logical scalar indicating whether the UMI counts corresponding to swapped molecules should also be returned.}
 \item{get.diagnostics}{A logical scalar indicating whether to return the number of reads for each swapped molecule in each sample.}
@@ -26,7 +39,7 @@ With droplet data, there is the opportunity to remove such effects based on the 
 It is very unlikely that the same combination will arise from different molecules in multiple samples.
 Thus, observation of the same combination across multiple samples is indicative of barcode swapping.
 
-For 10X Genomics data, the number of reads corresponding to each gene-UMI-barcode combination is extracted from the molecule information file.
+We can remove swapped molecules based on the number of reads assigned to each gene-UMI-barcode combination.
 From the total number of reads assigned to that combination, the fraction of reads in each sample is calculated.
 The sample with the largest fraction that is greater than \code{min.frac} is defined as the putative sample of origin to which the molecule is assigned.
 This assumes that the swapping rate is low, so the sample of origin for a molecule should contain the majority of the reads.
@@ -40,6 +53,9 @@ This can be useful for examining the level of swapping across samples on a molec
 though for the sake of memory, the actual identity of the molecules is not returned.
 By default, the matrix is returned as a \linkS4class{HDF5Matrix}, which reduces memory usage and avoids potential issues with integer overflow.
 If \code{hdf5.out=FALSE}, a sparse matrix is returned instead, which is faster but uses more memory.
+
+\code{swappedDrops} is a wrapper around \code{removeSwappedDrops} that extracts the relevant data from the 10X Genomics molecule information file.
+For other types of droplet-based data, it may be more convenient to call \code{removeSwappedDrops} directly.
 } 
 
 \value{
@@ -60,7 +76,8 @@ with modifications by Aaron Lun
 }
 
 \seealso{
-\code{\link{read10xMolInfo}}
+\code{\link{read10xMolInfo}},
+\code{\link{encodeSequence}}
 }
 
 \examples{

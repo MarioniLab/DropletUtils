@@ -181,4 +181,8 @@ test_that("swappedDrops functions correctly for silly inputs", {
     o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
     h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
     expect_warning(swappedDrops(o1), "contains multiple GEM groups")
+
+    # removeSwappedDrops is not happy if manually specified lists don't match up.
+    expect_error(removeSwappedDrops(cells=list(), umis=list(1L), genes=list(1L), nreads=list(1L), ref.genes=1:10), "lists are not")
+    expect_error(removeSwappedDrops(cells=list(c("A", "C")), umis=list(1L), genes=list(1L), nreads=list(1L), ref.genes=1:10), "list vectors are not")
 })

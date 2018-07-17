@@ -1,5 +1,5 @@
 #' @export
-swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
+swappedDrops <- function(samples, barcode.length=NULL, ...)
 # Removes swapped reads between samples in 10X Genomics data.
 #
 # written by Jonathan Griffiths
@@ -8,6 +8,7 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
 {
     ref.genes <- NULL
     cells <- umis <- genes <- nreads <- vector("list", length(samples))
+    names(cells) <- names(samples)
 
     for (i in seq_along(samples)) {
         mol.info <- read10xMolInfo(samples[i], barcode.length=barcode.length)
@@ -29,15 +30,25 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
         genes[[i]] <- current$gene
         nreads[[i]] <- current$reads
     }
-        
-    # Identifying swapped molecules.
+
+    removeSwappedDrops(cells=cells, umis=umis, genes=genes, nreads=nreads, ref.genes=ref.genes, ...)
+}
+
+#' @export
+removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0.8, get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
+# Core function to swappedDrops(), split off to accommodate non-HDF5 inputs.
+# 
+# written by Aaron Lun
+# created 17 July 2018
+{
     diag.code <- ifelse(get.diagnostics, 1L + as.integer(hdf5.out), 0L)
     swap.out <- .Call(cxx_find_swapped, cells, umis, genes, nreads, min.frac, diag.code)
     unswapped <- swap.out[[1]]
 
-    cleaned <- swapped <- vector("list", length(samples))
-    names(cleaned) <- names(swapped) <- names(samples)
-    for (i in seq_along(samples)) { 
+    nsamples <- length(cells)
+    cleaned <- swapped <- vector("list", nsamples)
+    names(cleaned) <- names(swapped) <- names(cells)
+    for (i in seq_len(nsamples)) { 
         cur.cells <- cells[[i]]
         all.cells <- sort(unique(cur.cells))
         cur.genes <- genes[[i]]
@@ -61,3 +72,4 @@ swappedDrops <- function(samples, barcode.length=NULL, min.frac=0.8, get.swapped
     }
     return(output)
 }
+
