@@ -11,8 +11,11 @@ citEntry(
     entry = "article",
     author = "Jonathan A. Griffiths and Arianne C. Richard and Karsten Bach and Aaron T.L. Lun and John C. Marioni",
     title = "Detection and removal of barcode swapping in single-cell RNA-seq data",
-    journal = "biorXiv",
-    year = "2017", 
-    textVersion = "Griffiths JA, Richard AC, Bach K, Lun ATL and Marioni JC (2017). Detection and removal of barcode swapping in single-cell RNA-seq data. biorXiv"
+    journal = "Nat. Commun.",
+    year = "2018", 
+    volume = 9,
+    number = 1,
+    pages = 2667,
+    textVersion = "Griffiths JA, Richard AC, Bach K, Lun ATL and Marioni JC (2018). Detection and removal of barcode swapping in single-cell RNA-seq data. Nat. Commun. 9, 2667"
 )
 
