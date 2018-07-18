@@ -12,6 +12,7 @@ static const R_CallMethodDef all_call_entries[] = {
 
     REGISTER(compute_multinom, 3),
     REGISTER(montecarlo_pval, 5),
+    REGISTER(montecarlo_pval_alpha, 6),
 
     REGISTER(find_swapped, 6),
     REGISTER(get_cell_barcodes, 3),

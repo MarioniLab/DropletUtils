@@ -25,6 +25,8 @@ SEXP compute_multinom(SEXP, SEXP, SEXP);
 
 SEXP montecarlo_pval(SEXP, SEXP, SEXP, SEXP, SEXP);
 
+SEXP montecarlo_pval_alpha(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+
 
 SEXP find_swapped(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
