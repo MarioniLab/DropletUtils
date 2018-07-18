@@ -85,6 +85,9 @@ For barcodes with counts below \code{lower}, \code{NA} values are returned for a
 This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
+
+The metadata of the output DataFrame will contains the ambient profile in \code{ambient}, the estimated/specified value of \code{alpha}, the specified value of \code{lower} and the number of iterations in \code{niters}.
+For \code{emptyDrops}, the metadata will also contain the retention threshold in \code{retain}.
 }
 
 \author{

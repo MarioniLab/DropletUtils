@@ -1,6 +1,6 @@
 #' @export
 #' @importFrom BiocParallel SerialParam
-#' @importFrom S4Vectors DataFrame
+#' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom edgeR goodTuringProportions
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=Inf, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
@@ -52,7 +52,10 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     all.p[keep] <- pval
     all.lr[keep] <- obs.P + rest.P 
     all.lim[keep] <- limited
-    return(DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m)))
+
+    output <- DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
+    metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
+    output
 }
 
 #' @importFrom BiocParallel bpnworkers SerialParam bplapply
@@ -156,6 +159,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 #' @export
 #' @importFrom stats p.adjust
+#' @importFrom S4Vectors metadata<-
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
@@ -172,6 +176,7 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...)
     always <- stats$Total >= retain
     tmp[always] <- 0
 
+    metadata(stats)$retain <- retain
     stats$FDR <- p.adjust(tmp, method="BH")
     return(stats)
 }
