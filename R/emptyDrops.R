@@ -91,6 +91,39 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(obs.P)
 }
 
+#' @importFrom methods is
+#' @importClassesFrom Matrix dgTMatrix
+#' @importFrom stats optimize 
+.estimate_overdispersion <- function(mat, prop, totals, interval=c(0.01, 10000))
+# Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution.
+{
+    if (is(mat, "dgTMatrix")) {
+        i <- mat@i + 1L
+        j <- mat@j + 1L
+        x <- mat@x
+    } else {
+        keep <- which(mat > 0, arr.ind=TRUE)
+        i <- keep[,1]
+        j <- keep[,2]
+        x <- mat[keep]
+    }
+
+    per.prop <- prop[i] 
+    LOGLIK <- function(alpha) {
+        output <- numeric(length(alpha))
+        for (adx in seq_along(alpha)) {
+            cur.alpha <- alpha[adx]
+            output[adx] <- lgamma(cur.alpha) * length(totals) - 
+                sum(lgamma(totals + cur.alpha)) + 
+                sum(lgamma(x + per.prop * cur.alpha)) - 
+                sum(lgamma(per.prop * cur.alpha))
+        }
+        return(output)
+    }
+
+    optimize(LOGLIK, interval=interval, maximum=TRUE)$maximum
+}
+
 #' @export
 #' @importFrom stats p.adjust
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
