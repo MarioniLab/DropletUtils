@@ -122,6 +122,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 #' @importFrom methods is
 #' @importClassesFrom Matrix dgTMatrix
+#' @importMethodsFrom Matrix which
 #' @importFrom stats optimize 
 .estimate_alpha <- function(mat, prop, totals, interval=c(0.01, 10000))
 # Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution.

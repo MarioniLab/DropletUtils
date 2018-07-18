@@ -14,6 +14,9 @@ SEXP compute_multinom_internal(MAT M, SEXP prop, SEXP alpha) {
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
     const bool use_alpha=R_FINITE(Alpha);
+    if (use_alpha && Alpha <= 0) {
+        throw std::runtime_error("alpha must be positive if specified");
+    }
 
     for (size_t c=0; c<NC; ++c) {
         auto info=M->get_const_col_indexed(c, target.begin());
