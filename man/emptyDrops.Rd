@@ -7,7 +7,7 @@
 
 \usage{
 testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
-    ignore=NULL, BPPARAM=SerialParam()) 
+    ignore=NULL, alpha=Inf, BPPARAM=SerialParam()) 
 
 emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 }
@@ -20,6 +20,7 @@ Columns represent barcoded droplets, rows represent genes.
 \item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{ignore}{A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).}
+\item{alpha}{A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.}
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 \item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
 \item{barcode.args}{Further arguments to pass to \code{\link{barcodeRanks}}.}
@@ -27,7 +28,7 @@ Columns represent barcoded droplets, rows represent genes.
 }
 
 \section{Details about \code{testEmptyDrops}}{
-The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts below \code{lower}.
+The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}. 
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
@@ -56,6 +57,20 @@ Cells can then be defined by taking all barcodes with significantly non-ambient 
 All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 Nonetheless, their original Monte Carlo p-values are still reported in the output.
+}
+
+\section{Handling overdispersion}{
+By default, \code{alpha=Inf} which means that the sampling of molecules is assumed to follow a multinomial distribution.
+If \code{alpha} is set to a positive number, sampling is assumed to follow a Dirichlet-multinomial (DM) distribution.
+The parameter vector of the DM distribution is defined as the estimated ambient profile scaled by \code{alpha}.
+Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling.
+If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count profiles for all barcodes with totals less than or equal to \code{lower}. 
+
+The default is to not estimate \code{alpha} for historical reasons.
+Users can check whether estimation of \code{alpha} is necessary by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
+If the multinomial assumption is appropriate, the p-values for presumed ambient barcodes should be uniformly distributed.
+Otherwise, if overdispersion is present, the p-value distribution will be right-skewed (i.e., more smaller p-values than expected).
+This indicates that users should set \code{alpha=NULL} to avoid anticonservativeness in the cell calls.
 }
 
 \value{
