@@ -159,7 +159,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 #' @export
 #' @importFrom stats p.adjust
-#' @importFrom S4Vectors metadata<-
+#' @importFrom S4Vectors metadata<- metadata
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 # Combined function that puts these all together, always keeping cells above the inflection
 # point (they are given p-values of 0, as they are always rejected). 
