@@ -1,4 +1,4 @@
-# This tests that swappedDrops works correctly.
+# This tests that extraction of molecule information works correctly.
 # library(DropletUtils); library(testthat); source("test-molinfo.R")
 
 tmpdir <- tempfile()
@@ -34,6 +34,40 @@ test_that("Extraction of molecule information fields works correctly", {
         current3 <- read10xMolInfo(output$files[i], barcode.length=barcode + 1L)
         expect_true(length(unique(current3$data$cell)) == length(unique(current$data$cell)))
     }
+})
+
+set.seed(9091)
+test_that("Extraction of subsets of the molinfo fields works correctly", {
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1)
+    full <- read10xMolInfo(output)
+    
+    # Discounting the GEM.
+    subbed <- read10xMolInfo(output, get.gem=FALSE)
+    tmp <- full
+    tmp$data$gem_group <- NULL
+    expect_identical(subbed, tmp)
+
+    # Discounting the genes. 
+    subbed <- read10xMolInfo(output, get.gene=FALSE)
+    tmp <- full
+    tmp$data$gene <- NULL
+    expect_identical(subbed, tmp)
+
+    fullun <- read10xMolInfo(output, keep.unmapped=TRUE)
+    subbed <- read10xMolInfo(output, get.gene=FALSE, keep.unmapped=TRUE)
+    fullun$data$gene <- NULL
+    expect_identical(subbed, fullun)
+
+    # Discounting everything.
+    subbed <- read10xMolInfo(output, get.gem=FALSE, get.reads=FALSE, get.cell=FALSE, get.gene=FALSE, get.umi=FALSE)
+    expect_identical(nrow(subbed$data), nrow(full$data))
+    expect_identical(ncol(subbed$data), 0L)
+    expect_identical(subbed$genes, full$genes)
+
+    subbed <- read10xMolInfo(output, get.gem=FALSE, get.reads=FALSE, get.cell=FALSE, get.gene=FALSE, get.umi=FALSE, keep.unmapped=TRUE)
+    expect_identical(nrow(subbed$data), nrow(fullun$data))
+    expect_identical(ncol(subbed$data), 0L)
+    expect_identical(subbed$genes, fullun$genes)
 })
 
 set.seed(908)

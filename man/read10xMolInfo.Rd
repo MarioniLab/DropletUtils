@@ -5,13 +5,15 @@
 \description{Extract relevant fields from the molecule information HDF5 file, produced by CellRanger for 10X Genomics data.}
 
 \usage{
-read10xMolInfo(sample, barcode.length=NULL, keep.unmapped=FALSE) 
+read10xMolInfo(sample, barcode.length=NULL, keep.unmapped=FALSE, get.cell=TRUE,
+    get.umi=TRUE, get.gem=TRUE, get.gene=TRUE, get.reads=TRUE)
 }
 
 \arguments{
 \item{sample}{A string containing the path to the molecule information HDF5 file.}
 \item{barcode.length}{An integer scalar specifying the length of the cell barcode.}
 \item{keep.unmapped}{A logical scalar indicating whether unmapped molecules should be reported.}
+\item{get.cell, get.umi, get.gem, get.gene, get.reads}{Logical scalar indicating whether the corresponding field should be extracted.}
 }
 
 \value{
@@ -27,6 +29,8 @@ This refers to an entry in the \code{genes} vector, see below.}
 \item{\code{reads}:}{Integer, the number of reads mapped to this molecule.}
 }
 
+The field will not be present in the DataFrame if the corresponding \code{get.*} argument is \code{FALSE}, 
+
 The second element of the list is named \code{genes} and is a character vector containing the names of all genes in the annotation.
 This contains the names of the various entries of \code{gene} for the individual molecules.
 }
@@ -37,6 +41,11 @@ By default, these are removed when \code{keep.unmapped=FALSE}.
 
 The length of the cell barcode is automatically inferred if \code{barcode.length=NULL}.
 Currently, version 1 of the 10X chemistry uses 14 nt barcodes, while version 2 uses 16 nt barcodes.
+
+Setting any of the \code{get.*} arguments will (generally) avoid extraction of the corresponding field.
+This can improve efficiency if that field is not necessary for further analysis.
+Aside from the missing field, the results are guaranteed to be identical, i.e., same order and number of rows.
+Note that some fields must be loaded to yield similar results, e.g., gene IDs will always be loaded to remove unmapped reads if \code{keep.unmapped=FALSE}.
 }
 
 \author{
