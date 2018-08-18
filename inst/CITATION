@@ -1,21 +1,33 @@
-citEntry(
-    entry = "article",
-    author = "Aaron Lun and Samantha Riesenfeld and Tallulah Andrews and The Phuong Dao and Tomas Gomes and {participants in the 1st Human Cell Atlas Jamboree} and John Marioni",
+bibentry(
+    bibtype = "Article",
     title = "Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data",
+    author = c(
+        person("Aaron", "Lun"),
+        person("Samantha", "Riesenfeld"),
+        person("Tallulah", "Andrews"),
+        person("The Phuong", "Dao"),
+        person("Tomas", "Gomes"),
+        person("participants in the 1st Human Cell Atlas Jamboree"),
+        person("John", "Marioni")),
     journal = "biorXiv",
     year = "2018",
-    textVersion = "Lun A, Riesenfeld S, Andrews T, Dao TP, Gomes T, participants in the 1st Human Cell Atlas Jamboree and Marioni JC (2018). Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data. biorXiv"
+    doi = "10.1101/234872"
 )
 
-citEntry(
-    entry = "article",
-    author = "Jonathan A. Griffiths and Arianne C. Richard and Karsten Bach and Aaron T.L. Lun and John C. Marioni",
+bibentry(
+    bibtype = "Article",
     title = "Detection and removal of barcode swapping in single-cell RNA-seq data",
+    author = c(
+        person(c("Jonathan", "A."), "Griffiths"),
+        person(c("Arianne", "C."), "Richard"),
+        person("Karsten", "Bach"),
+        person(c("Aaron", "T.", "L."), "Lun"),
+        person(c("John", "C."), "Marioni")),
     journal = "Nat. Commun.",
     year = "2018", 
     volume = 9,
     number = 1,
     pages = 2667,
-    textVersion = "Griffiths JA, Richard AC, Bach K, Lun ATL and Marioni JC (2018). Detection and removal of barcode swapping in single-cell RNA-seq data. Nat. Commun. 9, 2667"
+    doi = "10.1038/s41467-018-05083-x"
 )
 
