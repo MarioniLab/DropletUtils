@@ -2,13 +2,15 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
-\section{Version 1.1.7}{\itemize{
-\item Created removeSwappedDrops() for removing swapping in other types of droplet-based data.
+\section{Version 1.1.9}{\itemize{
+\item Added removeSwappedDrops() for removing swapping in other types of droplet-based data.
 
 \item Added alpha= argument to testEmptyDrops() to support overdispersion during sampling.
 Returned arguments and estimates in metadata of testEmptyDrops(), emptyDrops().
 
-\item Created encodeSequences() function for convenient 2-bit encoding of sequences.
+\item Added encodeSequences() for convenient 2-bit encoding of sequences.
+
+\item Added get10xMolInfoStats() function to compute per-cell statistics from a molecule info file.
 }}
 
 \section{Version 1.0.0}{\itemize{
