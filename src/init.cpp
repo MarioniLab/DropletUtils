@@ -2,7 +2,7 @@
 #include "R_ext/Rdynload.h"
 #include "R_ext/Visibility.h"
 
-#define REGISTER(x, i) {#x, (DL_FUNC) &x, i}
+#define REGISTER(x, i) {#x, reinterpret_cast<DL_FUNC>(x), i}
 
 extern "C" {
 
@@ -15,8 +15,10 @@ static const R_CallMethodDef all_call_entries[] = {
     REGISTER(montecarlo_pval_alpha, 6),
 
     REGISTER(find_swapped, 6),
+
     REGISTER(get_cell_barcodes, 3),
     REGISTER(encode_sequences, 1),
+    REGISTER(group_cells, 2),
 
     REGISTER(load_tenx_to_hdf5, 6),
     {NULL, NULL, 0}

@@ -30,9 +30,12 @@ SEXP montecarlo_pval_alpha(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 SEXP find_swapped(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
+
 SEXP get_cell_barcodes(SEXP, SEXP, SEXP);
 
 SEXP encode_sequences(SEXP);
+
+SEXP group_cells(SEXP, SEXP);
 
 
 SEXP load_tenx_to_hdf5(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
