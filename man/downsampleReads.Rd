@@ -25,13 +25,14 @@ Subsampling the reads with \code{downsampleReads} recapitulates the effect of di
 This provides an alternative to downsampling with the CellRanger \code{aggr} function or subsampling with the 10X Genomics R kit.
 Note that this differs from directly subsampling the UMI count matrix with \code{\link{downsampleMatrix}}.
 
-If \code{bycol=TRUE}, sampling without replacement is performed on the reads for each cell.
-The total number of reads for each cell after downsampling is guaranteed to be \code{prop} times the original total.
-Different proportions can be specified for different cells by setting \code{prop} to a vector.
-
 If \code{bycol=FALSE}, downsampling without replacement is performed on all reads from the entire dataset.
 The total number of reads for each cell after downsampling may not be exactly equal to \code{prop} times the original value.
 Note that this is the more natural approach and is the default, which differs from the default used in \code{\link{downsampleMatrix}}.
+
+If \code{bycol=TRUE}, sampling without replacement is performed on the reads for each cell.
+The total number of reads for each cell after downsampling is guaranteed to be \code{prop} times the original total (rounded to the nearest integer).
+Different proportions can be specified for different cells by setting \code{prop} to a vector, 
+where each proportion corresponds to a cell/GEM combination in the order returned by \code{\link{get10xMolInfoStats}}.
 }
 
 \value{

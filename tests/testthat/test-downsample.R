@@ -161,6 +161,10 @@ test_that("downsampling from the reads yields correct results", {
     out <- downsampleReads(out.paths, barcode, prop=1)
     expect_equal(out, full.tab)
 
+    # Checking that the ordering of cells is equivalent.
+    stats <- get10xMolInfoStats(out.paths)
+    expect_identical(colnames(out), sprintf("%s-%i", stats$cell, stats$gem_group))
+
     # Checking that some downsampling has occurred (hard to check the totals, as UMI counts != read counts).
     for (down in 1:4/11) {
         out <- downsampleReads(out.paths, barcode, prop=down)
@@ -189,7 +193,7 @@ test_that("downsampling from the reads yields correct results", {
     
 test_that("downsampling from the reads compares correctly to downsampleMatrix", {
     # Manually creating files for comparison to downsampleMatrix - this relies on ordered 'gene' and 'cell', 
-    # so that the retention probabilities applied to each molecule is the same across functions.
+    # so that the retention probabilities applied to each molecule are the same across functions.
     ngenes <- 4
     gene.count <- seq_len(ngenes)*100
     ncells <- 200
