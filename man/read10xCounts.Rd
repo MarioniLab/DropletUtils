@@ -26,8 +26,9 @@ A SingleCellExperiment object containing count data for each gene (row) and cell
 \itemize{
     \item Row metadata will contain the fields \code{"ID"} and \code{"Symbol"}.
         The former is the gene identifier (usually Ensembl), while the latter is the gene name.
-    \item Column metadata will contain the \code{"Barcode"} field.
-        This refers to the cell barcode sequence and GEM group for each library. 
+    \item Column metadata will contain the fields \code{"Sample"} and \code{"Barcode"}.
+        The former contains the value of \code{samples} from which each column was obtained.
+        The latter refers to the cell barcode sequence and GEM group for each library. 
     \item Rows are named with the gene identifier.
     Columns are named with the cell barcode in certain settings, see Details.
 }
