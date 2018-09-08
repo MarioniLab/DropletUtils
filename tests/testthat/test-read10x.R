@@ -17,7 +17,9 @@ gene.symb <- paste0(sample(LETTERS, replace=TRUE, ngenes),
                     sample(9, replace=TRUE, ngenes))
 
 cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
-    
+
+################################################
+
 test_that("write10xCounts works correctly", {
     write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
     expect_identical(sort(list.files(tmpdir)), c("barcodes.tsv", "genes.tsv", "matrix.mtx"))
@@ -51,6 +53,7 @@ test_that("read10xCounts works correctly", {
     alt.counts <- my.counts
     rownames(alt.counts) <- gene.ids
     colnames(alt.counts) <- NULL
+
     expect_equal(counts(sce10x), alt.counts)
     expect_identical(rowData(sce10x)$ID, gene.ids)
     expect_identical(rowData(sce10x)$Symbol, gene.symb)
@@ -69,17 +72,30 @@ test_that("read10xCounts works correctly", {
     expect_identical(colnames(sce10x3), sce10x3$Barcode)
     sce10x4 <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
     expect_identical(colnames(sce10x4), NULL)
+})
 
+test_that("read10xCounts works with odd inputs", {
     # Checking that we are robust to odd symbols in the gene names.
     tmpdir2 <- tempfile()
     gene.symb2 <- paste0(gene.symb, sample(c("#", "'", '"', ""), length(gene.ids), replace=TRUE))
     write10xCounts(path=tmpdir2, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
-    sce10x5 <- read10xCounts(tmpdir2)
+    sce10x <- read10xCounts(tmpdir2)
 
-    expect_identical(assay(sce10x5), assay(sce10x))
-    expect_identical(colData(sce10x5)$Barcode, colData(sce10x)$Barcode)
-    expect_identical(rowData(sce10x)$ID, rowData(sce10x5)$ID)
-    expect_identical(rowData(sce10x5)$Symbol, gene.symb2)
+    expect_identical(assay(sce10x, withDimnames=FALSE), my.counts)
+    expect_identical(colData(sce10x)$Barcode, cell.ids)
+    expect_identical(rowData(sce10x)$ID, gene.ids)
+    expect_identical(rowData(sce10x)$Symbol, gene.symb2)
+
+    # Checking that we are robust to names in the inputs. 
+    sce10x2 <- read10xCounts(c(A=tmpdir2, B=tmpdir2))
+    expect_identical(assay(sce10x2), cbind(assay(sce10x), assay(sce10x)))
+
+    expect_identical(sce10x2$Barcode, rep(colData(sce10x)$Barcode, 2))
+    expect_true(all(sce10x2$Sample==tmpdir2))
+    expect_identical(names(sce10x2$Sample), rep(c("A", "B"), each=ncol(sce10x)))
+
+    expect_identical(rowData(sce10x2)$ID, rowData(sce10x)$ID)
+    expect_identical(rowData(sce10x2)$Symbol, gene.symb2)
 })
 
 test_that("Alternative readMM schemes work correctly", {
