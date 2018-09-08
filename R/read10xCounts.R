@@ -29,7 +29,7 @@ read10xCounts <- function(samples, col.names=FALSE, ...)
 
         full_data[[i]] <- data_mat
         gene_info_list[[i]] <- gene.info 
-        cell_info_list[[i]] <- DataFrame(Sample = run, Barcode = cell.names)
+        cell_info_list[[i]] <- DataFrame(Sample = rep(run, length(cell.names)), Barcode = cell.names, row.names=NULL)
     }
 
     # Checking gene uniqueness. 
@@ -38,10 +38,10 @@ read10xCounts <- function(samples, col.names=FALSE, ...)
     }
     gene_info <- gene_info_list[[1]]
     colnames(gene_info) <- c("ID", "Symbol")
+    rownames(gene_info) <- gene_info$ID
     
     # Forming the full data matrix.
     full_data <- do.call(cbind, full_data)
-    rownames(full_data) <- gene_info$ID
 
     # Adding the cell data (only using as colnames if there is only 1 set - guaranteed unique).
     cell_info <- do.call(rbind, cell_info_list)
