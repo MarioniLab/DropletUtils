@@ -8,8 +8,9 @@ Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"),
     role="ctb"))
 Maintainer: Aaron Lun <alun@wehi.edu.au>
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
-Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5
-Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown, HDF5Array
+Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
+    HDF5Array
+Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
 Description: Provides a number of utility functions for handling 
