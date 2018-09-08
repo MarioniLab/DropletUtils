@@ -1,9 +1,10 @@
 #' @export
-#' @importFrom Matrix readMM sparseMatrix
+#' @importFrom Matrix readMM
 #' @importFrom methods as is
 #' @importFrom utils tail
 # Note that this function is the reason for Suggests: HDF5Array
 read10xMatrix <- function(file, hdf5.out=FALSE, chunk.size) {
+    .Deprecated(new="Matrix::readMM")
     if (is.character(file)) { 
         fhandle <- file(file, open='r')
         on.exit(close(fhandle))
