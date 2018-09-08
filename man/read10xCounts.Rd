@@ -22,9 +22,15 @@ Each directory should contain the \code{"matrix.mtx"}, \code{"genes.tsv"} and \c
 }
 
 \value{
-A SingleCellExperiment object containing count data for each gene (row) and cell (column).
-Matrices are combined by column if multiple \code{samples} were specified.
-Rows are named with the gene identifier (usually ENSEMBL).
+A SingleCellExperiment object containing count data for each gene (row) and cell (column) across all \code{samples}.
+\itemize{
+    \item Row metadata will contain the fields \code{"ID"} and \code{"Symbol"}.
+        The former is the gene identifier (usually Ensembl), while the latter is the gene name.
+    \item Column metadata will contain the \code{"Barcode"} field.
+        This refers to the cell barcode sequence and GEM group for each library. 
+    \item Rows are named with the gene identifier.
+    Columns are named with the cell barcode in certain settings, see Details.
+}
 }
 
 \details{
@@ -40,6 +46,9 @@ If so, \code{type} is set to \code{"HDF5"}; otherwise it is set to \code{"sparse
         It is loaded as a \linkS4class{TENxMatrix} object, which is a stub object that refers back to the file in \code{samples}.
         Users may need to set \code{group} if it cannot be automatically determined.
 }
+
+Matrices are combined by column if multiple \code{samples} were specified.
+This will throw an error if the gene information is not consistent across \code{samples}.
 
 If \code{col.names=TRUE} and \code{length(sample)==1}, each column is named by the cell barcode.
 For multiple samples, the columns are unnamed to avoid problems with non-unique barcodes across samples.
