@@ -20,7 +20,7 @@ cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 
 ################################################
 
-test_that("write10xCounts works correctly", {
+test_that("write10xCounts works correctly for sparse counts", {
     write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
     expect_identical(sort(list.files(tmpdir)), c("barcodes.tsv", "genes.tsv", "matrix.mtx"))
     all.sizes <- file.info(list.files(tmpdir, full=TRUE))$size
@@ -47,7 +47,23 @@ test_that("write10xCounts works correctly", {
     expect_identical(all.sizes, file.info(list.files(tmpdir, full=TRUE))$size)
 })
 
-test_that("read10xCounts works correctly", {
+tmph5 <- tempfile(fileext=".h5")
+test_that("write10xCounts works correctly for HDF5 counts", {
+    write10xCounts(path=tmph5, group="mm9", my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    all_fields <- rhdf5::h5ls(tmph5)
+    expect_identical(all_fields$name, c("mm9", "barcodes", "data", "gene_names", "genes", "indices", "indptr", "shape"))
+    all.sizes <- file.info(list.files(tmph5, full=TRUE))$size
+
+    # Checking overwrite.
+    expect_error(write10xCounts(path=tmph5, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids),
+                 "specified 'path' already exists", fixed=TRUE)
+    write10xCounts(path=tmph5, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids, overwrite=TRUE)
+    expect_identical(all.sizes, file.info(list.files(tmph5, full=TRUE))$size)
+})
+
+################################################
+
+test_that("read10xCounts works correctly for sparse counts", {
     # Reading it in.
     sce10x <- read10xCounts(tmpdir)
     alt.counts <- my.counts
@@ -74,7 +90,7 @@ test_that("read10xCounts works correctly", {
     expect_identical(colnames(sce10x4), NULL)
 })
 
-test_that("read10xCounts works with odd inputs", {
+test_that("read10xCounts works for sparse counts with odd inputs", {
     # Checking that we are robust to odd symbols in the gene names.
     tmpdir2 <- tempfile()
     gene.symb2 <- paste0(gene.symb, sample(c("#", "'", '"', ""), length(gene.ids), replace=TRUE))
@@ -97,6 +113,28 @@ test_that("read10xCounts works with odd inputs", {
     expect_identical(rowData(sce10x2)$ID, rowData(sce10x)$ID)
     expect_identical(rowData(sce10x2)$Symbol, gene.symb2)
 })
+
+test_that("read10xCounts works correctly for HDF5 counts", {
+    # Reading it in.
+    sce10x <- read10xCounts(tmph5)
+    alt.counts <- as.matrix(my.counts)
+    dimnames(alt.counts) <- NULL
+
+    expect_equal(as.matrix(counts(sce10x, withDimnames=FALSE)), alt.counts)
+    expect_identical(rowData(sce10x)$ID, gene.ids)
+    expect_identical(rowData(sce10x)$Symbol, gene.symb)
+    expect_identical(sce10x$Sample, rep(tmph5, ncol(my.counts)))
+    expect_identical(sce10x$Barcode, cell.ids)
+
+    # Reading it in, twice; and checking it makes sense.
+    sce10x2 <- read10xCounts(c(tmph5, tmph5))
+    ref <- sce10x
+    colnames(ref) <- NULL
+    ref <- BiocGenerics::cbind(ref, ref)
+    expect_equal(ref, sce10x2)
+})
+
+################################################
 
 test_that("Alternative readMM schemes work correctly", {
     path <- file.path(tmpdir, "matrix.mtx")
