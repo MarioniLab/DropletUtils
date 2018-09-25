@@ -29,7 +29,7 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
         gene_info_list[[i]] <- info$gene.info
         cell.names <- info$cell.names
         cell_info_list[[i]] <- DataFrame(
-          Sample = factor(rep(run, length(cell.names)), unique(samples)),
+          Sample = Rle(run, length(cell.names)),
           Barcode = cell.names, row.names=NULL)
     }
 
