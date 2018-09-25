@@ -1,5 +1,5 @@
 #' @export
-#' @importFrom S4Vectors DataFrame
+#' @importFrom S4Vectors DataFrame Rle
 #' @importFrom SingleCellExperiment SingleCellExperiment
 read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HDF5"), group=NULL)
 # Reads in one or more 10X directories in 'samples', and produces
