@@ -1,13 +1,13 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
 #' @importFrom SingleCellExperiment SingleCellExperiment
-read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HDF5"), group=NULL) 
+read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HDF5"), group=NULL)
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.
 #
 # written by Davis McCarthy
 # modifications by Aaron Lun
-# some time ago.    
+# some time ago.
 {
     nsets <- length(samples)
     full_data <- vector("list", nsets)
@@ -15,7 +15,7 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
     cell_info_list <- vector("list", nsets)
     type <- match.arg(type)
 
-    for (i in seq_len(nsets)) { 
+    for (i in seq_len(nsets)) {
         run <- samples[i]
         type <- .type_chooser(run, type)
 
@@ -28,10 +28,12 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
         full_data[[i]] <- info$mat
         gene_info_list[[i]] <- info$gene.info
         cell.names <- info$cell.names
-        cell_info_list[[i]] <- DataFrame(Sample = rep(run, length(cell.names)), Barcode = cell.names, row.names=NULL)
+        cell_info_list[[i]] <- DataFrame(
+          Sample = factor(rep(run, length(cell.names)), unique(samples)),
+          Barcode = cell.names, row.names=NULL)
     }
 
-    # Checking gene uniqueness. 
+    # Checking gene uniqueness.
     if (nsets > 1 && length(unique(gene_info_list)) != 1L) {
         stop("gene information differs between runs")
     }
