@@ -7,7 +7,7 @@
 
 \usage{
 testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
-    ignore=NULL, alpha=Inf, BPPARAM=SerialParam()) 
+    ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
 
 emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...) 
 }
@@ -60,17 +60,15 @@ Nonetheless, their original Monte Carlo p-values are still reported in the outpu
 }
 
 \section{Handling overdispersion}{
-By default, \code{alpha=Inf} which means that the sampling of molecules is assumed to follow a multinomial distribution.
 If \code{alpha} is set to a positive number, sampling is assumed to follow a Dirichlet-multinomial (DM) distribution.
 The parameter vector of the DM distribution is defined as the estimated ambient profile scaled by \code{alpha}.
-Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling.
+Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling between molecules.
 If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count profiles for all barcodes with totals less than or equal to \code{lower}. 
+If \code{alpha=Inf}, the sampling of molecules is modelled with a multinomial distribution.
 
-The default is to not estimate \code{alpha} for historical reasons.
-Users can check whether estimation of \code{alpha} is necessary by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
-If the multinomial assumption is appropriate, the p-values for presumed ambient barcodes should be uniformly distributed.
-Otherwise, if overdispersion is present, the p-value distribution will be right-skewed (i.e., more smaller p-values than expected).
-This indicates that users should set \code{alpha=NULL} to avoid anticonservativeness in the cell calls.
+Users can check whether the model is suitable by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
+Under the null hypothesis, the p-values for presumed ambient barcodes (i.e., with total counts below \code{lower}) should be uniformly distributed.
+Skews in the p-value distribution are indicative of an inaccuracy in the model and/or its estimates (of \code{alpha} or the ambient profile).
 }
 
 \value{

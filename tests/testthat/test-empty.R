@@ -263,7 +263,7 @@ test_that("emptyDrops runs to completion", {
     set.seed(1000)
     my.counts <- DropletUtils:::simCounts()
     limit <- 100
-    e.out <- emptyDrops(my.counts, lower=limit)
+    e.out <- emptyDrops(my.counts, lower=limit, alpha=Inf)
    
     totals <- Matrix::colSums(my.counts)
     expect_identical(as.integer(totals), e.out$Total)
@@ -280,19 +280,19 @@ test_that("emptyDrops runs to completion", {
     expect_equal(e.out$LogProb[valid], collected[valid])
 
     # Checking ambient tests.
-    e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE)
+    e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE, alpha=Inf)
     expect_identical(e.out$Total, e.out2$Total)
     expect_identical(e.out$LogProb[totals>limit], e.out2$LogProb[totals>limit])
     expect_true(all(!is.na(e.out2$LogProb[totals>0])))
 
     # Checking the ignore argument works correctly.
     set.seed(1001)
-    e.out3a <- emptyDrops(my.counts, lower=limit, ignore=200)
+    e.out3a <- emptyDrops(my.counts, lower=limit, ignore=200, alpha=Inf)
     e.out3a$FDR <- NULL
     set.seed(1001)
     survivors <- totals <= 100 | totals > 200
     new.counts <- my.counts[,survivors]
-    e.out3b <- emptyDrops(new.counts, lower=limit, ignore=NULL)
+    e.out3b <- emptyDrops(new.counts, lower=limit, ignore=NULL, alpha=Inf)
     e.out3b$FDR <- NULL
     expect_equal(e.out3a[survivors,], e.out3b) 
 
@@ -301,7 +301,7 @@ test_that("emptyDrops runs to completion", {
     expect_true(all(e.out$FDR[totals >= K]==0))
     expect_true(!all(e.out$FDR[totals < K]==0))
 
-    e.outK <- emptyDrops(my.counts, retain=K*0.6)
+    e.outK <- emptyDrops(my.counts, retain=K*0.6, alpha=Inf)
     expect_true(all(e.outK$FDR[totals >= K*0.6]==0))
     expect_true(!all(e.outK$FDR[totals < K*0.6]==0))
 })
@@ -317,9 +317,9 @@ test_that("emptyDrops works correctly with alpha estimation", {
     totals <- Matrix::colSums(my.counts)
     discarded <- totals <= limit
     lostmat <- my.counts[,discarded,drop=FALSE]
-    ambient.prop <- edgeR::goodTuringProportions(Matrix::rowSums(lostmat))
-    alpha0 <- DropletUtils:::.estimate_alpha(lostmat, ambient.prop, totals[discarded])
-    
+    ambient.prop <- metadata(e.out)$ambient
+    alpha0 <- metadata(e.out)$alpha
+
     alphaT <- DropletUtils:::.estimate_alpha(as(lostmat, "dgTMatrix"), ambient.prop, totals[discarded])
     expect_identical(alpha0, alphaT)
 
