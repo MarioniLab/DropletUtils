@@ -11,8 +11,7 @@ static const R_CallMethodDef all_call_entries[] = {
     REGISTER(downsample_runs, 4),
 
     REGISTER(compute_multinom, 3),
-    REGISTER(montecarlo_pval, 5),
-    REGISTER(montecarlo_pval_alpha, 6),
+    REGISTER(montecarlo_pval, 6),
 
     REGISTER(find_swapped, 6),
 

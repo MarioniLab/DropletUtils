@@ -2,7 +2,7 @@
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom edgeR goodTuringProportions
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=Inf, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
@@ -77,13 +77,10 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(n.above)
 }
 
-.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha) { 
-    if (is.infinite(alpha)) {
-        out <- .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations) 
-    } else {
-        out <- .Call(cxx_montecarlo_pval_alpha, total.val, total.len, P, ambient, iterations, alpha) 
-    }
-    return(out)
+.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha) 
+# Wrapper function to preserve NAMESPACE in bplapply.
+{ 
+    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha) 
 }
 
 #' @importFrom methods is
@@ -146,10 +143,11 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
         output <- numeric(length(alpha))
         for (adx in seq_along(alpha)) {
             cur.alpha <- alpha[adx]
+            prop.alpha <- per.prop * cur.alpha
             output[adx] <- lgamma(cur.alpha) * length(totals) - 
                 sum(lgamma(totals + cur.alpha)) + 
-                sum(lgamma(x + per.prop * cur.alpha)) - 
-                sum(lgamma(per.prop * cur.alpha))
+                sum(lgamma(x + prop.alpha)) - 
+                sum(lgamma(prop.alpha))
         }
         return(output)
     }
