@@ -7,7 +7,6 @@
 
 \item Added alpha= argument to testEmptyDrops() to support overdispersion during sampling.
 Returned arguments and estimates in metadata of testEmptyDrops(), emptyDrops().
-Increased the default niters= for more stable p-values.
 
 \item Added encodeSequences() for convenient 2-bit encoding of sequences.
 
