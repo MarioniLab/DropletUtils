@@ -6,7 +6,7 @@
 \description{Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.}
 
 \usage{
-testEmptyDrops(m, lower=100, niters=50000, test.ambient=FALSE, 
+testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
     ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
 
 emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...) 

@@ -2,7 +2,7 @@
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom edgeR goodTuringProportions
-testEmptyDrops <- function(m, lower=100, niters=50000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
 # written by Aaron Lun
