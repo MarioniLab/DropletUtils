@@ -1,12 +1,12 @@
 Package: DropletUtils
-Version: 1.1.11
-Date: 2018-10-08
+Version: 1.1.12
+Date: 2018-10-09
 Title: Utilities for Handling Single-Cell Droplet Data
-Authors@R: c(person("Aaron", "Lun", role = c("aut", "cre"), 
-    email = "alun@wehi.edu.au"), person("Jonathan",
-    "Griffiths", role="ctb"), person("Davis", "McCarthy",
-    role="ctb"))
-Maintainer: Aaron Lun <alun@wehi.edu.au>
+Authors@R: c(
+    person("Aaron", "Lun", role = c("aut", "cre"), 
+    email = "infinite.monkeys.with.keyboards@gmail.com"), 
+    person("Jonathan", "Griffiths", role="ctb"), 
+    person("Davis", "McCarthy", role="ctb"))
 Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
     HDF5Array
