@@ -2,7 +2,7 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
-\section{Version 1.1.11}{\itemize{
+\section{Version 1.2.0}{\itemize{
 \item Added removeSwappedDrops() for removing swapping in other types of droplet-based data.
 
 \item Added alpha= argument to testEmptyDrops() to support overdispersion during sampling.
