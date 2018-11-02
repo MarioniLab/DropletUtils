@@ -2,6 +2,10 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.4.0}{\itemize{
+\item Removed read10xMatrix().
+}}
+
 \section{Version 1.2.0}{\itemize{
 \item Added removeSwappedDrops() for removing swapping in other types of droplet-based data.
 

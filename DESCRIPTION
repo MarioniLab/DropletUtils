@@ -1,13 +1,13 @@
 Package: DropletUtils
-Version: 1.3.0
-Date: 2018-10-26
+Version: 1.3.1
+Date: 2018-11-02
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
     person("Aaron", "Lun", role = c("aut", "cre"), 
     email = "infinite.monkeys.with.keyboards@gmail.com"), 
     person("Jonathan", "Griffiths", role="ctb"), 
     person("Davis", "McCarthy", role="ctb"))
-Depends: R (>= 3.5), BiocParallel, SingleCellExperiment
+Depends: R (>= 3.6), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
     HDF5Array
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
