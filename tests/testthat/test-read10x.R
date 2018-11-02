@@ -80,7 +80,7 @@ test_that("read10xCounts works correctly for sparse counts", {
     sce10x2 <- read10xCounts(c(tmpdir, tmpdir))
     ref <- sce10x
     colnames(ref) <- NULL
-    ref <- BiocGenerics::cbind(ref, ref)
+    ref <- cbind(ref, ref)
     expect_equal(ref, sce10x2)
 
     # Checking that column names work.
@@ -130,57 +130,7 @@ test_that("read10xCounts works correctly for HDF5 counts", {
     sce10x2 <- read10xCounts(c(tmph5, tmph5))
     ref <- sce10x
     colnames(ref) <- NULL
-    ref <- BiocGenerics::cbind(ref, ref)
+    ref <- cbind(ref, ref)
     expect_equal(ref, sce10x2)
 })
 
-################################################
-
-test_that("Alternative readMM schemes work correctly", {
-    path <- file.path(tmpdir, "matrix.mtx")
-    ref <- as(readMM(path), "dgCMatrix")
-    out <- read10xMatrix(path)
-    expect_identical(ref, out)
-    expect_error(read10xMatrix(path, hdf5.out=TRUE), "missing")
-
-    # HDF5Matrix output. 
-    ref2 <- as.matrix(ref)
-    out <- read10xMatrix(path, chunk.size=10, hdf5.out=TRUE)
-    expect_s4_class(out, "HDF5Matrix")
-    expect_identical(type(out), "integer")
-    expect_equivalent(ref2, as.matrix(out))
-
-    # Chunk sizes equal to or larger than the number of non-zero entries.
-    out <- read10xMatrix(path, chunk.size=sum(ref!=0), hdf5.out=TRUE)
-    expect_s4_class(out, "HDF5Matrix")
-    expect_equivalent(ref2, as.matrix(out))
-    out <- read10xMatrix(path, chunk.size=sum(ref!=0)*10, hdf5.out=TRUE)
-    expect_s4_class(out, "HDF5Matrix")
-    expect_equivalent(ref2, as.matrix(out))
-
-    # For real matrices instead.
-    path2 <- file.path(tmpdir, "matrix2.mtx")
-    X <- readLines(path)
-    X <- sub("integer", "real", X)
-    writeLines(con=path2, X)
-
-    out <- read10xMatrix(path2, hdf5.out=TRUE, chunk.size=10)
-    expect_s4_class(out, "HDF5Matrix")
-    expect_identical(type(out), "double")
-    expect_equivalent(ref2, as.matrix(out))
-
-    X[-(1:2)] <- sub("$", ".5", X[-(1:2)])
-    writeLines(con=path2, X)
-    out <- read10xMatrix(path2, hdf5.out=TRUE, chunk.size=10)
-    ref3 <- ref2
-    ref3[ref2!=0] <- ref3[ref2!=0] + 0.5
-    expect_equivalent(ref3, as.matrix(out))
-
-    # Supplying a connection rather than a file path.
-    expect_error(read10xMatrix(file(path)), "read mode")
-    expect_error(read10xMatrix(DataFrame(path)), "connection")
-    fhandle <- file(path, open="r")
-    outh <- read10xMatrix(fhandle)
-    close(fhandle)
-    expect_identical(outh, ref)
-})
