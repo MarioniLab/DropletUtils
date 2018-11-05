@@ -6,18 +6,18 @@
 \description{Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.}
 
 \usage{
-testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE, 
-    ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
+testEmptyDrops(m, lower=100, niters=10000, test.ambient=FALSE,
+    ignore=NULL, alpha=NULL, BPPARAM=SerialParam())
 
-emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...) 
+emptyDrops(m, lower=100, retain=NULL, barcode.args=list(), ...)
 }
 
 \arguments{
 \item{m}{A numeric matrix object, usually a dgTMatrix or dgCMatrix.
-Columns represent barcoded droplets, rows represent genes. 
+Columns represent barcoded droplets, rows represent genes.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
-\item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.} 
+\item{niters}{An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.}
 \item{test.ambient}{A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.}
 \item{ignore}{A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).}
 \item{alpha}{A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.}
@@ -30,14 +30,14 @@ Columns represent barcoded droplets, rows represent genes.
 \section{Details about \code{testEmptyDrops}}{
 The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
-Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}. 
+Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
 
 The null hypothesis is that transcript molecules are included into droplets by multinomial sampling from the ambient profile.
 For each barcode, the probability of obtaining its count vector based on the null model is computed.
 Then, \code{niters} count vectors are simulated from the null model.
 The proportion of simulated vectors with probabilities lower than the observed multinomial probability for that barcode is used to calculate the p-value.
-We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate. 
+We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate.
 
 The \code{ignore} argument can also be set to ignore barcodes with total counts less than or equal to \code{ignore}.
 This differs from the \code{lower} argument in that the ignored barcodes are not necessarily used to compute the ambient profile.
@@ -63,7 +63,7 @@ Nonetheless, their original Monte Carlo p-values are still reported in the outpu
 If \code{alpha} is set to a positive number, sampling is assumed to follow a Dirichlet-multinomial (DM) distribution.
 The parameter vector of the DM distribution is defined as the estimated ambient profile scaled by \code{alpha}.
 Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling between molecules.
-If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count profiles for all barcodes with totals less than or equal to \code{lower}. 
+If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count profiles for all barcodes with totals less than or equal to \code{lower}.
 If \code{alpha=Inf}, the sampling of molecules is modelled with a multinomial distribution.
 
 Users can check whether the model is suitable by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
@@ -77,10 +77,10 @@ Skews in the p-value distribution are indicative of an inaccuracy in the model a
 \item{\code{Total}:}{Integer, the total UMI count for each barcode.}
 \item{\code{LogProb}:}{Numeric, the log-probability of observing the barcode's count vector under the null model.}
 \item{\code{PValue}:}{Numeric, the Monte Carlo p-value against the null model.}
-\item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{npts}.}
+\item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{niters}.}
 }
 For barcodes with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
-This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}. 
+This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}.
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
 
@@ -93,25 +93,25 @@ Aaron Lun
 }
 
 \examples{
-# Mocking up some data: 
+# Mocking up some data:
 set.seed(0)
 my.counts <- DropletUtils:::simCounts()
 
-# Identify likely cell-containing droplets. 
+# Identify likely cell-containing droplets.
 out <- emptyDrops(my.counts)
 out
 
 is.cell <- out$FDR <= 0.01
 sum(is.cell, na.rm=TRUE)
 
-# Check if p-values are lower-bounded by 'npts'
-# (increase 'npts' if any Limited==TRUE and Sig==FALSE)
+# Check if p-values are lower-bounded by 'niters'
+# (increase 'niters' if any Limited==TRUE and Sig==FALSE)
 table(Sig=is.cell, Limited=out$Limited)
 }
 
 \references{
-Lun A, Riesenfeld S, Andrews T, Dao TP, Gomes T, participants in the 1st Human Cell Atlas Jamboree, Marioni JC (2018). 
-Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data. 
+Lun A, Riesenfeld S, Andrews T, Dao TP, Gomes T, participants in the 1st Human Cell Atlas Jamboree, Marioni JC (2018).
+Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data.
 \emph{biorXiv}.
 
 Phipson B, Smyth GK (2010).
@@ -120,6 +120,6 @@ Permutation P-values should never be zero: calculating exact P-values when permu
 }
 
 \seealso{
-\code{\link{barcodeRanks}}, 
+\code{\link{barcodeRanks}},
 \code{\link{defaultDrops}}
 }
