@@ -34,7 +34,7 @@ Each index should refer to an element of \code{ref.genes}.}
 
 \details{
 Barcode swapping on the Illumina sequencer occurs when multiplexed samples undergo PCR re-amplification on the flow cell by excess primer with different barcodes.
-This results in sequencing of the wrong barcode and molecules being assigned to incorrect samples after debarcoding.
+This results in sequencing of the wrong sample barcode and molecules being assigned to incorrect samples after debarcoding.
 With droplet data, there is the opportunity to remove such effects based on the combination of gene, UMI and cell barcode for each observed transcript molecule.
 It is very unlikely that the same combination will arise from different molecules in multiple samples.
 Thus, observation of the same combination across multiple samples is indicative of barcode swapping.
@@ -68,6 +68,22 @@ This is a list containing sample-specific sparse matrices of UMI counts correspo
 Adding the cleaned and swapped matrices for each sample should yield the total UMI count prior to removal of swapped molecules. 
 
 If \code{get.diagnostics=TRUE}, the top-level list will also contain an additional \code{diagnostics} matrix.
+}
+
+\section{Format of the molecule information file}{
+\code{swappedDrops} makes a few assumptions about the nature of the data in each molecule information file.
+These are necessary to simplify downstream processing and are generally acceptable in most cases.
+
+Each molecule information file should contain data from only a single 10X run.
+Users should \emph{not} combine multiple samples into a single molecule information file.
+The function will emit a warning upon detecting multiple GEM groups from any molecule information file.
+Molecules with different GEMs will not be recognised as coming from a different sample, though they will be recognised as being derived from different cell-level libraries.
+
+In files produced by CellRanger version 3.0, an additional per-molecule field is present indicating the (c)DNA library from which the molecule was derived.
+Library preparation can be performed separately for different features (e.g., antibodies, CRISPR tags) such that one 10X run can contain data from multiple libraries.
+This allows for arbitrarily complicated multiplexing schemes - for example, gene expression libraries might be multiplexed together across one set of samples,
+while the antibody-derived libraries might be multiplexed across another \emph{different} set of samples.
+For simplicity, we assume that multiplexing was performed across the same set of \code{samples} for all libraries therein.
 }
 
 \author{
