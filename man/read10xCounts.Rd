@@ -33,9 +33,11 @@ A SingleCellExperiment object containing count data for each gene (row) and cell
         If \code{version="3"}, it will also contain the \code{"Type"} field specifying the type of feature (e.g., gene or antibody).
     \item Column metadata will contain the fields \code{"Sample"} and \code{"Barcode"}.
         The former contains the value of \code{samples} from which each column was obtained.
-        The latter refers to the cell barcode sequence and GEM group for each library. 
+        The latter refers to the cell barcode sequence and GEM group for each cell library. 
     \item Rows are named with the gene identifier.
     Columns are named with the cell barcode in certain settings, see Details.
+    \item The assays will contain a single \code{"counts"} matrix, containing UMI counts for each gene in each cell.
+    Note that the matrix representation will depend on the format of the \code{samples}, see Details.
 }
 }
 
@@ -43,7 +45,7 @@ A SingleCellExperiment object containing count data for each gene (row) and cell
 This function was originally developed from the \code{Read10X} function from the \pkg{Seurat} package.
 It was then taken from the \code{read10xResults} implementation in the \pkg{scater} package.
 
-If \code{type="auto"}, the format is automatically detected for each \code{samples} based on whether it ends with \code{".h5"}.
+If \code{type="auto"}, the format of the input file is automatically detected for each \code{samples} based on whether it ends with \code{".h5"}.
 If so, \code{type} is set to \code{"HDF5"}; otherwise it is set to \code{"sparse"}.
 \itemize{
     \item If \code{type="sparse"}, count data are loaded as a \linkS4class{dgCMatrix} object.
