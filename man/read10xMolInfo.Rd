@@ -6,14 +6,17 @@
 
 \usage{
 read10xMolInfo(sample, barcode.length=NULL, keep.unmapped=FALSE, get.cell=TRUE,
-    get.umi=TRUE, get.gem=TRUE, get.gene=TRUE, get.reads=TRUE)
+    get.umi=TRUE, get.gem=TRUE, get.gene=TRUE, get.reads=TRUE,
+    version=c("auto", "2", "3"))
 }
 
 \arguments{
 \item{sample}{A string containing the path to the molecule information HDF5 file.}
-\item{barcode.length}{An integer scalar specifying the length of the cell barcode.}
+\item{barcode.length}{An integer scalar specifying the length of the cell barcode.
+Only relevant when \code{version="2"}.}
 \item{keep.unmapped}{A logical scalar indicating whether unmapped molecules should be reported.}
 \item{get.cell, get.umi, get.gem, get.gene, get.reads}{Logical scalar indicating whether the corresponding field should be extracted.}
+\item{version}{String specifying the version of the 10X molecule information format to read data from.}
 }
 
 \value{
@@ -39,7 +42,12 @@ This contains the names of the various entries of \code{gene} for the individual
 Molecules that were not assigned to any gene have \code{gene} set to \code{length(genes)+1}.
 By default, these are removed when \code{keep.unmapped=FALSE}.
 
-The length of the cell barcode is automatically inferred if \code{barcode.length=NULL}.
+CellRanger 3.0 introduced a major change in the format of the molecule information files.
+When \code{version="auto"}, the function will attempt to determine the version format of the file.
+This can also be user-specified by setting \code{version} explicitly.
+
+For files produced by version 2.2 of the CellRanger software, the length of the cell barcode is not given.
+Instead, the barcode length is automatically inferred if \code{barcode.length=NULL} and \code{version="2"}.
 Currently, version 1 of the 10X chemistry uses 14 nt barcodes, while version 2 uses 16 nt barcodes.
 
 Setting any of the \code{get.*} arguments will (generally) avoid extraction of the corresponding field.
@@ -71,6 +79,10 @@ Massively parallel digital transcriptional profiling of single cells.
 \emph{Nat Commun} 8:14049.
 
 10X Genomics (2017).
+Molecule info.
+\url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/2.2/output/molecule_info}
+
+10X Genomics (2018).
 Molecule info.
 \url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/molecule_info}
 }
