@@ -4,6 +4,8 @@
 
 \section{Version 1.4.0}{\itemize{
 \item Removed read10xMatrix().
+
+\item Supported CellRanger v3 output files in read10xMolInfo(), read10xCounts(), write10xCounts().
 }}
 
 \section{Version 1.2.0}{\itemize{
