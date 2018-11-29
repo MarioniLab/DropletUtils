@@ -44,17 +44,17 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
 
 #' @importFrom utils write.table
 #' @importFrom Matrix writeMM
+#' @importFrom R.utils gzip
 .write_sparse <- function(path, x, barcodes, gene.id, gene.symbol, gene.type, version="2") {
     dir.create(path, showWarnings=FALSE)
     gene.info <- data.frame(gene.id, gene.symbol, stringsAsFactors=FALSE)
 
     if (version=="3") {
         gene.info$gene.type <- rep(gene.type, length.out=nrow(gene.info))
-        mhandle <- gzfile(file.path(path, "matrix.mtx.gz"), open="wb")
+        mhandle <- file.path(path, "matrix.mtx")
         bhandle <- gzfile(file.path(path, "barcodes.tsv.gz"), open="wb")
         fhandle <- gzfile(file.path(path, "features.tsv.gz"), open="wb")
         on.exit({
-            close(mhandle)
             close(bhandle)
             close(fhandle)
         })
@@ -67,6 +67,11 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     writeMM(x, file=mhandle)
     write(barcodes, file=bhandle)
     write.table(gene.info, file=fhandle, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+
+    if (version=="3") {
+        # Annoyingly, writeMM doesn't take connection objects.
+        gzip(mhandle)
+    }
 
     return(NULL)
 }
