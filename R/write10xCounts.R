@@ -1,6 +1,6 @@
 #' @export
-write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), gene.symbol=gene.id, 
-    overwrite=FALSE, type=c("auto", "sparse", "HDF5"), group="group")
+write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), gene.symbol=gene.id, gene.type="Gene Expression",
+    overwrite=FALSE, type=c("auto", "sparse", "HDF5"), genome="unknown", version=c("2", "3"))
 # Writes a count matrix to the specified path in the 10x style.   
 # This allows us to easily create things for testing read10xCounts. 
 # 
@@ -23,11 +23,12 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     }
 
     # Determining what format to save in.
+    version <- match.arg(version)
     type <- .type_chooser(path, match.arg(type))
     if (type=="sparse") {
-        .write_sparse(temp.path, x, barcodes, gene.id, gene.symbol)
+        .write_sparse(temp.path, x, barcodes, gene.id, gene.symbol, gene.type, version=version)
     } else {
-        .write_hdf5(temp.path, group, x, barcodes, gene.id, gene.symbol)
+        .write_hdf5(temp.path, genome, x, barcodes, gene.id, gene.symbol, gene.type, version=version)
     }
 
     # We don't put this at the top as the write functions might fail; 
@@ -43,16 +44,29 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
 
 #' @importFrom utils write.table
 #' @importFrom Matrix writeMM
-.write_sparse <- function(path, x, barcodes, gene.id, gene.symbol) {
+.write_sparse <- function(path, x, barcodes, gene.id, gene.symbol, gene.type, version="2") {
     dir.create(path, showWarnings=FALSE)
+    gene.info <- data.frame(gene.id, gene.symbol, stringsAsFactors=FALSE)
 
-    # Saving all of the various bits and pieces.
-    writeMM(x, file=file.path(path, "matrix.mtx"))
+    if (version=="3") {
+        gene.info$gene.type <- rep(gene.type, length.out=nrow(gene.info))
+        mhandle <- gzfile(file.path(path, "matrix.mtx.gz"), open="wb")
+        bhandle <- gzfile(file.path(path, "barcodes.tsv.gz"), open="wb")
+        fhandle <- gzfile(file.path(path, "features.tsv.gz"), open="wb")
+        on.exit({
+            close(mhandle)
+            close(bhandle)
+            close(fhandle)
+        })
+    } else {
+        mhandle <- file.path(path, "matrix.mtx")
+        bhandle <- file.path(path, "barcodes.tsv")
+        fhandle <- file.path(path, "genes.tsv")
+    }
 
-    write(barcodes, file=file.path(path, "barcodes.tsv"))
-
-    write.table(data.frame(gene.id, gene.symbol), file=file.path(path, "genes.tsv"),
-        row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
+    writeMM(x, file=mhandle)
+    write(barcodes, file=bhandle)
+    write.table(gene.info, file=fhandle, row.names=FALSE, col.names=FALSE, quote=FALSE, sep="\t")
 
     return(NULL)
 }
@@ -60,18 +74,46 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
 #' @importFrom rhdf5 h5createFile h5createGroup h5write
 #' @importFrom methods as
 #' @importClassesFrom Matrix dgCMatrix
-.write_hdf5 <- function(path, group, x, barcodes, gene.id, gene.symbol) {
+.write_hdf5 <- function(path, genome, x, barcodes, gene.id, gene.symbol, gene.type, version="3") {
     h5createFile(path)
+
+    if (version=="3") {
+        group <- "matrix"
+    } else {
+        group <- genome
+    }
     h5createGroup(path, group)
+
     h5write(barcodes, file=path, name=paste0(group, "/barcodes"))
-    h5write(gene.id, file=path, name=paste0(group, "/genes"))
-    h5write(gene.symbol, file=path, name=paste0(group, "/gene_names"))
-   
+
+    # Saving feature information.
+    if (version=="3") {
+        h5createGroup(path, file.path(group, "features"))
+        h5write(gene.id, file=path, name=paste0(group, "/features/id"))
+        h5write(gene.symbol, file=path, name=paste0(group, "/features/name"))
+
+        h5write(rep(gene.type, length.out=length(gene.id)),
+            file=path, name=paste0(group, "/features/feature_type"))
+
+        h5write(rep(genome, length.out=length(gene.id)),
+            file=path, name=paste0(group, "/features/genome"))
+
+    } else {
+        h5write(gene.id, file=path, name=paste0(group, "/genes"))
+        h5write(gene.symbol, file=path, name=paste0(group, "/gene_names"))
+    }
+
+    # Saving matrix information.
     x <- as(x, "dgCMatrix")
     h5write(x@x, file=path, name=paste0(group, "/data"))
-    h5write(x@i, file=path, name=paste0(group, "/indices"))
-    h5write(x@p, file=path, name=paste0(group, "/indptr"))
     h5write(dim(x), file=path, name=paste0(group, "/shape"))
+    if (version=="3") {
+        ind <- x@i - 1L # zero indexed in version 3.0.
+    } else {
+        ind <- x@i
+    }
+    h5write(ind, file=path, name=paste0(group, "/indices"))
+    h5write(x@p, file=path, name=paste0(group, "/indptr"))
 
     return(NULL)
 }
