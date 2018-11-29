@@ -112,12 +112,7 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     x <- as(x, "dgCMatrix")
     h5write(x@x, file=path, name=paste0(group, "/data"))
     h5write(dim(x), file=path, name=paste0(group, "/shape"))
-    if (version=="3") {
-        ind <- x@i - 1L # zero indexed in version 3.0.
-    } else {
-        ind <- x@i
-    }
-    h5write(ind, file=path, name=paste0(group, "/indices"))
+    h5write(x@i, file=path, name=paste0(group, "/indices")) # already zero-indexed.
     h5write(x@p, file=path, name=paste0(group, "/indptr"))
 
     return(NULL)
