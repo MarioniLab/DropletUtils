@@ -50,7 +50,7 @@ test_that("Removal of swapped drops works correctly", {
         retainer <- split(c(output$original$cell, output$swapped$cell)[was.mapped], f[was.mapped], drop=FALSE)
         retainer <- lapply(retainer, FUN=function(i) {
             i <- unique(i)
-            collected <- BITMASK(i, barcode)
+            collected <- DropletUtils:::.unmask_barcode(i, barcode)
             stopifnot(!anyDuplicated(collected))
             i[order(collected)] + 1L # get back to 1-based indexing.
         })
@@ -151,7 +151,7 @@ test_that("swappedDrops functions correctly for silly inputs", {
 
     # Spits out a warning if you have multiple GEM groups.
     o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
-    h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
+    rhdf5::h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
     expect_warning(swappedDrops(o1), "contains multiple GEM groups")
 
     # Responds to names in the sample paths.
