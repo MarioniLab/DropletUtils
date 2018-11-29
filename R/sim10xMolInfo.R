@@ -1,7 +1,8 @@
 #' @importFrom rhdf5 h5write h5createFile h5write.default
 #' @importFrom stats rpois
 sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4, 
-    ngenes=20, nmolecules=10000, swap.frac=0.2, ave.read=10, return.tab=FALSE)
+    ngenes=20, nmolecules=10000, swap.frac=0.2, ave.read=10, 
+    version=c("2", "3"), return.tab=FALSE)
 # A function that creates a HDF5 file mimicking the molecule information from CellRanger.
 # Used for testing the correctness of the swapping removal algorithm.   
 #
@@ -48,6 +49,8 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
 
     # Writing them to 10X-like HDF5 files.
     out.files <- paste0(prefix, ".", seq_len(nsamples), ".h5")
+    version <- match.arg(version)
+
     for (i in seq_along(out.files)){
         sample <- seq_len(nsamples)[i]
         out.file <- out.files[i]
@@ -57,12 +60,25 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
         
         current <- fulltab[fulltab$sample==sample,]
         h5 <- h5createFile(out.file)
-        h5write(current$cell, out.file, "barcode") # technically should be saved as 64-bit, but not possible here.
+
+        if (version=="2") {
+            h5write(current$cell, out.file, "barcode") # technically should be saved as 64-bit, but not possible here.
+            h5write(current$gene, out.file, "gene")
+            h5write(current$reads, out.file, "reads")
+            h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
+        } else {
+            actual.barcodes <- factor(.unmask_barcode(current$cell, barcode.length))
+            h5write(as.integer(actual.barcodes) - 1L, out.file, "barcode_idx") # technically should be saved as 64-bit, but not possible here.
+            h5write(levels(actual.barcodes), out.file, "barcodes")
+
+            h5write(current$gene, out.file, "feature_idx")
+            h5write(current$reads, out.file, "count")
+            h5createGroup(out.file, "features")
+            h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "features/id")
+        }
+
         h5write(current$umi, out.file, "umi")
-        h5write(current$gene, out.file, "gene")
         h5write(rep(1, nrow(current)), out.file, "gem_group")
-        h5write(current$reads, out.file, "reads")
-        h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
     }
 
     if (return.tab) { 
@@ -70,4 +86,13 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
     } else {
         return(out.files)
     }
+}
+
+.unmask_barcode <- function(idx, blen) {
+    seqs <- vector("list", blen)
+    for (i in seq_len(blen)) {
+        seqs[[i]] <- c("A", "C", "G", "T")[idx %% 4 + 1L]
+        idx <- floor(idx/4)
+    }
+    do.call(paste0, rev(seqs))
 }
