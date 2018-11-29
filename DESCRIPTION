@@ -9,7 +9,7 @@ Authors@R: c(
     person("Davis", "McCarthy", role="ctb"))
 Depends: R (>= 3.6), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
-    HDF5Array
+    HDF5Array, R.utils
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
 biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
@@ -23,4 +23,4 @@ NeedsCompilation: yes
 VignetteBuilder: knitr
 LinkingTo: Rcpp, beachmat, Rhdf5lib
 SystemRequirements: C++11
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
