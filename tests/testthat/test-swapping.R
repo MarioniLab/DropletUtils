@@ -1,38 +1,6 @@
 # This tests that swappedDrops works correctly.
 # library(DropletUtils); library(testthat); source("test-swapping.R")
 
-##########################################
-
-BITMASK <- function(idx, blen) {
-    seqs <- vector("list", blen)
-    for (i in seq_len(blen)) {
-        seqs[[i]] <- c("A", "C", "G", "T")[idx %% 4 + 1L]
-        idx <- floor(idx/4)
-    }
-    do.call(paste0, rev(seqs))
-}
-
-test_that("barcode extraction is working correctly", {
-    library(rhdf5)
-    for (blen in c(4, 7, 10)) {
-         all.barcodes <- sample(4^blen, 10000, replace=TRUE) - 1L
-    
-         out.file <- tempfile(fileext="h5")
-         h5 <- h5createFile(out.file)
-         h5write(all.barcodes, out.file, "barcode")
-
-         out <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", blen)
-         guess <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", NULL)
-         expect_identical(out, guess)
-
-         # Manually doing the bit masks.
-         progressive <- BITMASK(all.barcodes, blen)
-         expect_identical(out, progressive)
-    }
-})
-
-##########################################
-
 tmpdir <- tempfile()
 dir.create(tmpdir)
 ngenes <- 20L
@@ -69,8 +37,6 @@ REFFUN <- function(original, swapped, min.frac) {
     }
     return(all.counts)
 }
-
-##########################################
 
 library(Matrix)
 set.seed(5717)

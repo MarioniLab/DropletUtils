@@ -6,6 +6,26 @@ dir.create(tmpdir)
 ngenes <- 20L
 barcode <- 4L
 
+set.seed(910)
+test_that("barcode extraction is working correctly", {
+    library(rhdf5)
+    for (blen in c(4, 7, 10)) {
+         all.barcodes <- sample(4^blen, 10000, replace=TRUE) - 1L
+
+         out.file <- tempfile(fileext="h5")
+         h5 <- h5createFile(out.file)
+         h5write(all.barcodes, out.file, "barcode")
+
+         out <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", blen)
+         guess <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", NULL)
+         expect_identical(out, guess)
+
+         # Manually doing the bit masks.
+         progressive <- DropletUtils:::.unmask_barcode(all.barcodes, blen)
+         expect_identical(out, progressive)
+    }
+})
+
 set.seed(909)
 test_that("Extraction of molecule information fields works correctly", {
     output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode=barcode, nsamples=3)
@@ -72,12 +92,26 @@ test_that("Extraction of subsets of the molinfo fields works correctly", {
 
 set.seed(908)
 test_that("Automatic detection of the molecule information fields works correctly", {
-    # Checking automatic detection of the barcode length works.
     for (blen in c(4L, 6L, 8L)) { 
         output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=blen)
         current <- read10xMolInfo(output)
         expect_true(all(nchar(current$data$cell)==blen))
     }
+})
+
+set.seed(908)
+test_that("read10xMolInfo responds correctly to the CellRanger version", {
+    set.seed(100)
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=6, version="2")
+    expect_false("barcode_idx" %in% rhdf5::h5ls(output)$name)
+    restored <-read10xMolInfo(output)
+
+    set.seed(100)
+    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=6, version="3")
+    expect_true("barcode_idx" %in% rhdf5::h5ls(output)$name)
+    restored2 <-read10xMolInfo(output)
+
+    expect_identical(restored, restored2)
 })
 
 set.seed(907)
