@@ -1,28 +1,31 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
 #' @importFrom SingleCellExperiment SingleCellExperiment
-read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HDF5"), group=NULL) 
+read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HDF5"), 
+    version=c("auto", "2", "3"), genome=NULL) 
 # Reads in one or more 10X directories in 'samples', and produces
 # a SingleCellExperiment object as the output.
 #
 # written by Davis McCarthy
 # modifications by Aaron Lun
-# some time ago.    
+# some time ago.
 {
     nsets <- length(samples)
     full_data <- vector("list", nsets)
     gene_info_list <- vector("list", nsets)
     cell_info_list <- vector("list", nsets)
+
     type <- match.arg(type)
+    version <- match.arg(version)
 
     for (i in seq_len(nsets)) { 
         run <- samples[i]
-        type <- .type_chooser(run, type)
+        cur.type <- .type_chooser(run, type)
 
-        if (type=="sparse") {
-            info <- .read_from_sparse(run)
+        if (cur.type=="sparse") {
+            info <- .read_from_sparse(run, version=version)
         } else {
-            info <- .read_from_hdf5(run, group=group)
+            info <- .read_from_hdf5(run, genome=genome, version=version)
         }
 
         full_data[[i]] <- info$mat
@@ -36,7 +39,6 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
         stop("gene information differs between runs")
     }
     gene_info <- gene_info_list[[1]]
-    colnames(gene_info) <- c("ID", "Symbol")
     rownames(gene_info) <- gene_info$ID
 
     # Forming the full data matrix.
@@ -55,36 +57,78 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
 #' @importClassesFrom Matrix dgCMatrix
 #' @importFrom Matrix readMM
 #' @importFrom utils read.delim
-.read_from_sparse <- function(path) {
-    barcode.loc <- file.path(path, "barcodes.tsv")
-    gene.loc <- file.path(path, "genes.tsv")
-    matrix.loc <- file.path(path, "matrix.mtx")
+.read_from_sparse <- function(path, version) {
+    if (version=="auto") {
+        version <- if (file.exists(file.path(path, "features.tsv.gz"))) "3" else "2"
+    }
+
+    if (version=="3") {
+        bname <- "barcodes.tsv.gz"
+        gname <- "features.tsv.gz"
+        mname <- "matrix.mtx.gz"
+    } else {
+        bname <- "barcodes.tsv"
+        gname <- "genes.tsv"
+        mname <- "matrix.mtx"
+    }
+
+    barcode.loc <- file.path(path, bname)
+    gene.loc <- file.path(path, gname)
+    matrix.loc <- file.path(path, mname)
+
+    gene.info <- read.delim(gene.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE, quote="", comment.char="")
+    if (version=="3") {
+        colnames(gene.info) <- c("ID", "Symbol", "Type")
+    } else {
+        colnames(gene.info) <- c("ID", "Symbol")
+    }
 
     list(
         mat=as(readMM(matrix.loc), "dgCMatrix"),
         cell.names=readLines(barcode.loc),
-        gene.info=read.delim(gene.loc, header=FALSE, colClasses="character", stringsAsFactors=FALSE, quote="", comment.char="")
+        gene.info=gene.info
     )
 }
 
 #' @importFrom rhdf5 h5ls h5read
 #' @importFrom HDF5Array TENxMatrix
 #' @importFrom utils head
-.read_from_hdf5 <- function(path, group=NULL) {
-    if (is.null(group)) {
-        available <- h5ls(path, recursive=FALSE)
-        available <- available[available$otype=="H5I_GROUP",]
+.read_from_hdf5 <- function(path, genome=NULL, version) {
+    available <- h5ls(path, recursive=FALSE)
+    available <- available[available$otype=="H5I_GROUP",]
 
-        if (nrow(available) > 1L) {
-            to.see <- head(available$name, 3)
-            if (length(to.see)==3L) {
-                to.see[3] <- "..."
+    if (version=="auto") {
+        version <- if ("matrix" %in% available$name) "3" else "2"
+    }
+
+    if (version=="2") {
+        group <- genome
+        if (is.null(group)) {
+            if (nrow(available) > 1L) {
+                to.see <- head(available$name, 3)
+                if (length(to.see)==3L) {
+                    to.see[3] <- "..."
+                }
+                stop("more than one available group (", paste(to.see, collapse=", "), ")")
+            } else if (nrow(available) == 0L) {
+                stop("no available groups")
             }
-            stop("more than one available group (", paste(to.see, collapse=", "), ")")
-        } else if (nrow(available) == 0L) {
-            stop("no available groups")
+            group <- available$name
         }
-        group <- available$name
+
+        gene.info <- data.frame(
+            ID=as.character(h5read(path, paste0(group, "/genes"))),
+            Symbol=as.character(h5read(path, paste0(group, "/gene_names"))),
+            stringsAsFactors=FALSE
+        )
+    } else {
+        group <- "matrix"
+        gene.info <- data.frame(
+            ID=as.character(h5read(path, paste0(group, "/features/id"))),
+            Symbol=as.character(h5read(path, paste0(group, "/features/name"))),
+            Type=as.character(h5read(path, paste0(group, "/features/feature_type"))),
+            stringsAsFactors=FALSE
+        )
     }
 
     mat <- TENxMatrix(path, group)
@@ -92,10 +136,6 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
     list(
         mat=mat,
         cell.names=as.character(h5read(path, paste0(group, "/barcodes"))),
-        gene.info=data.frame(
-            as.character(h5read(path, paste0(group, "/genes"))),
-            as.character(h5read(path, paste0(group, "/gene_names"))),
-            stringsAsFactors=FALSE
-        )
+        gene.info=gene.info
     )
 }
