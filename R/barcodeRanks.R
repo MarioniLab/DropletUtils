@@ -1,5 +1,7 @@
 #' @export
 #' @importFrom stats smooth.spline predict fitted
+#' @importFrom Matrix colSums
+#' @importFrom S4Vectors DataFrame metadata<-
 barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...) 
 # Returning statistics to construct a barcode-rank plot. Also calculates
 # the knee and inflection points for further use.
@@ -7,7 +9,7 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...)
 # written by Aaron Lun
 # created 22 December 2017    
 {
-    totals <- colSums(m)
+    totals <- unname(colSums(m))
     o <- order(totals, decreasing=TRUE)
 
     stuff <- rle(totals[o])
@@ -50,10 +52,15 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...)
     # Returning a whole stack of useful stats.
     fitted.vals <- rep(NA_real_, length(keep))
     fitted.vals[keep][new.keep] <- 10^fitted(fit)
-    return(list(rank=.reorder(run.rank, stuff$lengths, o), 
-                total=.reorder(run.totals, stuff$lengths, o),
-                fitted=.reorder(fitted.vals, stuff$lengths, o),
-                knee=knee, inflection=inflection))
+
+    out <- DataFrame(
+        rank=.reorder(run.rank, stuff$lengths, o), 
+        total=.reorder(run.totals, stuff$lengths, o),
+        fitted=.reorder(fitted.vals, stuff$lengths, o)
+    )
+    rownames(out) <- colnames(m)
+    metadata(out) <- list(knee=knee, inflection=inflection)
+    out
 }
 
 .reorder <- function(vals, lens, o) {

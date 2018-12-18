@@ -46,16 +46,16 @@ Note that only points with total counts above \code{lower} will be considered, r
 }
 
 \value{
-A list with the following elements:
+A \linkS4class{DataFrame} where each row corresponds to a column of \code{m}, and containing the following fields:
 \describe{
-\item{\code{rank}:}{A numeric vector of average ranks for each column of \code{m}.}
-\item{\code{total}:}{A numeric vector of total counts for each column of \code{m}.}
-\item{\code{fitted}:}{A numeric vector of fitted total counts from the spline for each column of \code{m}.
-This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.
+\item{\code{rank}:}{Numeric, the rank of each barcode (averaged across ties).}
+\item{\code{total}:}{Numeric, the total counts for each barcode.}
+\item{\code{fitted}:}{Numeric, the fitted value from the spline for each barcode.
+This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.}
 }
-\item{\code{knee}:}{A numeric scalar containing the total count at the knee point.}
-\item{\code{inflection}:}{A numeric scalar containing the total count at the inflection point.}
-}
+
+The metadata contains \code{knee}, a numeric scalar containing the total count at the knee point;
+and \code{inflection}, a numeric scalar containing the total count at the inflection point.
 }
 
 \author{
@@ -75,8 +75,8 @@ names(br.out)
 plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 o <- order(br.out$rank)
 lines(br.out$rank[o], br.out$fitted[o], col="red")
-abline(h=br.out$knee, col="dodgerblue", lty=2)
-abline(h=br.out$inflection, col="forestgreen", lty=2)
+abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
+abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
 legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
     legend=c("knee", "inflection"))
 }
