@@ -297,7 +297,7 @@ test_that("emptyDrops runs to completion", {
     expect_equal(e.out3a[survivors,], e.out3b) 
 
     # Checking retention options.
-    K <- barcodeRanks(my.counts, lower=limit)$knee
+    K <- metadata(barcodeRanks(my.counts, lower=limit))$knee
     expect_true(all(e.out$FDR[totals >= K]==0))
     expect_true(!all(e.out$FDR[totals < K]==0))
 

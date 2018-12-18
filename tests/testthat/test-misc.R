@@ -25,6 +25,15 @@ test_that("barcodeRanks runs to completion", {
     expect_true(all(is.na(brout3$fitted[!is.okay])))
     expect_true(all(!is.na(brout3$fitted[is.okay])))
 
+    # Respecting column names.
+    alt <- my.counts
+    colnames(alt) <- sprintf("BARCODE_%i", seq_len(ncol(alt)))
+    brout2 <- barcodeRanks(alt)
+    expect_identical(rownames(brout2), colnames(alt))
+    expect_identical(names(brout2$rank), NULL)
+    expect_identical(names(brout2$total), NULL)
+    expect_identical(names(brout2$fitted), NULL)
+
     # Trying out silly inputs.
     expect_error(barcodeRanks(my.counts[,0]), "insufficient")
     expect_error(barcodeRanks(my.counts[0,]), "insufficient")
