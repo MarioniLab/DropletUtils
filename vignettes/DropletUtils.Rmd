@@ -151,8 +151,9 @@ br.out <- barcodeRanks(my.counts)
 plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 o <- order(br.out$rank)
 lines(br.out$rank[o], br.out$fitted[o], col="red")
-abline(h=br.out$knee, col="dodgerblue", lty=2)
-abline(h=br.out$inflection, col="forestgreen", lty=2)
+
+abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
+abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
 legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
     legend=c("knee", "inflection"))
 ```
