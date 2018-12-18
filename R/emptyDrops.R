@@ -159,7 +159,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
 emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
-# Combined function that puts these all together, always keeping cells above the inflection
+# Combined function that puts these all together, always keeping cells above the knee 
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
@@ -169,7 +169,8 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...)
     tmp <- stats$PValue
     
     if (is.null(retain)) {
-        retain <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))$knee
+        br.out <- do.call(barcodeRanks, c(list(m, lower=lower), barcode.args))
+        retain <- metadata(br.out)$knee
     }
     always <- stats$Total >= retain
     tmp[always] <- 0
