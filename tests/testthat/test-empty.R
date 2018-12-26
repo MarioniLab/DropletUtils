@@ -51,6 +51,16 @@ test_that("multinomial calculations are correct with alpha", {
     }
 })
 
+UNICHECKER <- function(values, tol=1.25) {
+    for (thresh in c(0.01, 0.05, 0.1, 0.2, 0.5)) { 
+        # Generous boundaries for thresholds.
+        observed <- mean(values < thresh)
+        expect_true(observed < thresh * tol)
+        expect_true(observed > thresh / tol)
+    }
+    invisible(NULL)
+}
+
 test_that("p-value calculations are correct without alpha", {
     # Simulating some multinomial probabilities. 
     SIMSTUFF <- function(nbarcodes, ngenes) { 
@@ -64,90 +74,35 @@ test_that("p-value calculations are correct without alpha", {
         return(list(totals=totals, probs=probs, ambient=ambient))
     }
 
-    # Setting up the reference function.
-    REFFUN <- function(totals, probs, ambient, iter) {
-        cumamb <- cumsum(ambient)
-        logamb <- log(ambient)
-        sumamb <- sum(ambient)
-
-        n.above <- integer(length(totals))
-        for (it in seq_len(iter)) {
-            vec <- runif(max(totals), 0, sumamb)
-            chosen <- findInterval(vec, cumamb)+1L
-            
-            for (i in seq_along(totals)) {
-                curchosen <- chosen[seq_len(totals[i])]
-                curprof <- tabulate(curchosen, nbins=length(ambient))
-                curP <- sum(logamb * curprof - lfactorial(curprof))
-                if (curP <= probs[i]) { 
-                    n.above[i] <- n.above[i] + 1L
-                }
-            }
-        }
-
-        return(n.above)
-    }
-
-    # Checking the equivalence of our two implementations.
-    set.seed(0)
-    sim <- SIMSTUFF(100, 20)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100)
-    expect_identical(stats, ref)
-
-    # More barcodes (especially checking what happens with two barcodes of the same total).
-    set.seed(0)
-    sim <- SIMSTUFF(1001, 20)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100)
-    expect_identical(stats, ref)
-
-    # More genes.
-    set.seed(0)
-    sim <- SIMSTUFF(100, 200)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100)
-    expect_identical(stats, ref)
-
-    # More iterations.
-    set.seed(0)
-    sim <- SIMSTUFF(100, 20)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=500)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=500)
-    expect_identical(stats, ref)
-
     # Checking for uniformity:
-#    set.seed(0)
-#    sim <- SIMSTUFF(10000, 1000)
-#    totals <- sim$totals
-#    probs <- sim$probs
-#    ambient.prof <- sim$ambient
-#    set.seed(100)
-#    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=1000)
+    set.seed(0)
+    sim <- SIMSTUFF(10000, 1000)
+    totals <- sim$totals
+    probs <- sim$probs
+    ambient.prof <- sim$ambient
+
+    set.seed(100)
+    N <- 10000
+    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N)
+    UNICHECKER(stats/N)
+
+    # Same result for multiple cores (set BPPARAM first as it redefines the seed!)
+    BPPARAM <- BiocParallel::MulticoreParam(3)
+    set.seed(100)
+    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N) 
+    expect_identical(stats, stats2)
+
+    # Different result for different seeds.
+    set.seed(101)
+    stats3 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N) 
+    expect_false(identical(stats, stats3))
+    UNICHECKER(stats3/N)
+
+    # Worker splitting behaves for near-zero or no jobs.
+    almost_none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=1L) 
+    expect_true(all(almost_none %in% 0:1))
+    none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=0L) 
+    expect_identical(none, integer(length(totals)))
 })
 
 test_that("p-value calculations are correct with alpha", {
@@ -166,96 +121,44 @@ test_that("p-value calculations are correct with alpha", {
         return(list(totals=totals, probs=probs, ambient=ambient))
     }
 
-    # Setting up the reference function.
-    REFFUN <- function(totals, probs, ambient, iter, alpha) {
-        n.above <- integer(length(totals))
-        alpha.ambient <- ambient*alpha
-
-        for (it in seq_len(iter)) {
-            test.ambient <- rgamma(length(ambient), alpha.ambient)
-            test.ambient <- test.ambient/sum(test.ambient)
-
-            cumamb <- cumsum(test.ambient)
-            logamb <- log(test.ambient)
-            sumamb <- sum(test.ambient)
-
-            vec <- runif(max(totals), 0, sumamb)
-            chosen <- findInterval(vec, cumamb)+1L
-
-            for (i in seq_along(totals)) {
-                curchosen <- chosen[seq_len(totals[i])]
-                curprof <- tabulate(curchosen, nbins=length(test.ambient))
-                curP <- sum(lgamma(alpha.ambient + curprof) - lfactorial(curprof) - lgamma(alpha.ambient))
-
-                if (curP <= probs[i]) { 
-                    n.above[i] <- n.above[i] + 1L
-                }
-            }
-        }
-
-        return(n.above)
-    }
-
-    # Checking the equivalence of our two implementations.
+    # Checking for uniformity.
     set.seed(0)
-    sim <- SIMSTUFF(100, 20, alpha=10)
+    sim <- SIMSTUFF(10000, 800, alpha=10)
     totals <- sim$totals
     probs <- sim$probs
     ambient.prof <- sim$ambient
 
     set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100, alpha=10)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100, alpha=10)
-    expect_identical(stats, ref)
+    N <- 10000
+    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N, alpha=10)
+    UNICHECKER(stats/N)
 
-    # More barcodes (especially checking what happens with two barcodes of the same total).
+    # Same result for multiple cores (set BPPARAM first as it redefines the seed!)
+    BPPARAM <- BiocParallel::MulticoreParam(3)
+    set.seed(100)
+    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N, alpha=10) 
+    expect_identical(stats, stats2)
+
+    # Different result for different seeds.
+    set.seed(101)
+    stats3 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N, alpha=10) 
+    expect_false(identical(stats, stats3))
+    UNICHECKER(stats3/N)
+ 
+    # Trying with a different alpha.
     set.seed(0)
-    sim <- SIMSTUFF(1001, 20, alpha=5)
+    sim <- SIMSTUFF(10000, 800, alpha=5)
     totals <- sim$totals
     probs <- sim$probs
     ambient.prof <- sim$ambient
 
     set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100, alpha=5)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100, alpha=5)
-    expect_identical(stats, ref)
-
-    # More genes.
-    set.seed(0)
-    sim <- SIMSTUFF(100, 200, alpha=2)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=100, alpha=2)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=100, alpha=2)
-    expect_identical(stats, ref)
-
-    # More iterations.
-    set.seed(0)
-    sim <- SIMSTUFF(100, 20, alpha=20)
-    totals <- sim$totals
-    probs <- sim$probs
-    ambient.prof <- sim$ambient
-
-    set.seed(100)
-    ref <- REFFUN(totals, probs, ambient.prof, iter=500, alpha=20)
-    set.seed(100)
-    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=500, alpha=20)
-    expect_identical(stats, ref)
-
-    # Checking for uniformity:
-#    set.seed(0)
-#    sim <- SIMSTUFF(10000, 1000, alpha=5)
-#    totals <- sim$totals
-#    probs <- sim$probs
-#    ambient.prof <- sim$ambient
-#    set.seed(100)
-#    stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=1000, alpha=5)
+    stats4 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N, alpha=5)
+    UNICHECKER(stats4/N)
+    expect_false(identical(stats, stats4))
+    
+    # Triggering a check on 'alpha'.
+    expect_error(DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N, alpha=0), "must be positive") 
 })
 
 test_that("emptyDrops runs to completion", {
