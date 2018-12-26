@@ -58,7 +58,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     output
 }
 
-#' @importFrom BiocParallel bpnworkers SerialParam bplapply
+#' @importFrom BiocParallel bpnworkers SerialParam bpmapply
+#' @importFrom stats runif
 .permute_counter <- function(totals, probs, ambient, iter, alpha=Inf, BPPARAM=SerialParam()) 
 # Calculating the p-values using a Monte Carlo approach.
 {
@@ -67,20 +68,37 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     re.totals <- rle(totals[o]) # Ensure identity upon comparison.
 
     nworkers <- bpnworkers(BPPARAM)
-    per.core <- rep(ceiling(iter/nworkers), nworkers)
-    per.core[1] <- iter - sum(per.core[-1]) # Making sure that we get the exact number of iterations.
+    if (iter < nworkers) {
+        per.core <- integer(nworkers)
+        per.core[seq_len(iter)] <- 1L
+    } else {
+        per.core <- rep(ceiling(iter/nworkers), nworkers)
+        per.core[1] <- iter - sum(per.core[-1]) # Making sure that we get the exact number of iterations.
+    }
 
-    out.values <- bplapply(per.core, FUN=.monte_carlo_pval, total.val=re.totals$values,
-        total.len=re.totals$lengths, P=re.P, ambient=ambient, alpha=alpha, BPPARAM=BPPARAM)
+    # Creating seeds for the C++ PRNG to avoid disrupting the R seed in multi-core execution.
+    seeds.per.core <- lapply(per.core, FUN=function(n) {
+        floor(runif(n, 0, .Machine$integer.max))
+    })
+
+    out.values <- bpmapply(iterations=per.core, seeds=seeds.per.core, FUN=.monte_carlo_pval, 
+        MoreArgs=list(
+            total.val=re.totals$values, 
+            total.len=re.totals$lengths, 
+            P=re.P, 
+            ambient=ambient, 
+            alpha=alpha
+        ), BPPARAM=BPPARAM, SIMPLIFY=FALSE)
+
     n.above <- Reduce("+", out.values)
     n.above[o] <- n.above
     return(n.above)
 }
 
-.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha) 
-# Wrapper function to preserve NAMESPACE in bplapply.
+.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha, seeds) 
+# Wrapper function to preserve NAMESPACE in bpmapply.
 { 
-    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha) 
+    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds) 
 }
 
 #' @importFrom methods is
