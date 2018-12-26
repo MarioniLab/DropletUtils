@@ -1,6 +1,7 @@
 #include "DropletUtils.h"
+#include <random>
 
-SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha) {
+SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds) {
     BEGIN_RCPP
     Rcpp::IntegerVector Totalval(totalval);
     Rcpp::IntegerVector Totallen(totallen);
@@ -16,8 +17,13 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
     }
 
     const int niter=check_integer_scalar(iter, "number of iterations");
-    if (niter < 1) {
-        throw std::runtime_error("number of iterations should be a positive integer");
+    if (niter < 0) {
+        throw std::runtime_error("number of iterations should be a non-negative integer");
+    }
+
+    Rcpp::IntegerVector Seeds(seeds);
+    if (Seeds.size()!=niter) {
+        throw std::runtime_error("number of seeds and iterations should be the same");
     }
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
@@ -45,17 +51,18 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
         std::partial_sum(Ambient.begin(), Ambient.end(), cumprob.begin());
     }
 
-    Rcpp::RNGScope rng; // after the IntegerVector!
-
     // Looping across iterations, using a new probability vector per iteration.
     for (int it=0; it<niter; ++it) {
+        std::mt19937 generator(Seeds[it]);
         if (use_alpha) {
             for (size_t ldx=0; ldx<ngenes; ++ldx) {
-                tmpprob[ldx]=R::rgamma(Ambient[ldx] * Alpha, 1);
+                // Do NOT cache across iterations, as this introduces possible dependencies.
+                tmpprob[ldx]=std::gamma_distribution<double>(Ambient[ldx] * Alpha, 1)(generator);
             }
             std::partial_sum(tmpprob.begin(), tmpprob.end(), cumprob.begin());
         }
         const double sumprob=cumprob.back();
+        std::uniform_real_distribution<double> cpp_runif(0, sumprob);
 
         int curtotal=0;
         std::fill(tracker.begin(), tracker.end(), 0);
@@ -72,7 +79,7 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
             // Sampling more points to reach the current total count.
             while (curtotal<curval) {
-                auto chosen=std::lower_bound(cumprob.begin(), cumprob.end(), R::unif_rand() * sumprob) - cumprob.begin();
+                auto chosen=std::lower_bound(cumprob.begin(), cumprob.end(), cpp_runif(generator)) - cumprob.begin();
                 if (chosen >= ngenes) {
                     chosen=ngenes-1; // Some protection against the very-unlikely case.
                 }
