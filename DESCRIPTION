@@ -21,6 +21,6 @@ Description: Provides a number of utility functions for handling
 License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr
-LinkingTo: Rcpp, beachmat, Rhdf5lib
+LinkingTo: Rcpp, beachmat, Rhdf5lib, BH
 SystemRequirements: C++11
 RoxygenNote: 6.1.1

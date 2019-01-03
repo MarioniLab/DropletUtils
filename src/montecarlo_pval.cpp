@@ -1,5 +1,5 @@
 #include "DropletUtils.h"
-#include <random>
+#include "boost/random.hpp"
 
 SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds) {
     BEGIN_RCPP
@@ -53,16 +53,16 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
     // Looping across iterations, using a new probability vector per iteration.
     for (int it=0; it<niter; ++it) {
-        std::mt19937 generator(Seeds[it]);
+        boost::random::mt19937 generator(Seeds[it]);
         if (use_alpha) {
             for (size_t ldx=0; ldx<ngenes; ++ldx) {
                 // Do NOT cache across iterations, as this introduces possible dependencies.
-                tmpprob[ldx]=std::gamma_distribution<double>(Ambient[ldx] * Alpha, 1)(generator);
+                tmpprob[ldx]=boost::random::gamma_distribution<double>(Ambient[ldx] * Alpha, 1)(generator);
             }
             std::partial_sum(tmpprob.begin(), tmpprob.end(), cumprob.begin());
         }
         const double sumprob=cumprob.back();
-        std::uniform_real_distribution<double> cpp_runif(0, sumprob);
+        boost::random::uniform_real_distribution<double> cpp_runif(0, sumprob);
 
         int curtotal=0;
         std::fill(tracker.begin(), tracker.end(), 0);
