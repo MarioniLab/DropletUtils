@@ -1,5 +1,5 @@
 Package: DropletUtils
-Version: 1.3.5
+Version: 1.3.6
 Date: 2018-01-03
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
@@ -11,7 +11,7 @@ Depends: R (>= 3.6), BiocParallel, SingleCellExperiment
 Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
     HDF5Array, R.utils
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
-biocViews: SingleCell, Sequencing, RNASeq, GeneExpression, 
+biocViews: ImmunoOncology, SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
 Description: Provides a number of utility functions for handling 
     single-cell (RNA-seq) data from droplet technologies such as 10X
