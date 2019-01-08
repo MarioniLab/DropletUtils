@@ -1,6 +1,6 @@
 #include "DropletUtils.h"
 #include "boost/random.hpp"
-#include "pcg_random.hpp"
+#include "rand_custom.hpp"
 
 SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds, SEXP streams) {
     BEGIN_RCPP
@@ -23,14 +23,8 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
     }
 
     Rcpp::NumericVector Seeds(seeds);
-    if (Seeds.size()!=niter) {
-        throw std::runtime_error("number of seeds and iterations should be the same");
-    }
-
     Rcpp::IntegerVector Streams(streams);
-    if (Streams.size()!=niter) {
-        throw std::runtime_error("number of streams and iterations should be the same");
-    }
+    check_pcg_vectors(Seeds, Streams, niter);
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
     const bool use_alpha=R_FINITE(Alpha);
@@ -59,7 +53,7 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
     // Looping across iterations, using a new probability vector per iteration.
     for (int it=0; it<niter; ++it) {
-        pcg32 generator(static_cast<uint32_t>(Seeds[it]), Streams[it]);
+        auto generator=create_pcg32(Seeds, Streams, it);
 
         if (use_alpha) {
             typedef boost::random::gamma_distribution<double> distr_t;
