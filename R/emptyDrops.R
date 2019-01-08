@@ -59,7 +59,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 }
 
 #' @importFrom BiocParallel bpnworkers SerialParam bpmapply
-#' @importFrom stats runif
 .permute_counter <- function(totals, probs, ambient, iter, alpha=Inf, BPPARAM=SerialParam()) 
 # Calculating the p-values using a Monte Carlo approach.
 {
@@ -76,17 +75,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
         per.core[1] <- iter - sum(per.core[-1]) # Making sure that we get the exact number of iterations.
     }
 
-    # Creating seeds for the C++ PRNG to avoid disrupting the R seed in multi-core execution.
-    seeds.per.core <- streams.per.core <- vector("list", nworkers)
-    last <- 0L
-    for (i in seq_len(nworkers)) {
-        n <- per.core[i]
-        seeds.per.core[[i]] <- runif(n, 0, 2^32)
-        streams.per.core[[i]] <- last + seq_len(n)
-        last <- last + n
-    }
+    pcg.state <- .setup_pcg_state(per.core)
 
-    out.values <- bpmapply(iterations=per.core, seeds=seeds.per.core, streams=streams.per.core,
+    out.values <- bpmapply(iterations=per.core, seeds=pcg.state$seeds, streams=pcg.state$streams,
         FUN=.monte_carlo_pval, 
         MoreArgs=list(
             total.val=re.totals$values, 
@@ -105,6 +96,21 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 # Wrapper function to preserve NAMESPACE in bpmapply.
 { 
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
+}
+
+#' @importFrom stats runif
+.setup_pcg_state <- function(per.core) 
+# Creating seeds for the C++ PRNG to avoid disrupting the R seed in multi-core execution.
+{
+    seeds.per.core <- streams.per.core <- vector("list", length(per.core))
+    last <- 0L
+    for (i in seq_along(per.core)) {
+        N <- per.core[i]
+        seeds.per.core[[i]] <- runif(N, 0, 2^32)
+        streams.per.core[[i]] <- last + seq_len(N)
+        last <- last + N
+    }
+    list(seeds=seeds.per.core, streams=streams.per.core)
 }
 
 #' @importFrom methods is
