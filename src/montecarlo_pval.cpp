@@ -1,6 +1,13 @@
 #include "DropletUtils.h"
+
 #include "boost/random.hpp"
 #include "rand_custom.h"
+#include "utils.h"
+
+#include <stdexcept>
+#include <algorithm>
+#include <vector>
+#include <cmath>
 
 SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds, SEXP streams) {
     BEGIN_RCPP

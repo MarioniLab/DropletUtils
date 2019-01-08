@@ -2,15 +2,6 @@
 #define DROPLETUTILS_H
 
 #include "Rcpp.h"
-#include "beachmat/integer_matrix.h"
-#include "beachmat/numeric_matrix.h"
-
-#include <algorithm>
-#include <deque>
-#include <stdexcept>
-#include <functional>
-#include <cmath>
-#include <numeric>
 
 // Functions to be called from R.
 
@@ -39,14 +30,6 @@ SEXP group_cells(SEXP, SEXP);
 SEXP load_tenx_to_hdf5(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 }
-
-// Checking for scalar inputs.
-
-int check_integer_scalar(Rcpp::RObject, const char*);
-
-double check_numeric_scalar(Rcpp::RObject, const char*);
-
-bool check_logical_scalar(Rcpp::RObject, const char*);
 
 #endif
 

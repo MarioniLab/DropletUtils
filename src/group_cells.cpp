@@ -1,5 +1,9 @@
 #include "DropletUtils.h"
 
+#include <stdexcept>
+#include <algorithm>
+#include <deque>
+
 SEXP group_cells (SEXP cells, SEXP gems) {
     BEGIN_RCPP
     Rcpp::StringVector Cells(cells);

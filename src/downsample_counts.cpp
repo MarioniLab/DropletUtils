@@ -1,5 +1,13 @@
 #include "DropletUtils.h"
 
+#include "beachmat/integer_matrix.h"
+#include "beachmat/numeric_matrix.h"
+#include "utils.h"
+
+#include <stdexcept>
+#include <algorithm>
+#include <cmath>
+
 /* Defining some general-purpose downsampling functions. */
 
 /* This function considers sampling events without replacement from a vector.

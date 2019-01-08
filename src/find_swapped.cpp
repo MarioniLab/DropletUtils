@@ -1,5 +1,13 @@
 #include "DropletUtils.h"
 
+#include "beachmat/numeric_matrix.h"
+#include "utils.h"
+
+#include <stdexcept>
+#include <vector>
+#include <algorithm>
+#include <utility>
+
 template<class V>
 std::vector<V> process_list(Rcpp::List incoming) {
     const size_t nsamples=incoming.size();

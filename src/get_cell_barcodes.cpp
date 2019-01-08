@@ -1,6 +1,14 @@
 #include "DropletUtils.h"
+
 #include "H5Cpp.h"
-#include <cstdint> 
+#include "utils.h"
+
+#include <stdexcept>
+#include <cstdint>
+#include <string>
+#include <cmath>
+#include <vector>
+#include <algorithm>
 
 SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
     BEGIN_RCPP

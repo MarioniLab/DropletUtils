@@ -1,5 +1,8 @@
 #include "DropletUtils.h"
 
+#include <stdexcept>
+#include <sstream>
+
 SEXP encode_sequences (SEXP incoming) {
     BEGIN_RCPP
     Rcpp::StringVector Seqs(incoming);
@@ -33,7 +36,7 @@ SEXP encode_sequences (SEXP incoming) {
                     {
                         std::stringstream err;
                         err << "unrecognized character in '" << ptr << "'";
-                        throw std::runtime_error(err.str().c_str());
+                        throw std::runtime_error(err.str());
                     }
             }
             mult*=4;

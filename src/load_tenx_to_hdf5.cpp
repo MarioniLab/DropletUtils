@@ -1,5 +1,11 @@
 #include "DropletUtils.h"
 
+#include "beachmat/integer_matrix.h"
+#include "beachmat/numeric_matrix.h"
+#include "utils.h"
+
+#include <stdexcept>
+
 template<class V, class M>
 SEXP load_tenx_to_hdf5_internal(SEXP fhandle, SEXP chunksize, SEXP x_type, SEXP nz, M omat) {
     const int chunks=check_integer_scalar(chunksize, "chunk size");

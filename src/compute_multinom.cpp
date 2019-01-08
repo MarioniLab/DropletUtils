@@ -1,5 +1,13 @@
 #include "DropletUtils.h"
 
+#include "beachmat/integer_matrix.h"
+#include "beachmat/numeric_matrix.h"
+#include "utils.h"
+
+#include <stdexcept>
+#include <cmath>
+#include <tuple>
+
 template <typename V, class MAT>
 SEXP compute_multinom_internal(MAT M, SEXP prop, SEXP alpha) {
     const size_t NC=M->get_ncol();
