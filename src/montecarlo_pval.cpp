@@ -1,7 +1,8 @@
 #include "DropletUtils.h"
 #include "boost/random.hpp"
+#include "pcg_random.hpp"
 
-SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds) {
+SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds, SEXP streams) {
     BEGIN_RCPP
     Rcpp::IntegerVector Totalval(totalval);
     Rcpp::IntegerVector Totallen(totallen);
@@ -21,9 +22,14 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
         throw std::runtime_error("number of iterations should be a non-negative integer");
     }
 
-    Rcpp::IntegerVector Seeds(seeds);
+    Rcpp::NumericVector Seeds(seeds);
     if (Seeds.size()!=niter) {
         throw std::runtime_error("number of seeds and iterations should be the same");
+    }
+
+    Rcpp::IntegerVector Streams(streams);
+    if (Streams.size()!=niter) {
+        throw std::runtime_error("number of streams and iterations should be the same");
     }
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
@@ -53,7 +59,8 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
     // Looping across iterations, using a new probability vector per iteration.
     for (int it=0; it<niter; ++it) {
-        boost::random::mt19937 generator(Seeds[it]);
+        pcg32 generator(static_cast<uint32_t>(Seeds[it]), Streams[it]);
+
         if (use_alpha) {
             for (size_t ldx=0; ldx<ngenes; ++ldx) {
                 // Do NOT cache across iterations, as this introduces possible dependencies.

@@ -77,11 +77,17 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     }
 
     # Creating seeds for the C++ PRNG to avoid disrupting the R seed in multi-core execution.
-    seeds.per.core <- lapply(per.core, FUN=function(n) {
-        floor(runif(n, 0, .Machine$integer.max))
-    })
+    seeds.per.core <- streams.per.core <- vector("list", nworkers)
+    last <- 0L
+    for (i in seq_len(nworkers)) {
+        n <- per.core[i]
+        seeds.per.core[[i]] <- runif(n, 0, 2^32)
+        streams.per.core[[i]] <- last + seq_len(n)
+        last <- last + n
+    }
 
-    out.values <- bpmapply(iterations=per.core, seeds=seeds.per.core, FUN=.monte_carlo_pval, 
+    out.values <- bpmapply(iterations=per.core, seeds=seeds.per.core, streams=streams.per.core,
+        FUN=.monte_carlo_pval, 
         MoreArgs=list(
             total.val=re.totals$values, 
             total.len=re.totals$lengths, 
@@ -95,10 +101,10 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(n.above)
 }
 
-.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha, seeds) 
+.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
 # Wrapper function to preserve NAMESPACE in bpmapply.
 { 
-    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds) 
+    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
 }
 
 #' @importFrom methods is
