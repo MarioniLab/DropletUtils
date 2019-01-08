@@ -1,6 +1,6 @@
 #include "rand_custom.h"
-#include "utils.h"
 #include <sstream>
+#include <stdexcept>
 
 void check_pcg_vectors(const Rcpp::NumericVector& seeds, const Rcpp::IntegerVector& streams, size_t N, const char* msg) {
     // Use of references to Rcpp classes is deliberate, to ensure that seeds are NumericVectors 
@@ -28,7 +28,7 @@ pcg32 create_pcg32(const Rcpp::NumericVector& seeds, const Rcpp::IntegerVector& 
         throw std::runtime_error("seed for PCG32 must lie in [0, 2^32)");
     }
 
-    const double custream=streams[i];
+    const double curstream=streams[i];
     if (curstream < 0) { // no need to check upper bound for 32-bit signed ints.
         throw std::runtime_error("stream for PCG32 must be non-negative");
     }

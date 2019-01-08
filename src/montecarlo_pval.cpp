@@ -1,6 +1,6 @@
 #include "DropletUtils.h"
 #include "boost/random.hpp"
-#include "rand_custom.hpp"
+#include "rand_custom.h"
 
 SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEXP iter, SEXP alpha, SEXP seeds, SEXP streams) {
     BEGIN_RCPP
@@ -24,7 +24,7 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
     Rcpp::NumericVector Seeds(seeds);
     Rcpp::IntegerVector Streams(streams);
-    check_pcg_vectors(Seeds, Streams, niter);
+    check_pcg_vectors(Seeds, Streams, niter, "iterations");
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
     const bool use_alpha=R_FINITE(Alpha);
