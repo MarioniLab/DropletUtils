@@ -7,9 +7,9 @@ Authors@R: c(
     email = "infinite.monkeys.with.keyboards@gmail.com"), 
     person("Jonathan", "Griffiths", role="ctb"), 
     person("Davis", "McCarthy", role="ctb"))
-Depends: R (>= 3.6), BiocParallel, SingleCellExperiment
-Imports: S4Vectors, Matrix, methods, utils, stats, edgeR, Rcpp, rhdf5,
-    HDF5Array, R.utils
+Depends: SingleCellExperiment
+Imports: S4Vectors, BiocParallel, Rcpp, Matrix, methods, utils, stats, 
+    edgeR, rhdf5, HDF5Array, R.utils
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
 biocViews: ImmunoOncology, SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
