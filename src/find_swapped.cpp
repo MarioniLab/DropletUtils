@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
-#include <utility>
 
 template<class V>
 std::vector<V> process_list(Rcpp::List incoming) {
@@ -31,6 +30,11 @@ void compare_lists(U left, V right) {
     }
     return;
 }
+
+struct molecule {
+    molecule (int s, int i, int g, int u) : sample(s), index(i), gene(g), umi(u) {}
+    int sample, index, gene, umi; // using ints for memory efficiency.
+};
 
 /* Identifies which molecules should be retained in which samples,
  * given the cell, gene and UMI combination for each molecule per sample.
@@ -59,38 +63,34 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
         nmolecules+=Cells[i].size();
     } 
 
-    typedef std::pair<size_t, size_t> molecule;
-    std::vector<molecule> ordering(nmolecules);
-    auto ordIt=ordering.begin();
+    std::vector<molecule> ordering;
+    ordering.reserve(nmolecules);
     for (size_t i=0; i<nsamples; ++i) {
         const size_t cur_nmol=Cells[i].size();
+        const auto& cur_genes=Genes[i];
+        const auto& cur_umis=Umis[i];
         for (size_t j=0; j<cur_nmol; ++j) {
-            ordIt->first = i;
-            ordIt->second = j;
-            ++ordIt;
+            ordering.push_back(molecule(i, j, cur_genes[j], cur_umis[j]));
         }
     }
     
-    // Sorting the indices based on the list values.
+    // Sorting the indices.
     std::sort(ordering.begin(), ordering.end(), [&](const molecule& left, const molecule& right) {
-        const auto& left_gene=Genes[left.first][left.second];
-        const auto& right_gene=Genes[right.first][right.second];
-        if (left_gene < right_gene) {
+        if (left.gene < right.gene) {
             return true;
-        } else if (left_gene > right_gene) {
+        } else if (left.gene > right.gene) {
             return false;
         }
 
-        const auto& left_umi=Umis[left.first][left.second];
-        const auto& right_umi=Umis[right.first][right.second];
-        if (left_umi < right_umi) {
+        if (left.umi < right.umi) {
             return true;
-        } else if (left_umi > right_umi) {
+        } else if (left.umi > right.umi) {
             return false;
         }
 
-        const auto& left_cell=Cells[left.first][left.second];
-        const auto& right_cell=Cells[right.first][right.second];
+        // Referencing the strings to avoid copying them.
+        const auto& left_cell=Cells[left.sample][left.index];
+        const auto& right_cell=Cells[right.sample][right.index];
         return left_cell < right_cell;
     });
     
@@ -101,9 +101,8 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
     }
 
     auto same_combination = [&] (const molecule& left, const molecule& right) {
-        return Genes[left.first][left.second]==Genes[right.first][right.second] 
-            && Umis[left.first][left.second]==Umis[right.first][right.second]
-            && Cells[left.first][left.second]==Cells[right.first][right.second];
+        return left.gene==right.gene && left.umi==right.umi
+            && Cells[left.sample][left.index]==Cells[right.sample][right.index];
     };
 
     // Iterating across runs of the same UMI/gene/cell combination.
@@ -111,14 +110,14 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
     size_t nunique=0;
 
     while (ostart!=ordering.end()) {
-        int max_nread=Reads[ostart->first][ostart->second];
+        int max_nread=Reads[ostart->sample][ostart->index];
         int total_nreads=max_nread;
         auto best_mol=ostart;
 
         // ostart is always equal to oend at this point, so incrementing the latter to get to the next read.
         ++oend; 
         while (oend!=ordering.end() && same_combination(*ostart, *oend)) { 
-            const int current_nread=Reads[oend->first][oend->second];
+            const int current_nread=Reads[oend->sample][oend->index];
             if (current_nread > max_nread) {
                 max_nread=current_nread;
                 best_mol=oend;
@@ -129,7 +128,7 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
         }
 
         if (double(max_nread)/total_nreads >= mf) {
-            notswapped[best_mol->first][best_mol->second]=1;
+            notswapped[best_mol->sample][best_mol->index]=1;
         }
         if (diagcode) {
             ++nunique;
@@ -163,8 +162,8 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
                 if (nnzero >= nsamples) {
                     throw std::runtime_error("multiple instances of the same combination observed in a single sample");
                 }
-                indices[nnzero]=oend->first;
-                values[nnzero]=Reads[oend->first][oend->second];
+                indices[nnzero]=oend->sample;
+                values[nnzero]=Reads[oend->sample][oend->index];
                 ++oend;
                 ++nnzero;
             }
