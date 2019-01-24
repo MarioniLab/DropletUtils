@@ -42,7 +42,7 @@ removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0
 # created 17 July 2018
 {
     diag.code <- ifelse(get.diagnostics, 1L + as.integer(hdf5.out), 0L)
-    swap.out <- .Call(cxx_find_swapped, cells, umis, genes, nreads, min.frac, diag.code)
+    swap.out <- .Call(cxx_find_swapped, cells, genes, umis, nreads, min.frac, diag.code)
     unswapped <- swap.out[[1]]
 
     nsamples <- length(cells)
