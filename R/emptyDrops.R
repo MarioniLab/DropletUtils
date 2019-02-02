@@ -98,6 +98,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
 }
 
+#' @importFrom dqrng generateSeedVectors
 .setup_pcg_state <- function(per.core) 
 # Creating seeds for the C++ PRNG to avoid disrupting the R seed in multi-core execution.
 {
@@ -105,7 +106,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     last <- 0L
     for (i in seq_along(per.core)) {
         N <- per.core[i]
-        seeds.per.core[[i]] <- sample(.Machine$integer.max, N, replace=TRUE)
+        seeds.per.core[[i]] <- generateSeedVectors(N, bits=64)
         streams.per.core[[i]] <- last + seq_len(N)
         last <- last + N
     }

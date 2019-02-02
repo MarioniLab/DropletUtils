@@ -29,7 +29,8 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
         throw std::runtime_error("number of iterations should be a non-negative integer");
     }
 
-    Rcpp::IntegerVector Seeds(seeds), Streams(streams);
+    Rcpp::List Seeds(seeds);
+    Rcpp::IntegerVector Streams(streams);
     check_pcg_vectors(Seeds, Streams, niter, "iterations");
 
     double Alpha=check_numeric_scalar(alpha, "alpha");
