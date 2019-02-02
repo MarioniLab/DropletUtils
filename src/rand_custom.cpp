@@ -20,6 +20,6 @@ void check_pcg_vectors(Rcpp::List seeds, Rcpp::IntegerVector streams, size_t N, 
     return;
 }
 
-pcg32 create_pcg32(Rcpp::List seeds, Rcpp::IntegerVector streams, size_t i) {
-    return pcg32(convert_seed<uint64_t>(seeds[i]), streams[i]);
+pcg32 create_pcg32(SEXP seeds, int stream) {
+    return pcg32(convert_seed<uint64_t>(seeds), stream);
 }

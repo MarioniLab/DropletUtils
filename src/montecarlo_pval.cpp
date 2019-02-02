@@ -60,7 +60,7 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
     // Looping across iterations, using a new probability vector per iteration.
     for (int it=0; it<niter; ++it) {
-        auto generator=create_pcg32(Seeds, Streams, it);
+        auto generator=create_pcg32(Seeds[it], Streams[it]);
 
         if (use_alpha) {
             typedef boost::random::gamma_distribution<double> distr_t;

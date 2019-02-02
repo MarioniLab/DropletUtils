@@ -6,6 +6,6 @@
 
 void check_pcg_vectors(Rcpp::List, Rcpp::IntegerVector, size_t, const char*); 
 
-pcg32 create_pcg32(Rcpp::List, Rcpp::IntegerVector, size_t);
+pcg32 create_pcg32(SEXP, int);
 
 #endif
