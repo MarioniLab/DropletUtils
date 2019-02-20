@@ -9,7 +9,7 @@ Authors@R: c(
     person("Davis", "McCarthy", role="ctb"))
 Depends: SingleCellExperiment
 Imports: S4Vectors, BiocParallel, Rcpp, Matrix, methods, utils, stats, 
-    edgeR, rhdf5, HDF5Array, R.utils
+    edgeR, rhdf5, HDF5Array, R.utils, dqrng
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
 biocViews: ImmunoOncology, SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
