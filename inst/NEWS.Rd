@@ -9,7 +9,7 @@
 
 \item Modified barcodeRanks() to return a DataFrame with knee/inflection estimates in metadata.
 
-\item Slight change to random number generations in emptyDrops() to be agnostic to number of cores.
+\item Slight change to random number generation in emptyDrops() to be agnostic to number of cores.
 }}
 
 \section{Version 1.2.0}{\itemize{

@@ -35,13 +35,13 @@ This requires calculation of the second derivative, which is much more sensitive
 To overcome this, a smooth spline is fitted to the log-total counts against the log-rank using the \code{\link{smooth.spline}} function.
 Derivatives are then calculated from the fitted spline using \code{\link{predict}}.
 }
-We supply a default setting of \code{df} to avoid overfitting the spline, which results in unstability in the higher derivatives (and thus the curvature).
-This and other arguments to \code{\link{smooth.spline}} can be tuned if the estimated knee point is not at an appropriate location.
+We supply a default setting of \code{df} to avoid overfitting the spline, as this results in unstability in the higher derivatives (and thus the curvature).
+\code{df} and other arguments to \code{\link{smooth.spline}} can be tuned if the estimated knee point is not at an appropriate location.
 We also restrict the fit to lie within the bounds defined by \code{fit.bounds} to focus on the region containing the knee point.
 This allows us to obtain an accurate fit with low \code{df}, rather than attempting to model the entire curve.
 
-If \code{fit.bounds} is not specified, the upper bound is automatically set to the inflection point, which should lie after the knee point.
-The lower bound is set to the point at which the first derivative is closest to zero, i.e., the \dQuote{plateau} region before the knee point.
+If \code{fit.bounds} is not specified, the lower bound is automatically set to the inflection point, which should lie after the knee point.
+The upper bound is set to the point at which the first derivative is closest to zero, i.e., the \dQuote{plateau} region before the knee point.
 Note that only points with total counts above \code{lower} will be considered, regardless of how \code{fit.bounds} is defined.
 }
 

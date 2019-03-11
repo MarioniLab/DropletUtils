@@ -47,13 +47,14 @@ In contrast, \code{lower} is the maximum total count below which all barcodes ar
 
 \section{Details about \code{emptyDrops}}{
 The \code{emptyDrops} function combines the results of \code{testEmptyDrops} with \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
-Specifically, the total count \code{K} at the knee point is determined, and barcodes that contain more than \code{K} total counts are always retained.
-This ensures that cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
-If \code{retain} is specified, this is used instead of \code{K}, which may be useful if the knee point was not correctly identified in complex log-rank curves.
-Users can set \code{retain=Inf} to disable automatic retention of barcodes with large totals.
+Barcodes that contain more than \code{retain} total counts are always retained.
+This ensures that large cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
+If \code{retain} is not specified, it is set to the total count at the knee point detected by \code{\link{barcodeRanks}}.
+Manual specification of \code{retain} may be useful if the knee point was not correctly identified in complex log-rank curves.
+Users can also set \code{retain=Inf} to disable automatic retention of barcodes with large totals.
 
 The Benjamini-Hochberg correction is also applied to the Monte Carlo p-values to correct for multiple testing.
-Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 1\%.
+Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 0.1\%.
 All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 Nonetheless, their original Monte Carlo p-values are still reported in the output.
