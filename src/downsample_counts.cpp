@@ -32,7 +32,7 @@ public:
         set_num_sample(prop);
     }
 
-    /* This function considers sampling events without replacement from a vector.
+    /* This class considers sampling events without replacement from a vector.
      * Here, though, the vector contains frequencies of events rather than the events themselves.
      * The sampling scheme is adapted from John D. Cook, https://stackoverflow.com/a/311716/15485.
      * 
@@ -50,35 +50,19 @@ public:
      */
     template<class IN, class OUT> 
     void operator()(IN freqIt, IN freqEnd, OUT freqOut) {        
-        if (freqIt==freqEnd) { 
-            return;
-        }
-        bigint_t end_of_run=num_processed + static_cast<int>(*freqIt);
-        ++freqIt;
-
-        while (num_selected < num_sample) {
-
-            // Finding the next event with a non-zero frequency.
-            while (end_of_run==num_processed && freqIt!=freqEnd) {
-                end_of_run+=static_cast<int>(*freqIt);
-                ++freqIt;
-                ++freqOut;
-            }
-
-            // Breaking if all points have been iterated over.
-            if (end_of_run==num_processed && freqIt==freqEnd) { 
-                break;
-            }
-
-            // Deciding whether or not to keep this instance of this event.
-            // This is a safe way of computing NUM_YET_TO_SELECT/NUM_YET_TO_PROCESS > runif(1), avoiding issues with integer division.
-            if ( (num_total - num_processed)*R::unif_rand() < num_sample - num_selected) {
-                ++(*freqOut);
-                ++num_selected;
+        while (freqIt!=freqEnd && num_selected < num_sample) {
+            for (int i=0; i<*freqIt && num_sample > num_selected; ++i) {
+                // Deciding whether or not to keep this instance of this event.
+                // This is a safe way of computing NUM_YET_TO_SELECT/NUM_YET_TO_PROCESS > runif(1), avoiding issues with integer division.
+                if ( (num_total - num_processed)*R::unif_rand() < num_sample - num_selected) {
+                    ++(*freqOut);
+                    ++num_selected;
+                }
+                ++num_processed;
             }
          
-            // Moving onto the next instance of the same event.
-            ++num_processed; 
+            ++freqIt;
+            ++freqOut;
         }
         return;
     }  
