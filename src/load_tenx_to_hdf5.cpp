@@ -63,10 +63,10 @@ SEXP load_tenx_to_hdf5(SEXP fhandle, SEXP chunksize, SEXP x_type, SEXP nr, SEXP 
     const size_t NC=check_integer_scalar(nc, "number of columns");
 
     if (Rcpp::RObject(x_type).sexp_type()==INTSXP) {
-        auto omat=beachmat::create_integer_output(NR, NC, beachmat::HDF5_PARAM);
+        auto omat=beachmat::create_integer_output(NR, NC, beachmat::output_param("HDF5Matrix", "HDF5Array"));
         return load_tenx_to_hdf5_internal<Rcpp::IntegerVector>(fhandle, chunksize, x_type, nz, omat.get());
     } else { 
-        auto omat=beachmat::create_numeric_output(NR, NC, beachmat::HDF5_PARAM);
+        auto omat=beachmat::create_numeric_output(NR, NC, beachmat::output_param("HDF5Matrix", "HDF5Array"));
         return load_tenx_to_hdf5_internal<Rcpp::NumericVector>(fhandle, chunksize, x_type, nz, omat.get());
     }
     END_RCPP

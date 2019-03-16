@@ -13,11 +13,11 @@ Imports: S4Vectors, BiocParallel, Rcpp, Matrix, methods, utils, stats,
 Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
 biocViews: ImmunoOncology, SingleCell, Sequencing, RNASeq, GeneExpression, 
     Transcriptomics, DataImport, Coverage
-Description: Provides a number of utility functions for handling 
-    single-cell (RNA-seq) data from droplet technologies such as 10X
-    Genomics. This includes data loading, identification of cells from 
-    empty droplets, removal of barcode-swapped pseudo-cells, and 
-    downsampling of the count matrix.
+Description: Provides a number of utility functions for handling single-cell 
+    (RNA-seq) data from droplet technologies such as 10X Genomics. This 
+    includes data loading from count matrices or molecule information files, 
+    identification of cells from empty droplets, removal of barcode-swapped 
+    pseudo-cells, and downsampling of the count matrix.
 License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr

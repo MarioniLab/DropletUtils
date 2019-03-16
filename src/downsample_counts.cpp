@@ -152,14 +152,15 @@ void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop, Rcpp:
 SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
     BEGIN_RCPP
     int rtype=beachmat::find_sexp_type(rmat);
-    auto otype=beachmat::output_param(rmat, false, true);
     if (rtype==INTSXP) {
         auto mat=beachmat::create_integer_matrix(rmat);
+        auto otype=beachmat::output_param(mat->get_class(), mat->get_package());
         auto out=beachmat::create_integer_output(mat->get_nrow(), mat->get_ncol(), otype);
         downsample_matrix_internal(mat.get(), out.get(), prop, bycol);
         return out->yield();
     } else {
         auto mat=beachmat::create_numeric_matrix(rmat);
+        auto otype=beachmat::output_param(mat->get_class(), mat->get_package());
         auto out=beachmat::create_numeric_output(mat->get_nrow(), mat->get_ncol(), otype);
         downsample_matrix_internal(mat.get(), out.get(), prop, bycol);
         return out->yield();
