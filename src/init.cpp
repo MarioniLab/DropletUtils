@@ -19,7 +19,6 @@ static const R_CallMethodDef all_call_entries[] = {
     REGISTER(encode_sequences, 1),
     REGISTER(group_cells, 2),
 
-    REGISTER(load_tenx_to_hdf5, 6),
     {NULL, NULL, 0}
 };
 
