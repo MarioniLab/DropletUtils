@@ -62,22 +62,6 @@ test_that("downsampling from a count matrix gives expected sums", {
     CHECKFUN(u2, runif(ncells, 0, 0.5))
     CHECKFUN(u2, runif(ncells, 0.1, 0.2))
 
-    # Checking sparse matrix inputs.
-    library(Matrix)
-    w1 <- as(v1, "dgCMatrix")
-    set.seed(400)
-    for (down in c(0.111, 0.333, 0.777)) { 
-        CHECKFUN(w1, down) 
-        CHECKSUM(w1, down) 
-    }
-
-    w2 <- as(v2, "dgCMatrix")
-    set.seed(404)
-    for (down in c(0.111, 0.333, 0.777)) { 
-        CHECKFUN(w2, down) 
-        CHECKSUM(w2, down) 
-    }
-
     # Checking that bycol=FALSE behaves consistently with bycol=TRUE. 
     set.seed(505)
     out1 <- downsampleMatrix(u1, prop=0.111, bycol=FALSE)
@@ -89,15 +73,71 @@ test_that("downsampling from a count matrix gives expected sums", {
     # Checking silly inputs.
     expect_equal(downsampleMatrix(u1[0,,drop=FALSE], prop=0.5), u1[0,,drop=FALSE])
     expect_equal(downsampleMatrix(v1[0,,drop=FALSE], prop=0.5), v1[0,,drop=FALSE])
-    expect_equal(downsampleMatrix(w1[0,,drop=FALSE], prop=0.5), w1[0,,drop=FALSE])
 
     expect_equal(downsampleMatrix(u1[,0,drop=FALSE], prop=0.5), u1[,0,drop=FALSE])
     expect_equal(downsampleMatrix(v1[,0,drop=FALSE], prop=0.5), v1[,0,drop=FALSE])
-    expect_equal(downsampleMatrix(w1[,0,drop=FALSE], prop=0.5), w1[,0,drop=FALSE])
 
     expect_equal(downsampleMatrix(u1[0,0,drop=FALSE], prop=0.5), u1[0,0,drop=FALSE])
     expect_equal(downsampleMatrix(v1[0,0,drop=FALSE], prop=0.5), v1[0,0,drop=FALSE])
-    expect_equal(downsampleMatrix(w1[0,0,drop=FALSE], prop=0.5), w1[0,0,drop=FALSE])
+})
+
+test_that("different matrix representations yield the same result", {
+    set.seed(500)
+    ncells <- 100
+    u1 <- matrix(rpois(20000, 5), ncol=ncells)
+    v1 <- as(u1, "dgCMatrix")
+    w1 <- as(u1, "dgTMatrix")
+
+    # Basic downsampling.
+    for (down in c(0.111, 0.333, 0.777)) { 
+        set.seed(501)
+        dd <- downsampleMatrix(u1, down)
+
+        set.seed(501)
+        dc <- downsampleMatrix(v1, down)
+        expect_equivalent(as.matrix(dc), dd)
+
+        set.seed(501)
+        dt <- downsampleMatrix(w1, down)
+        expect_equivalent(as.matrix(dt), dd)
+    }
+
+    # Columnar downsampling.
+    for (down in c(0.111, 0.333, 0.777)) { 
+        set.seed(502)
+        dd <- downsampleMatrix(u1, down, bycol=TRUE)
+
+        set.seed(502)
+        dc <- downsampleMatrix(v1, down, bycol=TRUE)
+        expect_equivalent(as.matrix(dc), dd)
+
+        set.seed(502)
+        dt <- downsampleMatrix(w1, down, bycol=TRUE)
+        expect_equivalent(as.matrix(dt), dd)
+    }
+
+    # Columnar downsampling.
+    prop <- runif(ncol(u1))
+
+    set.seed(503)
+    dd <- downsampleMatrix(u1, prop, bycol=TRUE)
+
+    set.seed(503)
+    dc <- downsampleMatrix(v1, prop, bycol=TRUE)
+    expect_equivalent(as.matrix(dc), dd)
+
+    set.seed(503)
+    dt <- downsampleMatrix(w1, prop, bycol=TRUE)
+    expect_equivalent(as.matrix(dt), dd)
+
+    # Checking silly inputs.
+    expect_equal(downsampleMatrix(v1[0,,drop=FALSE], prop=0.5), v1[0,,drop=FALSE])
+    expect_equal(downsampleMatrix(v1[,0,drop=FALSE], prop=0.5), v1[,0,drop=FALSE])
+    expect_equal(downsampleMatrix(v1[0,0,drop=FALSE], prop=0.5), v1[0,0,drop=FALSE])
+
+    expect_equivalent(downsampleMatrix(w1[0,,drop=FALSE], prop=0.5), u1[0,,drop=FALSE])
+    expect_equivalent(downsampleMatrix(w1[,0,drop=FALSE], prop=0.5), u1[,0,drop=FALSE])
+    expect_equivalent(downsampleMatrix(w1[0,0,drop=FALSE], prop=0.5), u1[0,0,drop=FALSE])
 })
 
 set.seed(500)
