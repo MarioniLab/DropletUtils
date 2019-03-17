@@ -2,6 +2,7 @@
 
 #include "beachmat/integer_matrix.h"
 #include "beachmat/numeric_matrix.h"
+#include "beachmat/utils/const_column.h"
 #include "utils.h"
 
 #include <stdexcept>
@@ -117,106 +118,79 @@ bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::Log
  *************************************************/
 
 template <typename V, class M, class O>
-void downsample_matrix_internal(M mat, O output, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
+Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
+    auto mat=beachmat::create_matrix<M>(input);
+    auto otype=beachmat::output_param(mat.get());
+    auto output=beachmat::create_output<O>(mat->get_nrow(), mat->get_ncol(), otype);
+
     // Checking inputs:
     const size_t ngenes=mat->get_nrow();
     const size_t ncells=mat->get_ncol();
     V incoming(ngenes);
     Rcpp::IntegerVector outgoing(ngenes);
 
-    auto raw_type=mat->col_raw_type();
-    auto raws=mat->set_up_raw();
-    const bool is_sparse=raw_type=="sparse";
-    const bool is_dense=raw_type=="sparse";
+    beachmat::const_column<M> col_holder(mat.get());
 
     // Setting variables for global downsampling, if desired.
     downsampler down;
     const bool percol=check_downsampling_mode(ncells, prop, bycol);
     if (!percol) {
         bigint_t num_total=0;
-        if (is_sparse) {
-            for (size_t i=0; i<ncells; ++i) {
-                mat->get_col_raw(i, raws);
-                auto it=raws.get_values_start();
-                num_total+=bigsum(it, it+raws.get_n());
-            }
-        } else if (is_dense) {
-            for (size_t i=0; i<ncells; ++i) {
-                mat->get_col_raw(i, raws);
-                auto it=raws.get_values_start();
-                num_total+=bigsum(it, it+ngenes);
-            }
-        } else {
-            for (size_t i=0; i<ncells; ++i) {
-                mat->get_col(i, incoming.begin());
-                num_total+=bigsum(incoming.begin(), incoming.end());
-            }
+        for (size_t i=0; i<ncells; ++i) {
+            col_holder.fill(i);
+            auto it=col_holder.get_values();
+            num_total+=bigsum(it, it+col_holder.get_n());
         }
         down.set_global(num_total, prop[0]);
     }
 
-    // Iterating across cells and downsampling the count matrix.
-    auto pIt=prop.begin();
-    Rcpp::RNGScope _rng; 
+    /* Iterating across cells and downsampling the count matrix.
+     * Note that the RNGscope destructor may trigger a garbage collection,
+     * so we enclose it in its own scope to ensure that it doesn't 
+     * collect the unprotected output of yield().
+     */
+    {
+        auto pIt=prop.begin();
+        Rcpp::RNGScope _rng; 
 
-    for (size_t i=0; i<ncells; ++i) {
-        typename V::iterator valS, valE;
+        for (size_t i=0; i<ncells; ++i) {
+            col_holder.fill(i);
+            auto valS = col_holder.get_values();
+            auto valE = valS + col_holder.get_n();
 
-        if (is_sparse) {
-            mat->get_col_raw(i, raws);
-            valS=raws.get_values_start();
-            valE=valS + raws.get_n();
-        } else if (is_dense) {
-            mat->get_col_raw(i, raws);
-            valS=raws.get_values_start();
-            valE=valS+ngenes;
-        } else {
-            valS=incoming.begin();
-            mat->get_col(i, valS);
-            valE=incoming.end();
-        }
+            // Downsampling.
+            if (percol) { 
+                down(valS, valE, outgoing.begin(), *pIt);
+                ++pIt;
+            } else {
+                down(valS, valE, outgoing.begin());
+            }
 
-        // Downsampling.
-        if (percol) { 
-            down(valS, valE, outgoing.begin(), *pIt);
-            ++pIt;
-        } else {
-            down(valS, valE, outgoing.begin());
-        }
-
-        // Saving and then clearing the output vector.
-        if (is_sparse) {
-            output->set_col_indexed(i, raws.get_n(), raws.get_structure_start(), outgoing.begin());
-            std::fill(outgoing.begin(), outgoing.begin()+raws.get_n(), 0);
-        } else {
-            output->set_col(i, outgoing.begin());
-            std::fill(outgoing.begin(), outgoing.end(), 0);
+            // Saving and then clearing the output vector.
+            if (col_holder.is_sparse()) {
+                output->set_col_indexed(i, col_holder.get_n(), col_holder.get_indices(), outgoing.begin());
+                std::fill(outgoing.begin(), outgoing.begin() + col_holder.get_n(), 0);
+            } else {
+                output->set_col(i, outgoing.begin());
+                std::fill(outgoing.begin(), outgoing.end(), 0);
+            }
         }
     }
 
-    /* Note that the RNGscope destructor may trigger a garbage collection.
-     * I'm not sure that the object from output->yield() remains protected if a compiler does not implement RVO.
-     * This would result in a copy and destruction, and a point in time at which the output memory is unprotected.
-     * Hence, we do not perform an output->yield() to return out of this function.
-     */
-    return;
+    return output->yield();
 }
 
 SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
     BEGIN_RCPP
     int rtype=beachmat::find_sexp_type(rmat);
     if (rtype==INTSXP) {
-        auto mat=beachmat::create_integer_matrix(rmat);
-        auto otype=beachmat::output_param(mat->get_class(), mat->get_package());
-        auto out=beachmat::create_integer_output(mat->get_nrow(), mat->get_ncol(), otype);
-        downsample_matrix_internal<Rcpp::IntegerVector>(mat.get(), out.get(), prop, bycol);
-        return out->yield();
+        return downsample_matrix_internal<Rcpp::IntegerVector, 
+           beachmat::integer_matrix, 
+           beachmat::integer_output>(rmat, prop, bycol);
     } else {
-        auto mat=beachmat::create_numeric_matrix(rmat);
-        auto otype=beachmat::output_param(mat->get_class(), mat->get_package());
-        auto out=beachmat::create_numeric_output(mat->get_nrow(), mat->get_ncol(), otype);
-        downsample_matrix_internal<Rcpp::NumericVector>(mat.get(), out.get(), prop, bycol);
-        return out->yield();
+        return downsample_matrix_internal<Rcpp::NumericVector, 
+           beachmat::numeric_matrix, 
+           beachmat::numeric_output>(rmat, prop, bycol);
     }
     END_RCPP    
 }

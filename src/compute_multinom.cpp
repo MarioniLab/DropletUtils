@@ -2,6 +2,7 @@
 
 #include "beachmat/integer_matrix.h"
 #include "beachmat/numeric_matrix.h"
+#include "beachmat/utils/const_column.h"
 #include "utils.h"
 
 #include <stdexcept>
@@ -30,7 +31,8 @@ private:
 
 
 template <typename V, class MAT>
-SEXP compute_multinom_internal(MAT M, SEXP prop, SEXP alpha) {
+SEXP compute_multinom_internal(SEXP mat, SEXP prop, SEXP alpha) {
+    auto M=beachmat::create_matrix<MAT>(mat);
     const size_t NC=M->get_ncol();
     const size_t NR=M->get_nrow();
     Rcpp::NumericVector output(NC);
@@ -40,39 +42,23 @@ SEXP compute_multinom_internal(MAT M, SEXP prop, SEXP alpha) {
         throw std::runtime_error("length of ambient vector should be equal to number of columns");
     }
     likelihood_calculator lc(alpha);
-
-    const bool is_sparse=M->col_raw_type()=="sparse";
-    const bool is_dense=M->col_raw_type()=="dense";
-    V target(NR);
-    auto raws=M->set_up_raw();
+    beachmat::const_column<MAT> col_holder(M.get());
 
     for (size_t c=0; c<NC; ++c) {
         double& cur_out=output[c];
+        col_holder.fill(c);
+        auto val=col_holder.get_values();
 
-        if (is_sparse) {
-            M->get_col_raw(c, raws);
-            size_t num=raws.get_n();
-            auto dex=raws.get_structure_start();
-            auto val=raws.get_values_start();
+        if (col_holder.is_sparse()) {
+            size_t num=col_holder.get_n();
+            auto dex=col_holder.get_indices();
             for (size_t i=0; i<num; ++i, ++val, ++dex) {
                 cur_out+=lc(*val, ambient[*dex]);
             }
 
         } else {
-            typename V::iterator it;
-            if (is_dense) {
-                M->get_col_raw(c, raws);
-                it=raws.get_values_start();
-            } else {
-                it=target.begin();
-                M->get_col(c, it);
-            }
-
-            auto aIt=ambient.begin();
-            while (aIt!=ambient.end()) {
-                if (*it) { cur_out+=lc(*it, *aIt); }
-                ++it;
-                ++aIt;
+            for (auto aIt=ambient.begin(); aIt!=ambient.end(); ++aIt, ++val) {
+                if (*val) { cur_out+=lc(*val, *aIt); }
             }
         }
     }
@@ -84,11 +70,9 @@ SEXP compute_multinom(SEXP mat, SEXP prop, SEXP alpha) {
     BEGIN_RCPP
     int rtype=beachmat::find_sexp_type(mat);
     if (rtype==INTSXP) {
-        auto ptr=beachmat::create_integer_matrix(mat);
-        return compute_multinom_internal<Rcpp::IntegerVector>(ptr.get(), prop, alpha);
+        return compute_multinom_internal<Rcpp::IntegerVector, beachmat::integer_matrix>(mat, prop, alpha);
     } else {
-        auto ptr=beachmat::create_numeric_matrix(mat);
-        return compute_multinom_internal<Rcpp::NumericVector>(ptr.get(), prop, alpha);
+        return compute_multinom_internal<Rcpp::NumericVector, beachmat::numeric_matrix>(mat, prop, alpha);
     }
     END_RCPP    
 }
