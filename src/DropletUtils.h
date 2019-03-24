@@ -26,9 +26,6 @@ SEXP encode_sequences(SEXP);
 
 SEXP group_cells(SEXP, SEXP);
 
-
-SEXP load_tenx_to_hdf5(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-
 }
 
 #endif

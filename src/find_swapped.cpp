@@ -150,7 +150,8 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
         Rcpp::IntegerVector indices(nsamples);
         Rcpp::NumericVector values(nsamples);
         auto diag_out=beachmat::create_numeric_output(nunique, nsamples, 
-            diagcode==1 ? beachmat::SPARSE_PARAM : beachmat::HDF5_PARAM);
+            diagcode==1 ? beachmat::output_param("dgCMatrix", "Matrix") :
+                beachmat::output_param("HDF5Matrix", "HDF5Array"));
 
         auto ostart=ordering.begin(), oend=ordering.begin();
         size_t counter=0;
