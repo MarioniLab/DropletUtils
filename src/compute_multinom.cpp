@@ -11,7 +11,7 @@
 
 class likelihood_calculator {
 public: 
-    likelihood_calculator(SEXP alpha) : Alpha(check_numeric_scalar(alpha, "alpha")), use_alpha(use_alpha=R_FINITE(Alpha)) {
+    likelihood_calculator(SEXP alpha) : Alpha(check_numeric_scalar(alpha, "alpha")), use_alpha(R_FINITE(Alpha)) {
         if (use_alpha && Alpha <= 0) {
             throw std::runtime_error("alpha must be positive if specified");
         }
