@@ -32,8 +32,12 @@ void compare_lists(U left, V right) {
 }
 
 struct molecule {
-    molecule (int s, int i, int g, int u) : sample(s), index(i), gene(g), umi(u) {}
-    int sample, index, gene, umi; // using ints for memory efficiency.
+    molecule (int s, size_t i, int g, int u) : index(i), sample(s), gene(g), umi(u) {}
+
+    // need to handle situations where one sample has >2e9 UMIs.
+    // otherwise, using ints for memory efficiency.
+    size_t index; 
+    int sample, gene, umi; 
 };
 
 /* Identifies which molecules should be retained in which samples,
@@ -69,8 +73,11 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
         const size_t cur_nmol=Cells[i].size();
         const auto& cur_genes=Genes[i];
         const auto& cur_umis=Umis[i];
-        for (size_t j=0; j<cur_nmol; ++j) {
-            ordering.push_back(molecule(i, j, cur_genes[j], cur_umis[j]));
+
+        auto gIt=cur_genes.begin();
+        auto uIt=cur_umis.begin();
+        for (size_t j=0; j<cur_nmol; ++j, ++gIt, ++uIt) {
+            ordering.push_back(molecule(i, j, *gIt, *uIt));
         }
     }
     
@@ -88,10 +95,8 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
             return false;
         }
 
-        // Referencing the strings to avoid copying them.
-        const auto& left_cell=Cells[left.sample][left.index];
-        const auto& right_cell=Cells[right.sample][right.index];
-        return left_cell < right_cell;
+        // Referencing the StringVectors to avoid copying them.
+        return Cells[left.sample][left.index] < Cells[right.sample][right.index];
     });
     
     // Setting up the output, indicating which values to keep from each sample.
