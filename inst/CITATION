@@ -1,17 +1,19 @@
 bibentry(
     bibtype = "Article",
-    title = "Distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data",
+    title = "EmptyDrops: distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data",
     author = c(
-        person("Aaron", "Lun"),
+        person(c("Aaron", "T.", "L."), "Lun"),
         person("Samantha", "Riesenfeld"),
         person("Tallulah", "Andrews"),
         person("The Phuong", "Dao"),
         person("Tomas", "Gomes"),
         person("participants in the 1st Human Cell Atlas Jamboree"),
-        person("John", "Marioni")),
-    journal = "biorXiv",
-    year = "2018",
-    doi = "10.1101/234872"
+        person(c("John", "C."), "Marioni")),
+    journal = "Genome Biol.",
+    year = "2019",
+    volume = 20,
+    pages = 63,
+    doi = "10.1186/s13059-019-1662-y"
 )
 
 bibentry(
