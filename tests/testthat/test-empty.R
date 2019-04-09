@@ -86,8 +86,8 @@ test_that("p-value calculations are correct without alpha", {
     stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N)
     UNICHECKER(stats/N)
 
-    # Same result for multiple cores (set BPPARAM first as it redefines the seed!)
-    BPPARAM <- BiocParallel::MulticoreParam(3)
+    # Same result for multiple cores (set BPPARAM first as MulticoreParam redefines the seed!)
+    BPPARAM <- if (.Platform$OS.type=="windows") BiocParallel::SerialParam() else BiocParallel::MulticoreParam(3)
     set.seed(100)
     stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N) 
     expect_identical(stats, stats2)
@@ -134,7 +134,7 @@ test_that("p-value calculations are correct with alpha", {
     UNICHECKER(stats/N)
 
     # Same result for multiple cores (set BPPARAM first as it redefines the seed!)
-    BPPARAM <- BiocParallel::MulticoreParam(3)
+    BPPARAM <- if (.Platform$OS.type=="windows") BiocParallel::SerialParam() else BiocParallel::MulticoreParam(3)
     set.seed(100)
     stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N, alpha=10) 
     expect_identical(stats, stats2)
