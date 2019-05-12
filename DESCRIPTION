@@ -3,17 +3,40 @@ Version: 1.5.0
 Date: 2019-04-08
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
-    person("Aaron", "Lun", role = c("aut", "cre"), 
-    email = "infinite.monkeys.with.keyboards@gmail.com"), 
+    person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
     person("Jonathan", "Griffiths", role="ctb"), 
     person("Davis", "McCarthy", role="ctb"))
 Depends: SingleCellExperiment
-Imports: S4Vectors, BiocParallel, Rcpp, Matrix, methods, utils, stats, 
-    edgeR, rhdf5, HDF5Array, R.utils, dqrng
-Suggests: testthat, beachmat, knitr, BiocStyle, rmarkdown
-biocViews: ImmunoOncology, SingleCell, Sequencing, RNASeq, GeneExpression, 
-    Transcriptomics, DataImport, Coverage
-Description: Provides a number of utility functions for handling single-cell 
+Imports: 
+    S4Vectors,
+    BiocParallel,
+    Rcpp,
+    Matrix,
+    methods,
+    utils,
+    stats,
+    edgeR,
+    rhdf5,
+    HDF5Array,
+    R.utils,
+    dqrng
+Suggests: 
+    testthat,
+    beachmat,
+    knitr,
+    BiocStyle,
+    rmarkdown
+biocViews: 
+    ImmunoOncology,
+    SingleCell,
+    Sequencing,
+    RNASeq,
+    GeneExpression,
+    Transcriptomics,
+    DataImport,
+    Coverage
+Description: 
+    Provides a number of utility functions for handling single-cell 
     (RNA-seq) data from droplet technologies such as 10X Genomics. This 
     includes data loading from count matrices or molecule information files, 
     identification of cells from empty droplets, removal of barcode-swapped 
