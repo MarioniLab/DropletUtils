@@ -77,6 +77,12 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     pcg.state <- .setup_pcg_state(per.core)
 
+    # Structuring the ambient so that the highest probabilities
+    # are in the middle, to improve the speed of the binary search.
+    re.o <- order(ambient)
+    evens <- seq_along(re.o)%%2==0L
+    ambient <- ambient[c(re.o[evens], rev(re.o[!evens]))]
+
     out.values <- bpmapply(iterations=per.core, seeds=pcg.state$seeds, streams=pcg.state$streams,
         FUN=.monte_carlo_pval, 
         MoreArgs=list(
