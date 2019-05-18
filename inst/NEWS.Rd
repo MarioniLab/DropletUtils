@@ -2,6 +2,11 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.6.0}{\itemize{
+\item Switched emptyDrops() to use Boost's discrete_distribution for weighted sampling. 
+This results in some minor stochastic changes to the Monte Carlo p-values.
+}}
+
 \section{Version 1.4.0}{\itemize{
 \item Removed read10xMatrix().
 
