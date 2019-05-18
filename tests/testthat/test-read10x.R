@@ -114,7 +114,9 @@ test_that("read10xCounts works correctly for HDF5 counts, version < 3", {
     ref <- sce10x
     colnames(ref) <- NULL
     ref <- cbind(ref, ref)
-    expect_equal(ref, sce10x2)
+    expect_identical(colData(ref), colData(sce10x2))
+    expect_identical(rowData(ref), rowData(sce10x2))
+    expect_identical(as.matrix(assay(ref)), as.matrix(assay(sce10x2)))
 })
 
 test_that("read10xCounts works correctly for HDF5 counts, version >= 3", {
