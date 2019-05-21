@@ -47,15 +47,15 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
     }
 
     std::vector<int> tracker(ngenes);
-    std::vector<double> cumprob(ngenes), tmpprob, logprob;
+    std::vector<double> probs(ngenes), logprob;
     if (use_alpha) {
-        tmpprob.resize(ngenes);
+        probs.resize(ngenes);
     } else {
         logprob.reserve(ngenes);
         for (auto a : Ambient) {
             logprob.push_back(std::log(a));
         }
-        std::partial_sum(Ambient.begin(), Ambient.end(), cumprob.begin());
+        std::copy(Ambient.begin(), Ambient.end(), probs.begin());
     }
 
     // Looping across iterations, using a new probability vector per iteration.
@@ -69,12 +69,10 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
             // Do NOT cache gamma distribution across iterations, as this introduces possible dependencies.
             distr_t cpp_gamma;
             for (size_t ldx=0; ldx<ngenes; ++ldx) {
-                tmpprob[ldx]=cpp_gamma(generator, param_t(Ambient[ldx] * Alpha, 1));
+                probs[ldx]=cpp_gamma(generator, param_t(Ambient[ldx] * Alpha, 1));
             }
-            std::partial_sum(tmpprob.begin(), tmpprob.end(), cumprob.begin());
         }
-        const double sumprob=cumprob.back();
-        boost::random::uniform_real_distribution<double> cpp_runif(0, sumprob);
+        boost::random::discrete_distribution<> sampler(probs.begin(), probs.end());
 
         int curtotal=0;
         std::fill(tracker.begin(), tracker.end(), 0);
@@ -91,11 +89,7 @@ SEXP montecarlo_pval (SEXP totalval, SEXP totallen, SEXP prob, SEXP ambient, SEX
 
             // Sampling more points to reach the current total count.
             while (curtotal<curval) {
-                auto chosen=std::lower_bound(cumprob.begin(), cumprob.end(), cpp_runif(generator)) - cumprob.begin();
-                if (chosen >= ngenes) {
-                    chosen=ngenes-1; // Some protection against the very-unlikely case.
-                }
-
+                auto chosen=sampler(generator);
                 auto& curnum=tracker[chosen];
                 if (use_alpha) { 
                     curp += std::log(Ambient[chosen] * Alpha + curnum); // Difference of Gamma's in data-dependent component of Dirichlet-multinomial.
