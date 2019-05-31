@@ -238,3 +238,8 @@ test_that("emptyDrops works correctly with alpha estimation", {
     e.out2 <- emptyDrops(my.counts, lower=limit, alpha=5)
     expect_false(isTRUE(all.equal(e.out2$PValue, e.out$PValue)))
 })
+
+test_that("emptyDrops fails when you don't give it low counts", {
+    y <- matrix(rpois(100000, lambda=100), ncol=10000)
+    expect_error(emptyDrops(y), "no counts available")
+})

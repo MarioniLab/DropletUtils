@@ -2,6 +2,7 @@
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom edgeR goodTuringProportions
+#' @importFrom Matrix rowSums colSums
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) 
 # A function to compute a non-ambient p-value for each barcode.
 # 
@@ -17,6 +18,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     ambient <- umi.sum <= lower # lower => "T" in the text.
     ambient.cells <- m[,ambient]
     ambient.prof <- rowSums(ambient.cells)
+    if (sum(ambient.prof)==0) {
+        stop("no counts available to estimate the ambient profile")
+    }
     ambient.prop <- goodTuringProportions(ambient.prof)
 
     # Removing supposed ambient cells from the matrix.
