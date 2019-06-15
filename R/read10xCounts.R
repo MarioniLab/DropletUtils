@@ -44,10 +44,16 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
     # Forming the full data matrix.
     full_data <- do.call(cbind, full_data)
 
-    # Adding the cell data (only using as colnames if there is only 1 set - guaranteed unique).
+    # Adding the cell data.
     cell_info <- do.call(rbind, cell_info_list)
-    if (col.names && nsets == 1L) {
-        colnames(full_data) <- cell_info$Barcode
+    if (col.names) {
+        if (nsets == 1L) {
+            cnames <- cell_info$Barcode
+        } else {
+            sid <- rep(seq_along(cell_info_list), vapply(cell_info_list, nrow, 1L))
+            cnames <- paste0(sid, "_", cell_info$Barcode)
+        }
+        colnames(full_data) <- cnames
     }
 
     SingleCellExperiment(list(counts = full_data), rowData = gene_info, colData = cell_info)

@@ -64,7 +64,8 @@ Matrices are combined by column if multiple \code{samples} were specified.
 This will throw an error if the gene information is not consistent across \code{samples}.
 
 If \code{col.names=TRUE} and \code{length(sample)==1}, each column is named by the cell barcode.
-For multiple samples, the columns are unnamed to avoid problems with non-unique barcodes across samples.
+For multiple samples, the index of each sample in \code{samples} is concatenated to the cell barcode to form the column name.
+This avoids problems with multiple instances of the same cell barcodes in different samples.
 
 Note that user-level manipulation of sparse matrices requires loading of the \pkg{Matrix} package.
 Otherwise, calculation of \code{rowSums}, \code{colSums}, etc. will result in errors.

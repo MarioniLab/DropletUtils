@@ -44,7 +44,7 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     sce10x3 <- read10xCounts(tmpdir, col.names=TRUE)
     expect_identical(colnames(sce10x3), sce10x3$Barcode)
     sce10x4 <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
-    expect_identical(colnames(sce10x4), NULL)
+    expect_identical(colnames(sce10x4), paste0(rep(1:2, each=ncol(sce10x3)), "_", colnames(sce10x3)))
 })
 
 test_that("read10xCounts works for sparse counts with odd inputs", {
