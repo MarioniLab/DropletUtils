@@ -10,7 +10,7 @@ barcodeRanks(m, lower=100, fit.bounds=NULL, df=20, ...)
 
 \arguments{
 \item{m}{A real sparse matrix object, either a dgTMatrix or dgCMatrix.
-Columns represent barcoded droplets, rows represent cells.
+Columns represent barcoded droplets, rows represent genes.
 }
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{fit.bounds}{A numeric vector of length 2, specifying the lower and upper bouunds on the total UMI count for spline fitting.}
