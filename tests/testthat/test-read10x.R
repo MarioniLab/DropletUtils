@@ -37,8 +37,9 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     sce10x2 <- read10xCounts(c(tmpdir, tmpdir))
     ref <- sce10x
     colnames(ref) <- NULL
-    ref <- cbind(ref, ref)
-    expect_equal(ref, sce10x2)
+    ref2 <- cbind(ref, ref)
+    int_metadata(ref2) <- int_metadata(ref)
+    expect_equal(ref2, sce10x2)
 
     # Checking that column names work.
     sce10x3 <- read10xCounts(tmpdir, col.names=TRUE)
