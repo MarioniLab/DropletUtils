@@ -22,7 +22,13 @@ get10xMolInfoStats <- function(sample, barcode.length=NULL) {
 # The length refers to the number of entries with the same ID.
 {
     out <- .Call(cxx_group_cells, cells, gems)
-    names(out) <- c("order", "id", "cell", "gem", "length")
-    out$id <- rep(seq_along(out$length), out$length)
-    out
+    names(out) <- c("order", "unique", "length")
+
+    list(
+        order=out$order,
+        id=rep(seq_along(out$length), out$length),
+        cell=cells[out$unique],
+        gem=gems[out$unique],
+        length=out$length
+    )
 }
