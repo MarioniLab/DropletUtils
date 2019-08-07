@@ -78,7 +78,7 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
         }
 
         h5write(current$umi, out.file, "umi")
-        h5write(rep(1, nrow(current)), out.file, "gem_group")
+        h5write(rep(1L, nrow(current)), out.file, "gem_group")
     }
 
     if (return.tab) { 
