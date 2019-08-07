@@ -30,21 +30,27 @@ SEXP group_cells (SEXP cells, SEXP gems) {
     });
 
     // Now figuring out which ones are unique.
-    std::deque<Rcpp::String> unique_Cells;
-    std::deque<int> unique_Gems;
+    std::deque<size_t> unique_idx;
     std::deque<int> unique_num;
 
     if (N) {
-        unique_Cells.push_back(Cells[ordering[0]]);
-        unique_Gems.push_back(Gems[ordering[0]]);
-        unique_num.push_back(1);
+        // Avoid creating lots of Rcpp::String objects, the cache freaks out and overflows.
+        auto orderIt=ordering.begin();
+        auto cellIt=Cells.begin()+*orderIt;
+        auto gemIt=Gems.begin()+*orderIt;
 
-        for (size_t i=1; i<N; ++i) {
-            auto cur_cell=Cells[ordering[i]];
-            auto cur_gem=Gems[ordering[i]];
-            if (cur_cell!=unique_Cells.back() || cur_gem!=unique_Gems.back()) {
-                unique_Cells.push_back(cur_cell);
-                unique_Gems.push_back(cur_gem);
+        unique_idx.push_back(*orderIt);
+        unique_num.push_back(1);
+        ++orderIt;
+
+        for (size_t i=1; i<N; ++i, ++orderIt) {
+            auto altCellIt=Cells.begin() + *orderIt;
+            auto altGemIt=Gems.begin() + *orderIt;
+
+            if (*altCellIt!=*cellIt || *altGemIt!=*gemIt) {
+                cellIt=altCellIt;
+                gemIt=altGemIt;
+                unique_idx.push_back(*orderIt);
                 unique_num.push_back(1);
             } else {
                 ++(unique_num.back());
@@ -53,18 +59,19 @@ SEXP group_cells (SEXP cells, SEXP gems) {
 
         // Getting back to 1-based indexing.
         for (auto& o : ordering) { ++o; }
+        for (auto& i : unique_idx) { ++i; }
     }
 
-    Rcpp::RObject output;
+    Rcpp::RObject order_output, unique_output;
     if (N <= 2147483647) { // If the indices are greater than .Machine$integer.max, we switch to double.
-        output=Rcpp::IntegerVector(ordering.begin(), ordering.end());
+        order_output=Rcpp::IntegerVector(ordering.begin(), ordering.end());
+        unique_output=Rcpp::IntegerVector(unique_idx.begin(), unique_idx.end());
     } else {
-        output=Rcpp::NumericVector(ordering.begin(), ordering.end());
+        order_output=Rcpp::NumericVector(ordering.begin(), ordering.end());
+        unique_output=Rcpp::NumericVector(unique_idx.begin(), unique_idx.end());
     }
 
-    return Rcpp::List::create(output, R_NilValue,
-        Rcpp::StringVector(unique_Cells.begin(), unique_Cells.end()),
-        Rcpp::IntegerVector(unique_Gems.begin(), unique_Gems.end()),
+    return Rcpp::List::create(order_output, unique_output, 
         Rcpp::IntegerVector(unique_num.begin(), unique_num.end()));
     END_RCPP
 }
