@@ -199,6 +199,7 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...)
 # written by Aaron Lun
 # created 7 August 2017
 {
+    m <- .rounded_to_integer(m)
     stats <- testEmptyDrops(m, lower=lower, ...)
     tmp <- stats$PValue
     
@@ -212,4 +213,16 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...)
     metadata(stats)$retain <- retain
     stats$FDR <- p.adjust(tmp, method="BH")
     return(stats)
+}
+
+#' @importFrom Matrix colSums rowSums
+.rounded_to_integer <- function(m) {
+    cs <- colSums(m)
+    rs <- rowSums(m)
+    if (!isTRUE(all.equal(cs, round(cs))) ||
+        !isTRUE(all.equal(rs, round(rs)))) 
+    {
+        m <- round(m)
+    }
+    m
 }

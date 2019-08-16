@@ -58,6 +58,11 @@ Cells can then be defined by taking all barcodes with significantly non-ambient 
 All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 Nonetheless, their original Monte Carlo p-values are still reported in the output.
+
+This function will also attempt to detect whether \code{m} contains non-integer values by seeing if the column and row sums are discrete.
+If such values are present, \code{m} is first \code{\link{round}}ed to the nearest integer value before proceeding.
+This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
+Rounding is performed as discrete count values are necessary for the Good-Turing algorithm and for the multinomial simulations.
 }
 
 \section{Handling overdispersion}{

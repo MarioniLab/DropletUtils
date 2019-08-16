@@ -239,6 +239,19 @@ test_that("emptyDrops works correctly with alpha estimation", {
     expect_false(isTRUE(all.equal(e.out2$PValue, e.out$PValue)))
 })
 
+test_that("emptyDrops automatically rounds non-integer values", {
+    # Mocking up some counts.
+    set.seed(7001)
+    my.counts <- DropletUtils:::simCounts() * 1.2
+    expect_identical(round(my.counts), DropletUtils:::.rounded_to_integer(my.counts))
+
+    set.seed(7002)
+    out <- emptyDrops(my.counts)
+    set.seed(7002)
+    ref <- emptyDrops(round(my.counts))
+    expect_identical(out,ref)
+})
+
 test_that("emptyDrops fails when you don't give it low counts", {
     y <- matrix(rpois(100000, lambda=100), ncol=10000)
     expect_error(emptyDrops(y), "no counts available")
