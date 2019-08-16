@@ -5,6 +5,7 @@
 \section{Version 1.6.0}{\itemize{
 \item Switched emptyDrops() to use Boost's discrete_distribution for weighted sampling. 
 This results in some minor stochastic changes to the Monte Carlo p-values.
+Automatically round non-integer count matrices.
 }}
 
 \section{Version 1.4.0}{\itemize{
