@@ -76,7 +76,9 @@ Davis McCarthy, with modifications from Aaron Lun
 }
 
 \seealso{
-\code{\link{write10xCounts}}
+\code{\link{splitAltExps}}, to split alternative feature sets (e.g., antibody tags) into their own Experiments.
+
+\code{\link{write10xCounts}}, to create 10X-formatted file(s) from a count matrix.
 }
 
 \examples{
