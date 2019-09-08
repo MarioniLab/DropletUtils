@@ -97,7 +97,6 @@ read10xCounts <- function(samples, col.names=FALSE, type=c("auto", "sparse", "HD
 }
 
 #' @importFrom rhdf5 h5ls h5read
-#' @importFrom HDF5Array TENxMatrix
 #' @importFrom utils head
 .read_from_hdf5 <- function(path, genome=NULL, version) {
     available <- h5ls(path, recursive=FALSE)
