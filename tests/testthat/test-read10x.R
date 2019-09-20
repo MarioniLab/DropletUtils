@@ -33,25 +33,46 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     expect_identical(sce10x$Sample, rep(tmpdir, ncol(my.counts)))
     expect_identical(sce10x$Barcode, cell.ids)
 
-    # Reading it in, twice; and checking it makes sense.
-    sce10x2 <- read10xCounts(c(tmpdir, tmpdir))
-    ref <- sce10x
+    # Adding another dataset with slightly different counts.
+    tmpdir2 <- tempfile()
+    write10xCounts(path=tmpdir2, my.counts*2, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    sce10x2 <- read10xCounts(tmpdir2)
+    expect_identical(assay(sce10x)*2, assay(sce10x2))
+
+    ref <- cbind(sce10x, sce10x2)
     colnames(ref) <- NULL
-    ref2 <- cbind(ref, ref)
-    int_metadata(ref2) <- int_metadata(ref)
-    expect_equal(ref2, sce10x2)
+    combined <- read10xCounts(c(tmpdir, tmpdir2))
+
+    expect_equal(rowData(ref), rowData(combined))
+    expect_equal(colData(ref), colData(combined))
+    expect_equal(assay(ref), assay(combined))
+})
+
+test_that("read10xCounts works correctly for names", {
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
 
     # Checking that column names work.
     sce10x3 <- read10xCounts(tmpdir, col.names=TRUE)
     expect_identical(colnames(sce10x3), sce10x3$Barcode)
+
     sce10x4 <- read10xCounts(c(tmpdir, tmpdir), col.names=TRUE)
     expect_identical(colnames(sce10x4), paste0(rep(1:2, each=ncol(sce10x3)), "_", colnames(sce10x3)))
+
+    # Checking that sample names work.
+    sce10x5 <- read10xCounts(c(B=tmpdir, C=tmpdir))
+    expect_identical(colData(sce10x5)$Sample, rep(c("B", "C"), each=ncol(sce10x3)))
+    expect_identical(metadata(sce10x5)$Samples, c(B=tmpdir, C=tmpdir)) 
+
+    sce10x6 <- read10xCounts(c(tmpdir, tmpdir), sample.names=c("A", "B"))
+    expect_identical(colData(sce10x6)$Sample, rep(c("A", "B"), each=ncol(sce10x3)))
+    expect_identical(metadata(sce10x6)$Samples, c(tmpdir, tmpdir)) 
 })
 
 test_that("read10xCounts works for sparse counts with odd inputs", {
-    # Checking that we are robust to odd symbols in the gene names.
     tmpdir <- tempfile()
-    gene.symb2 <- paste0(gene.symb, sample(c("#", "'", '"', ""), length(gene.ids), replace=TRUE))
+    gene.symb2 <- paste0(gene.symb, sample(c("#", "'", '"', ""), length(gene.ids), replace=TRUE)) # full of weird elements.
     write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
     sce10x <- read10xCounts(tmpdir)
 
@@ -59,20 +80,6 @@ test_that("read10xCounts works for sparse counts with odd inputs", {
     expect_identical(colData(sce10x)$Barcode, cell.ids)
     expect_identical(rowData(sce10x)$ID, gene.ids)
     expect_identical(rowData(sce10x)$Symbol, gene.symb2)
-
-    # Checking that we are robust to names in the inputs. 
-    tmpdir2 <- tempfile()
-    write10xCounts(path=tmpdir2, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
-
-    sce10x2 <- read10xCounts(c(A=tmpdir, B=tmpdir2))
-    expect_identical(assay(sce10x2), cbind(assay(sce10x), assay(sce10x)))
-
-    expect_identical(sce10x2$Barcode, rep(colData(sce10x)$Barcode, 2))
-    expect_identical(unname(sce10x2$Sample), rep(c(tmpdir, tmpdir2), each=ncol(sce10x)))
-    expect_identical(names(sce10x2$Sample), rep(c("A", "B"), each=ncol(sce10x)))
-
-    expect_identical(rowData(sce10x2)$ID, rowData(sce10x)$ID)
-    expect_identical(rowData(sce10x2)$Symbol, gene.symb2)
 })
 
 test_that("read10xCounts works correctly for sparse counts, version >= 3", {
