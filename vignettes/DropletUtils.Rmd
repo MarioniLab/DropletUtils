@@ -132,7 +132,7 @@ Users should use `downsampleMatrix` instead if they want to guarantee similar to
 
 # Computing barcode ranks
 
-A useful diagnostic for droplet-based data is the barcode rank plot, which shows the (log-)total UMI count for each barcode on the x-axis and the (log-)rank on the y-axis.
+A useful diagnostic for droplet-based data is the barcode rank plot, which shows the (log-)total UMI count for each barcode on the y-axis and the (log-)rank on the x-axis.
 This is effectively a transposed empirical cumulative density plot with log-transformed axes.
 It is useful as it allows users to examine the distribution of total counts across barcodes, focusing on those with the largest counts.
 To demonstrate, let us mock up a count matrix:
