@@ -28,16 +28,21 @@ Columns represent barcoded droplets, rows represent genes.
 }
 
 \section{Details about \code{testEmptyDrops}}{
-The \code{testEmptyDrops} function will obtain an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
+The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
 
+Then, \code{testEmptyDrops} will test each barcode for significant deviations from the ambient profile.
 The null hypothesis is that transcript molecules are included into droplets by multinomial sampling from the ambient profile.
 For each barcode, the probability of obtaining its count vector based on the null model is computed.
 Then, \code{niters} count vectors are simulated from the null model.
 The proportion of simulated vectors with probabilities lower than the observed multinomial probability for that barcode is used to calculate the p-value.
+
 We use this Monte Carlo approach as an exact multinomial p-value is difficult to calculate.
+However, the p-value is lower-bounded by the value of \code{niters} (Phipson and Smyth, 2010), which can result in loss of power if \code{niters} is too small.
+Users can check whether this loss of power has any practical consequence by checking the \code{Limited} field in the output.
+If any barcodes have \code{Limited=TRUE} but does \emph{not} reject the null hypothesis, it suggests that \code{niters} should be increased.
 
 The \code{ignore} argument can also be set to ignore barcodes with total counts less than or equal to \code{ignore}.
 This differs from the \code{lower} argument in that the ignored barcodes are not necessarily used to compute the ambient profile.
@@ -46,23 +51,27 @@ In contrast, \code{lower} is the maximum total count below which all barcodes ar
 }
 
 \section{Details about \code{emptyDrops}}{
-The \code{emptyDrops} function combines the results of \code{testEmptyDrops} with \code{\link{barcodeRanks}} to identify droplets that are likely to contain cells.
+The \code{emptyDrops} function identifies droplets that are likely to contain cells by calling \code{testEmptyDrops}.
+The Benjamini-Hochberg correction is applied to the Monte Carlo p-values to correct for multiple testing.
+Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 0.1\%.
+
 Barcodes that contain more than \code{retain} total counts are always retained.
 This ensures that large cells with profiles that are very similar to the ambient pool are not inadvertently discarded.
 If \code{retain} is not specified, it is set to the total count at the knee point detected by \code{\link{barcodeRanks}}.
 Manual specification of \code{retain} may be useful if the knee point was not correctly identified in complex log-rank curves.
 Users can also set \code{retain=Inf} to disable automatic retention of barcodes with large totals.
 
-The Benjamini-Hochberg correction is also applied to the Monte Carlo p-values to correct for multiple testing.
-Cells can then be defined by taking all barcodes with significantly non-ambient profiles, e.g., at a false discovery rate of 0.1\%.
-All barcodes with total counts above \code{K} (or \code{retain}) are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
+All barcodes with total counts above \code{retain} are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
-Nonetheless, their original Monte Carlo p-values are still reported in the output.
+However, their original Monte Carlo p-values are still reported in the output, as these may be useful for diagnostic purposes.
 
 This function will also attempt to detect whether \code{m} contains non-integer values by seeing if the column and row sums are discrete.
 If such values are present, \code{m} is first \code{\link{round}}ed to the nearest integer value before proceeding.
 This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
 Rounding is performed as discrete count values are necessary for the Good-Turing algorithm and for the multinomial simulations.
+
+In general, users should call \code{emptyDrops} rather than \code{testEmptyDrops}.
+The latter is a \dQuote{no frills} version that is largely intended for use within other functions.
 }
 
 \section{Handling overdispersion}{
