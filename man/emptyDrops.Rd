@@ -44,6 +44,9 @@ However, the p-value is lower-bounded by the value of \code{niters} (Phipson and
 Users can check whether this loss of power has any practical consequence by checking the \code{Limited} field in the output.
 If any barcodes have \code{Limited=TRUE} but does \emph{not} reject the null hypothesis, it suggests that \code{niters} should be increased.
 
+The stability of the Monte Carlo $p$-values depends on \code{niters}, which is only set to a default of 10000 for speed.
+Larger values improve stability with the only cost being that of time, so users should set \code{niters} to the largest value they are willing to wait for.
+
 The \code{ignore} argument can also be set to ignore barcodes with total counts less than or equal to \code{ignore}.
 This differs from the \code{lower} argument in that the ignored barcodes are not necessarily used to compute the ambient profile.
 Users can interpret \code{ignore} as the minimum total count required for a barcode to be considered as a potential cell.
@@ -86,6 +89,21 @@ Under the null hypothesis, the p-values for presumed ambient barcodes (i.e., wit
 Skews in the p-value distribution are indicative of an inaccuracy in the model and/or its estimates (of \code{alpha} or the ambient profile).
 }
 
+\section{\code{NA} values in the results}{
+We assume that libraries with total UMI counts below \code{lower} correspond to empty droplets.
+These are used to estimate the ambient expression profile against which the remaining libraries are tested.
+Under this definition, these low-count libraries cannot be cell-containing droplets and are excluded from the hypothesis testing.
+
+However, it is still desirable for the number of rows of the output DataFrame to be the same as \code{ncol(m)}.
+This allows easy subsetting of \code{m} based on a logical vector constructed from the output (e.g., to retain all FDR values below a threshold).
+Thus, the rows for the excluded barcodes are filled in with \code{NA} values for all fields in the output.
+
+If \code{test.ambient=FALSE}, non-\code{NA} statistics will be reported for all barcodes.
+This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes below \code{lower}.
+Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution.
+Any strong peaks in the p-values near zero indicate that \code{emptyDrops} is not controlling the FDR correctly.
+}
+
 \value{
 \code{testEmptyDrops} will return a DataFrame with the following components:
 \describe{
@@ -94,8 +112,6 @@ Skews in the p-value distribution are indicative of an inaccuracy in the model a
 \item{\code{PValue}:}{Numeric, the Monte Carlo p-value against the null model.}
 \item{\code{Limited}:}{Logical, indicating whether a lower p-value could be obtained by increasing \code{niters}.}
 }
-For barcodes with counts below \code{lower}, \code{NA} values are returned for all fields if \code{test.ambient=FALSE}.
-This is to ensure that the number of rows in the output DataFrame is identical to \code{ncol(m)}.
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
 
