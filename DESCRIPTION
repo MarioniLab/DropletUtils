@@ -1,6 +1,6 @@
 Package: DropletUtils
-Version: 1.5.11
-Date: 2019-10-11
+Version: 1.5.12
+Date: 2019-10-15
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
     person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
@@ -45,5 +45,5 @@ License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr
 LinkingTo: Rcpp, beachmat, Rhdf5lib, BH, dqrng
-SystemRequirements: C++11
+SystemRequirements: C++11, GNU make
 RoxygenNote: 6.1.1
