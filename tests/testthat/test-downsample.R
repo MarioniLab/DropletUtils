@@ -184,6 +184,32 @@ test_that("downsampling from a count matrix gives expected margins", {
 #####################################################
 #####################################################
 
+set.seed(5001)
+test_that("downsampling batches gives consistent results", {
+    u1 <- matrix(rpois(20000, 5), ncol=100)
+    u2 <- matrix(rpois(40000, 1), ncol=200)
+
+    for (method in c("mean", "median", "geomean")) {
+        set.seed(100)
+        output <- downsampleBatches(u1, u2, method=method)
+        set.seed(100)
+        output2 <- downsampleBatches(cbind(u1, u2), batch=rep(1:2, c(ncol(u1), ncol(u2))), method=method)
+        expect_identical(output2, do.call(cbind, as.list(output)))
+    }
+
+    # Checking that the output is actually random.
+    expect_false(identical(downsampleBatches(u1, u2), downsampleBatches(u1, u2)))
+
+    # Checking that it's a no-op when the coverage is the same.
+    expect_identical(downsampleBatches(u1, u1), List(u1, u1))
+
+    expect_error(downsampleBatches(cbind(u1, u2)), "must be specified")
+})
+
+#####################################################
+#####################################################
+#####################################################
+
 library(Matrix)
 set.seed(501)
 test_that("downsampling from the reads yields correct results", {
