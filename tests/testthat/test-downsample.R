@@ -203,6 +203,10 @@ test_that("downsampling batches gives consistent results", {
     # Checking that it's a no-op when the coverage is the same.
     expect_identical(downsampleBatches(u1, u1), List(u1, u1))
 
+    # Checking that the downsampling actually equalizes coverage.
+    output <- downsampleBatches(u1, u1*10)
+    expect_equal(colSums(output[[1]])/colSums(output[[2]]), rep(1, ncol(output[[1]])))
+
     expect_error(downsampleBatches(cbind(u1, u2)), "must be specified")
 })
 
