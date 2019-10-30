@@ -16,17 +16,17 @@
 #' 
 #' @return A \linkS4class{SingleCellExperiment} object containing count data for each gene (row) and cell (column) across all \code{samples}.
 #' \itemize{
-#'     \item Row metadata will contain the fields \code{"ID"} and \code{"Symbol"}.
-#'         The former is the gene identifier (usually Ensembl), while the latter is the gene name.
-#'         If \code{version="3"}, it will also contain the \code{"Type"} field specifying the type of feature (e.g., gene or antibody).
-#'     \item Column metadata will contain the fields \code{"Sample"} and \code{"Barcode"}.
-#'         The former contains the name of the sample (or if not supplied, the path in \code{samples}) from which each column was obtained.
-#'         The latter contains to the cell barcode sequence and GEM group for each cell library. 
-#'     \item Rows are named with the gene identifier.
-#'     Columns are named with the cell barcode in certain settings, see Details.
-#'     \item The assays will contain a single \code{"counts"} matrix, containing UMI counts for each gene in each cell.
-#'     Note that the matrix representation will depend on the format of the \code{samples}, see Details.
-#'     \item The metadata contains a \code{"Samples"} field, containing the input \code{samples} character vector.
+#' \item Row metadata will contain the fields \code{"ID"} and \code{"Symbol"}.
+#' The former is the gene identifier (usually Ensembl), while the latter is the gene name.
+#' If \code{version="3"}, it will also contain the \code{"Type"} field specifying the type of feature (e.g., gene or antibody).
+#' \item Column metadata will contain the fields \code{"Sample"} and \code{"Barcode"}.
+#' The former contains the name of the sample (or if not supplied, the path in \code{samples}) from which each column was obtained.
+#' The latter contains to the cell barcode sequence and GEM group for each cell library. 
+#' \item Rows are named with the gene identifier.
+#' Columns are named with the cell barcode in certain settings, see Details.
+#' \item The assays will contain a single \code{"counts"} matrix, containing UMI counts for each gene in each cell.
+#' Note that the matrix representation will depend on the format of the \code{samples}, see Details.
+#' \item The metadata contains a \code{"Samples"} field, containing the input \code{samples} character vector.
 #' }
 #' 
 #' @details
@@ -37,11 +37,11 @@
 #' If \code{type="auto"}, the format of the input file is automatically detected for each \code{samples} based on whether it ends with \code{".h5"}.
 #' If so, \code{type} is set to \code{"HDF5"}; otherwise it is set to \code{"sparse"}.
 #' \itemize{
-#'     \item If \code{type="sparse"}, count data are loaded as a \linkS4class{dgCMatrix} object.
-#'         This is a conventional column-sparse compressed matrix format produced by the CellRanger pipeline.
-#'     \item If \code{type="HDF5"}, count data are assumed to follow the 10X sparse HDF5 format for large data sets.
-#'         It is loaded as a \linkS4class{TENxMatrix} object, which is a stub object that refers back to the file in \code{samples}.
-#'         Users may need to set \code{genome} if it cannot be automatically determined when \code{version="2"}.
+#' \item If \code{type="sparse"}, count data are loaded as a \linkS4class{dgCMatrix} object.
+#' This is a conventional column-sparse compressed matrix format produced by the CellRanger pipeline.
+#' \item If \code{type="HDF5"}, count data are assumed to follow the 10X sparse HDF5 format for large data sets.
+#' It is loaded as a \linkS4class{TENxMatrix} object, which is a stub object that refers back to the file in \code{samples}.
+#' Users may need to set \code{genome} if it cannot be automatically determined when \code{version="2"}.
 #' }
 #' 
 #' CellRanger 3.0 introduced a major change in the format of the output files for both \code{type}s.
