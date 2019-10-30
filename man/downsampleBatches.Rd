@@ -39,15 +39,22 @@ This is especially true when the number of cells cannot be easily controlled acr
 resulting in large differences in per-cell coverage even when the total sequencing depth is the same.
 }
 \examples{
-example(read10xCounts)
-summary(colSums(counts(sce10x2)))
+# Mocking up some 10X genomics output.
+example(write10xCounts, echo=FALSE)
+sce10x <- read10xCounts(tmpdir)
+
+# Making another copy with fewer counts:
+sce10x2 <- sce10x
+counts(sce10x2) <- round(counts(sce10x2)/2)
 
 # Downsampling for multiple batches in a single matrix:
-downsampled <- downsampleBatches(counts(sce10x2), batch=sce10x2$Sample)
-summary(colSums(downsampled))
+combined <- cbind(sce10x, sce10x2)
+batches <- rep(1:2, c(ncol(sce10x), ncol(sce10x2)))
+downsampled <- downsampleBatches(counts(combined), batch=batches)
+downsampled[1:10,1:10]
 
 # Downsampling for multiple matrices:
-downsampled2 <- downsampleBatches(counts(sce10x), counts(sce10x))
+downsampled2 <- downsampleBatches(counts(sce10x), counts(sce10x2))
 downsampled2
 
 }

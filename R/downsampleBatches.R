@@ -53,6 +53,7 @@
 #' @export
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors List
+#' @importFrom stats median
 downsampleBatches <- function(..., batch=NULL, method=c("median", "mean", "geomean"), bycol=TRUE) {
     mats <- List(...)
     FUN <- switch(match.arg(method),
