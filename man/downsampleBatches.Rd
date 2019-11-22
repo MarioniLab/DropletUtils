@@ -4,8 +4,12 @@
 \alias{downsampleBatches}
 \title{Downsample batches to equal coverage}
 \usage{
-downsampleBatches(..., batch = NULL, method = c("median", "mean",
-  "geomean"), bycol = TRUE)
+downsampleBatches(
+  ...,
+  batch = NULL,
+  method = c("median", "mean", "geomean"),
+  bycol = TRUE
+)
 }
 \arguments{
 \item{...}{Two or more count matrices, where each matrix represents data from a separate batch.

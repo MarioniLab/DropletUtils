@@ -46,4 +46,4 @@ NeedsCompilation: yes
 VignetteBuilder: knitr
 LinkingTo: Rcpp, beachmat, Rhdf5lib, BH, dqrng
 SystemRequirements: C++11, GNU make
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.0

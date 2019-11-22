@@ -4,9 +4,14 @@
 \alias{read10xCounts}
 \title{Load data from a 10X Genomics experiment}
 \usage{
-read10xCounts(samples, sample.names = names(samples),
-  col.names = FALSE, type = c("auto", "sparse", "HDF5"),
-  version = c("auto", "2", "3"), genome = NULL)
+read10xCounts(
+  samples,
+  sample.names = names(samples),
+  col.names = FALSE,
+  type = c("auto", "sparse", "HDF5"),
+  version = c("auto", "2", "3"),
+  genome = NULL
+)
 }
 \arguments{
 \item{samples}{A character vector containing one or more directory names, each corresponding to a 10X sample.
