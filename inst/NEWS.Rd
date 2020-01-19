@@ -4,6 +4,8 @@
 
 \section{Version 1.8.0}{\itemize{
 \item Added the downsampleBatches() function for convenient downsampling of batches.
+
+\item Preliminary support for using the output of write10xCounts() back in cellranger.
 }}
 
 \section{Version 1.6.0}{\itemize{
