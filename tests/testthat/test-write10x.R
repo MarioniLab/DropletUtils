@@ -75,14 +75,21 @@ test_that("write10xCounts works correctly for HDF5 counts, version < 3", {
 test_that("write10xCounts works correctly for HDF5 counts, version >= 3", {
     tmph5 <- tempfile(fileext=".h5")
     write10xCounts(path=tmph5, genome="mm9", my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids, version="3")
+
     all_fields <- rhdf5::h5ls(tmph5)
-    expect_identical(all_fields$name, c("matrix", "barcodes", "data", "features", "feature_type", "genome", "id", "name", "indices", "indptr", "shape"))
+    expect_identical(all_fields$name, 
+        c("matrix", "barcodes", "data", "features", 
+            "_all_tag_keys", "feature_type", "genome", "id", "name", "indices", "indptr", "shape"))
+
     expect_identical(as.vector(rhdf5::h5read(tmph5, "matrix/features/feature_type")), rep("Gene Expression", ngenes))
     expect_identical(as.vector(rhdf5::h5read(tmph5, "matrix/features/genome")), rep("mm9", ngenes))
 
+    # Overwriting with different genomes and types.
     genomes <- sample(c("mm9", "hg19"), ngenes, replace=TRUE)
     types <- sample(c("Gene Expression", "Antibody", "CUSTOM"), ngenes, replace=TRUE)
-    write10xCounts(path=tmph5, genome=genomes, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, gene.type=types, barcodes=cell.ids, version="3", overwrite=TRUE)
+    write10xCounts(path=tmph5, genome=genomes, my.counts, 
+        gene.id=gene.ids, gene.symbol=gene.symb, gene.type=types, barcodes=cell.ids, version="3", overwrite=TRUE)
+
     expect_identical(as.vector(rhdf5::h5read(tmph5, "matrix/features/feature_type")), types)
     expect_identical(as.vector(rhdf5::h5read(tmph5, "matrix/features/genome")), genomes)
 })
