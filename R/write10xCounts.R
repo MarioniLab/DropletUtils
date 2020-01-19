@@ -17,7 +17,8 @@
 #' @param genome String specifying the genome for storage when \code{type="HDF5"}.
 #' This can be a character vector with one genome per feature if \code{version="3"}.
 #' @param version String specifying the version of the CellRanger format to produce.
-#' @param chemistry,original.gem.groups,library.ids Strings containing metadata attributes to be added to the HDF5 file for code{type="HDF5"}.
+#' @param chemistry,original.gem.groups,library.ids 
+#' Strings containing metadata attributes to be added to the HDF5 file for \code{type="HDF5"}.
 #' Their interpretation is not formally documented and is left to the user's imagination.
 #' 
 #' @details
@@ -30,8 +31,8 @@
 #' See the documentation for \dQuote{latest} for this new format, otherwise see \dQuote{2.2} or earlier.
 #'
 #' The primary purpose of this function is to create files to use for testing \code{\link{read10xCounts}}.
-#' In principle, it is possible to re-use the HDF5 matrices for analysis in CellRanger.
-#' In practice, this is somewhat risky due to CellRanger's dependence on undocumented metadata attributes and some small type differences.
+#' In principle, it is possible to re-use the HDF5 matrices in \code{cellranger reanalyze}.
+#' We recommend against doing so routinely due to CellRanger's dependence on undocumented metadata attributes that may change without notice.
 #' 
 #' @return 
 #' For \code{type="sparse"}, a directory is produced at \code{path}.
