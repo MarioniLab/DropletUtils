@@ -10,7 +10,7 @@ downsampleMatrix <- function(x, prop, bycol=TRUE)
     if (bycol) {
         prop <- rep(prop, length.out = ncol(x))
     }
-    out <- .Call(cxx_downsample_matrix, x, prop, bycol)
+    out <- downsample_matrix(x, prop, bycol)
     dimnames(out) <- dimnames(x)
     return(out)
 }

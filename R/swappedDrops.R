@@ -35,14 +35,15 @@ swappedDrops <- function(samples, barcode.length=NULL, ...)
 }
 
 #' @export
-removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0.8, get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
+removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0.8,
+    get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
 # Core function to swappedDrops(), split off to accommodate non-HDF5 inputs.
 # 
 # written by Aaron Lun
 # created 17 July 2018
 {
     diag.code <- ifelse(get.diagnostics, 1L + as.integer(hdf5.out), 0L)
-    swap.out <- .Call(cxx_find_swapped, cells, genes, umis, nreads, min.frac, diag.code)
+    swap.out <- find_swapped(cells, genes, umis, nreads, min.frac, diag.code)
     unswapped <- swap.out[[1]]
 
     nsamples <- length(cells)

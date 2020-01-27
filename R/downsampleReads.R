@@ -18,7 +18,7 @@ downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE)
     if (bycol) {
         prop <- rep(prop, length.out=length(run.length))
     }
-    new.read.counts <- .Call(cxx_downsample_runs, run.length, incoming$data$reads[o], prop, bycol)
+    new.read.counts <- downsample_runs(run.length, incoming$data$reads[o], prop, bycol)
 
     # Assembling into a sparse matrix.
     keep <- new.read.counts>0L

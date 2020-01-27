@@ -24,7 +24,7 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
             all.barcodes <- sub("-[0-9]+", "", all.barcodes) # removing GEM group.
             data$cell <- all.barcodes[as.vector(h5read(sample, "/barcode_idx")) + 1L]
         } else {
-            data$cell <- .Call(cxx_get_cell_barcodes, sample, "barcode", barcode.length)
+            data$cell <- get_cell_barcodes(sample, "barcode", barcode.length)
         }
     }
 

@@ -82,11 +82,11 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     pcg.state <- .setup_pcg_state(per.core)
 
     out.values <- bpmapply(iterations=per.core, seeds=pcg.state$seeds, streams=pcg.state$streams,
-        FUN=.monte_carlo_pval, 
+        FUN=montecarlo_pval, 
         MoreArgs=list(
-            total.val=re.totals$values, 
-            total.len=re.totals$lengths, 
-            P=re.P, 
+            totalval=re.totals$values, 
+            totallen=re.totals$lengths, 
+            prob=re.P, 
             ambient=ambient, 
             alpha=alpha
         ), BPPARAM=BPPARAM, SIMPLIFY=FALSE)
@@ -94,12 +94,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     n.above <- Reduce("+", out.values)
     n.above[o] <- n.above
     return(n.above)
-}
-
-.monte_carlo_pval <- function(total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
-# Wrapper function to preserve NAMESPACE in bpmapply.
-{ 
-    .Call(cxx_montecarlo_pval, total.val, total.len, P, ambient, iterations, alpha, seeds, streams) 
 }
 
 #' @importFrom dqrng generateSeedVectors
@@ -139,9 +133,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
         obs.P <- numeric(ncol(mat))
         obs.P[by.col$Col] <- by.col$x
     } else {
-        obs.P <- .Call(cxx_compute_multinom, mat, prop, alpha)
+        obs.P <- compute_multinom(mat, prop, alpha)
     }
-    return(obs.P)
+    obs.P
 }
 
 .compute_multinom_prob_rest <- function(totals, alpha=Inf) 
