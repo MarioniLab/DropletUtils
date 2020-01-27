@@ -1,15 +1,13 @@
-#include "DropletUtils.h"
+#include "Rcpp.h"
 
 #include <stdexcept>
 #include <algorithm>
 #include <deque>
 
-SEXP group_cells (SEXP cells, SEXP gems) {
-    BEGIN_RCPP
-    Rcpp::StringVector Cells(cells);
-    Rcpp::IntegerVector Gems(gems);
-    const size_t N=Cells.size();
-    if (N!=Gems.size()) {
+//[[Rcpp::export(rng=false)]]
+Rcpp::List group_cells (Rcpp::StringVector cells, Rcpp::IntegerVector gems) {
+    const size_t N=cells.size();
+    if (N!=gems.size()) {
         throw std::runtime_error("cell and gem ID vectors should be the same length");
     }
 
@@ -21,12 +19,12 @@ SEXP group_cells (SEXP cells, SEXP gems) {
     std::iota(ordering.begin(), ordering.end(), 0);
 
     std::stable_sort(ordering.begin(), ordering.end(), [&](const int& left, const int& right) {
-        if (Cells[left] < Cells[right]) {
+        if (cells[left] < cells[right]) {
             return true;
-        } else if (Cells[left] > Cells[right]) {
+        } else if (cells[left] > cells[right]) {
            return false;
         }
-        return Gems[left] < Gems[right];
+        return gems[left] < gems[right];
     });
 
     // Now figuring out which ones are unique.
@@ -36,16 +34,16 @@ SEXP group_cells (SEXP cells, SEXP gems) {
     if (N) {
         // Avoid creating lots of Rcpp::String objects, the cache freaks out and overflows.
         auto orderIt=ordering.begin();
-        auto cellIt=Cells.begin()+*orderIt;
-        auto gemIt=Gems.begin()+*orderIt;
+        auto cellIt=cells.begin()+*orderIt;
+        auto gemIt=gems.begin()+*orderIt;
 
         unique_idx.push_back(*orderIt);
         unique_num.push_back(1);
         ++orderIt;
 
         for (size_t i=1; i<N; ++i, ++orderIt) {
-            auto altCellIt=Cells.begin() + *orderIt;
-            auto altGemIt=Gems.begin() + *orderIt;
+            auto altCellIt=cells.begin() + *orderIt;
+            auto altGemIt=gems.begin() + *orderIt;
 
             if (*altCellIt!=*cellIt || *altGemIt!=*gemIt) {
                 cellIt=altCellIt;
@@ -73,5 +71,4 @@ SEXP group_cells (SEXP cells, SEXP gems) {
 
     return Rcpp::List::create(order_output, unique_output, 
         Rcpp::IntegerVector(unique_num.begin(), unique_num.end()));
-    END_RCPP
 }

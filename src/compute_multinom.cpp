@@ -1,4 +1,4 @@
-#include "DropletUtils.h"
+#include "Rcpp.h"
 
 #include "beachmat/integer_matrix.h"
 #include "beachmat/numeric_matrix.h"
@@ -11,7 +11,7 @@
 
 class likelihood_calculator {
 public: 
-    likelihood_calculator(SEXP alpha) : Alpha(check_numeric_scalar(alpha, "alpha")), use_alpha(R_FINITE(Alpha)) {
+    likelihood_calculator(double alpha) : Alpha(alpha), use_alpha(R_FINITE(Alpha)) {
         if (use_alpha && Alpha <= 0) {
             throw std::runtime_error("alpha must be positive if specified");
         }
@@ -29,9 +29,8 @@ private:
     bool use_alpha;
 };
 
-
 template <typename V, class MAT>
-SEXP compute_multinom_internal(SEXP mat, SEXP prop, SEXP alpha) {
+Rcpp::NumericVector compute_multinom_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, double alpha) {
     auto M=beachmat::create_matrix<MAT>(mat);
     const size_t NC=M->get_ncol();
     const size_t NR=M->get_nrow();
@@ -66,14 +65,12 @@ SEXP compute_multinom_internal(SEXP mat, SEXP prop, SEXP alpha) {
     return output;
 }
 
-SEXP compute_multinom(SEXP mat, SEXP prop, SEXP alpha) {
-    BEGIN_RCPP
+//[[Rcpp::export(rng=false)]]
+Rcpp::NumericVector compute_multinom(Rcpp::RObject mat, Rcpp::NumericVector prop, double alpha) {
     int rtype=beachmat::find_sexp_type(mat);
     if (rtype==INTSXP) {
         return compute_multinom_internal<Rcpp::IntegerVector, beachmat::integer_matrix>(mat, prop, alpha);
     } else {
         return compute_multinom_internal<Rcpp::NumericVector, beachmat::numeric_matrix>(mat, prop, alpha);
     }
-    END_RCPP    
 }
-

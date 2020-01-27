@@ -1,4 +1,4 @@
-#include "DropletUtils.h"
+#include "Rcpp.h"
 
 #include "H5Cpp.h"
 #include "utils.h"
@@ -10,22 +10,11 @@
 #include <vector>
 #include <algorithm>
 
-SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
-    BEGIN_RCPP
-    Rcpp::StringVector fname(_fname);
-    Rcpp::StringVector dname(_dname);
-    if (fname.size()!=1) {
-        throw std::runtime_error("file name should be a string");
-    }
-    if (dname.size()!=1) {
-        throw std::runtime_error("dataset name should be a string");
-    }
-
+//[[Rcpp::export(rng=false)]]
+Rcpp::StringVector get_cell_barcodes(std::string fname, std::string dname, Rcpp::RObject barcodelen) {
     // Setting the file input parameters.
-    std::string curfile=Rcpp::as<std::string>(fname[0]);
-    std::string curdata=Rcpp::as<std::string>(dname[0]);
-    H5::H5File h5file(curfile.c_str(), H5F_ACC_RDONLY);
-    H5::DataSet h5data = h5file.openDataSet(curdata.c_str());
+    H5::H5File h5file(fname.c_str(), H5F_ACC_RDONLY);
+    H5::DataSet h5data = h5file.openDataSet(dname.c_str());
     
     if (h5data.getTypeClass()!=H5T_INTEGER) {
         throw std::runtime_error("cell barcodes should be encoded as integers");
@@ -48,12 +37,12 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
    
     // Guessing the barcode length. 
     int blen=0;
-    if (_barcodelen==R_NilValue) {
+    if (barcodelen.isNULL()) {
         if (encoded.size()) { 
             blen=std::ceil(std::log(*std::max_element(encoded.begin(), encoded.end()))/std::log(4));
         }
     } else {
-        blen=check_integer_scalar(_barcodelen, "barcode length");
+        blen=Rcpp::as<int>(barcodelen);
     }
 
    // Iterating across the output and taking pairs of bits.
@@ -73,7 +62,4 @@ SEXP get_cell_barcodes(SEXP _fname, SEXP _dname, SEXP _barcodelen) {
     }
 
     return output;    
-    END_RCPP
 }
-
-

@@ -1,13 +1,10 @@
-#include "DropletUtils.h"
-
+#include "Rcpp.h"
 #include <stdexcept>
 #include <sstream>
 
-SEXP encode_sequences (SEXP incoming) {
-    BEGIN_RCPP
-    Rcpp::StringVector Seqs(incoming);
+//[[Rcpp::export(rng=false)]]
+Rcpp::IntegerVector encode_sequences (Rcpp::StringVector Seqs) {
     Rcpp::IntegerVector output(Seqs.size());
-
     for (size_t i=0; i<output.size(); ++i) {
         Rcpp::String current=Seqs[i];
         int& curenc=output[i];
@@ -44,5 +41,4 @@ SEXP encode_sequences (SEXP incoming) {
     }
 
     return output;
-    END_RCPP
 }

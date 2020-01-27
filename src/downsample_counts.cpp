@@ -1,4 +1,4 @@
-#include "DropletUtils.h"
+#include "Rcpp.h"
 
 #include "beachmat/integer_matrix.h"
 #include "beachmat/numeric_matrix.h"
@@ -54,7 +54,8 @@ public:
         while (freqIt!=freqEnd && num_selected < num_sample) {
             for (int i=0; i<*freqIt && num_sample > num_selected; ++i) {
                 // Deciding whether or not to keep this instance of this event.
-                // This is a safe way of computing NUM_YET_TO_SELECT/NUM_YET_TO_PROCESS > runif(1), avoiding issues with integer division.
+                // This is a safe way of computing NUM_YET_TO_SELECT/NUM_YET_TO_PROCESS > runif(1), 
+                // avoiding issues with integer division.
                 if ( (num_total - num_processed)*R::unif_rand() < num_sample - num_selected) {
                     ++(*freqOut);
                     ++num_selected;
@@ -91,13 +92,12 @@ private:
     }
 };
 
-bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) 
+void check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, bool bycol) 
 // Choosing between global downsampling or cell-specific downsampling.
 {
-    const bool do_bycol=check_logical_scalar(bycol, "per-column specifier");
-    if (do_bycol) { 
+    if (bycol) { 
         if (prop.size()!=ncells) {
-            throw std::runtime_error("length of 'prop' should be equal to number of cells");
+            throw std::runtime_error("length of 'prop' should be equal to number of cells when 'bycol=TRUE'");
         }
         for (const auto& curprop : prop) { 
             if (curprop < 0 || curprop > 1) { 
@@ -105,12 +105,14 @@ bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::Log
             }
         }
     } else {
-        const double curprop=check_numeric_scalar(prop, "downsampling proportion");
+        if (prop.size()!=1) {
+            throw std::runtime_error("downsampling proportion should be a numeric scalar when 'bycol=FALSE'");
+        }
+        double curprop=prop[0];
         if (curprop < 0 || curprop > 1) { 
             throw std::runtime_error("downsampling proportion must lie in [0, 1]");
         }
     }
-    return do_bycol;
 }
 
 /*************************************************
@@ -118,7 +120,7 @@ bool check_downsampling_mode (size_t ncells, Rcpp::NumericVector prop, Rcpp::Log
  *************************************************/
 
 template <typename V, class M, class O>
-Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVector prop, Rcpp::LogicalVector bycol) {
+Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVector prop, bool bycol) {
     auto mat=beachmat::create_matrix<M>(input);
     auto otype=beachmat::output_param(mat.get());
     auto output=beachmat::create_output<O>(mat->get_nrow(), mat->get_ncol(), otype);
@@ -132,9 +134,10 @@ Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVecto
     beachmat::const_column<M> col_holder(mat.get());
 
     // Setting variables for global downsampling, if desired.
+    check_downsampling_mode(ncells, prop, bycol);
+
     downsampler down;
-    const bool percol=check_downsampling_mode(ncells, prop, bycol);
-    if (!percol) {
+    if (!bycol) {
         bigint_t num_total=0;
         for (size_t i=0; i<ncells; ++i) {
             col_holder.fill(i);
@@ -159,7 +162,7 @@ Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVecto
             auto valE = valS + col_holder.get_n();
 
             // Downsampling.
-            if (percol) { 
+            if (bycol) { 
                 down(valS, valE, outgoing.begin(), *pIt);
                 ++pIt;
             } else {
@@ -180,8 +183,8 @@ Rcpp::RObject downsample_matrix_internal(Rcpp::RObject input, Rcpp::NumericVecto
     return output->yield();
 }
 
-SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
-    BEGIN_RCPP
+//[[Rcpp::export]]
+Rcpp::RObject downsample_matrix(Rcpp::RObject rmat, Rcpp::NumericVector prop, bool bycol) {
     int rtype=beachmat::find_sexp_type(rmat);
     if (rtype==INTSXP) {
         return downsample_matrix_internal<Rcpp::IntegerVector, 
@@ -192,40 +195,37 @@ SEXP downsample_matrix(SEXP rmat, SEXP prop, SEXP bycol) {
            beachmat::numeric_matrix, 
            beachmat::numeric_output>(rmat, prop, bycol);
     }
-    END_RCPP    
 }
 
 /*************************************************
  ***** Downsampling (each run of) a vector. ******
  *************************************************/
 
-SEXP downsample_runs(SEXP cells, SEXP reads, SEXP prop, SEXP bycol) {
-    BEGIN_RCPP
-
+//[[Rcpp::export]]
+Rcpp::IntegerVector downsample_runs(Rcpp::IntegerVector cells, Rcpp::IntegerVector reads, 
+    Rcpp::NumericVector prop, bool bycol) 
+{
     // Checking all of the inputs.
-    Rcpp::IntegerVector cell_vec(cells);
-    Rcpp::IntegerVector read_vec(reads);
-    const bigint_t nmolecules=bigsum(cell_vec.begin(), cell_vec.end());
-    if (nmolecules!=read_vec.size()) {
+    const bigint_t nmolecules=bigsum(cells.begin(), cells.end());
+    if (nmolecules!=reads.size()) {
         throw std::runtime_error("length of 'reads' vector should be equal to sum of RLE lengths");
     }
 
     downsampler down;
-    Rcpp::NumericVector proportions(prop);
-    const bool percol=check_downsampling_mode(cell_vec.size(), proportions, bycol);
-    if (!percol) {
-        down.set_global(bigsum(read_vec.begin(), read_vec.end()), proportions[0]);
+    check_downsampling_mode(cells.size(), prop, bycol);
+    if (!bycol) {
+        down.set_global(bigsum(reads.begin(), reads.end()), prop[0]);
     }
 
     // Setting up the output.
     Rcpp::IntegerVector output(nmolecules);
     auto oIt=output.begin();
-    auto rIt=read_vec.begin();
-    auto pIt=proportions.begin();
+    auto rIt=reads.begin();
+    auto pIt=prop.begin();
 
-    // Iterating across the molecule cell_vec and downsampling.
-    for (const auto& cell : cell_vec) {
-        if (percol) { 
+    // Iterating across the molecule cells and downsampling.
+    for (const auto& cell : cells) {
+        if (bycol) { 
             down(rIt, rIt+cell, oIt, *pIt);
             ++pIt;
         } else {
@@ -236,6 +236,4 @@ SEXP downsample_runs(SEXP cells, SEXP reads, SEXP prop, SEXP bycol) {
     }
 
     return output;
-    END_RCPP;
 }
-

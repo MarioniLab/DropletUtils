@@ -1,4 +1,4 @@
-#include "DropletUtils.h"
+#include "Rcpp.h"
 
 #include "beachmat/numeric_matrix.h"
 #include "utils.h"
@@ -45,9 +45,8 @@ struct molecule {
  * Also returns a diagnostic matrix of molecule-sample read counts.
  */
 
-SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, SEXP diagnostics) {
-    BEGIN_RCPP
-
+//[[Rcpp::export(rng=false)]]
+Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, int diagnostics) {
     auto Cells=process_list<Rcpp::StringVector>(cells);
     auto Genes=process_list<Rcpp::IntegerVector>(genes);
     auto Umis=process_list<Rcpp::IntegerVector>(umis);
@@ -56,9 +55,6 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
     compare_lists(Cells, Genes);
     compare_lists(Cells, Umis);
     compare_lists(Cells, Reads);
-
-    const double mf=check_numeric_scalar(minfrac, "minimum fraction");
-    const int diagcode=check_numeric_scalar(diagnostics, "diagcode");
 
     // Setting up the ordering vector.
     const size_t nsamples=Cells.size();
@@ -132,10 +128,10 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
             ++oend;
         }
 
-        if (double(max_nread)/total_nreads >= mf) {
+        if (double(max_nread)/total_nreads >= minfrac) {
             notswapped[best_mol->sample][best_mol->index]=1;
         }
-        if (diagcode) {
+        if (diagnostics) {
             ++nunique;
         }
         ostart=oend;
@@ -151,11 +147,11 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
     output[1]=R_NilValue;
 
     // Storing diagnostic information about each unique combination.
-    if (diagcode) {
+    if (diagnostics) {
         Rcpp::IntegerVector indices(nsamples);
         Rcpp::NumericVector values(nsamples);
         auto diag_out=beachmat::create_numeric_output(nunique, nsamples, 
-            diagcode==1 ? beachmat::output_param("dgCMatrix", "Matrix") :
+            diagnostics==1 ? beachmat::output_param("dgCMatrix", "Matrix") :
                 beachmat::output_param("HDF5Matrix", "HDF5Array"));
 
         auto ostart=ordering.begin(), oend=ordering.begin();
@@ -183,5 +179,4 @@ SEXP find_swapped(SEXP cells, SEXP genes, SEXP umis, SEXP reads, SEXP minfrac, S
     }
 
     return output;
-    END_RCPP
 }
