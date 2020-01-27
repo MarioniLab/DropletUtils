@@ -17,6 +17,10 @@ encode_sequences <- function(Seqs) {
     .Call('_DropletUtils_encode_sequences', PACKAGE = 'DropletUtils', Seqs)
 }
 
+find_chimeric <- function(cells, umis, reads, minfrac, diagnostics) {
+    .Call('_DropletUtils_find_chimeric', PACKAGE = 'DropletUtils', cells, umis, reads, minfrac, diagnostics)
+}
+
 find_swapped <- function(cells, genes, umis, reads, minfrac, diagnostics) {
     .Call('_DropletUtils_find_swapped', PACKAGE = 'DropletUtils', cells, genes, umis, reads, minfrac, diagnostics)
 }

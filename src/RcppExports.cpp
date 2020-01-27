@@ -54,6 +54,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// find_chimeric
+Rcpp::List find_chimeric(Rcpp::StringVector cells, Rcpp::IntegerVector umis, Rcpp::IntegerVector reads, double minfrac, bool diagnostics);
+RcppExport SEXP _DropletUtils_find_chimeric(SEXP cellsSEXP, SEXP umisSEXP, SEXP readsSEXP, SEXP minfracSEXP, SEXP diagnosticsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type cells(cellsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type umis(umisSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type reads(readsSEXP);
+    Rcpp::traits::input_parameter< double >::type minfrac(minfracSEXP);
+    Rcpp::traits::input_parameter< bool >::type diagnostics(diagnosticsSEXP);
+    rcpp_result_gen = Rcpp::wrap(find_chimeric(cells, umis, reads, minfrac, diagnostics));
+    return rcpp_result_gen;
+END_RCPP
+}
 // find_swapped
 Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, int diagnostics);
 RcppExport SEXP _DropletUtils_find_swapped(SEXP cellsSEXP, SEXP genesSEXP, SEXP umisSEXP, SEXP readsSEXP, SEXP minfracSEXP, SEXP diagnosticsSEXP) {
@@ -115,6 +129,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_DropletUtils_downsample_matrix", (DL_FUNC) &_DropletUtils_downsample_matrix, 3},
     {"_DropletUtils_downsample_runs", (DL_FUNC) &_DropletUtils_downsample_runs, 4},
     {"_DropletUtils_encode_sequences", (DL_FUNC) &_DropletUtils_encode_sequences, 1},
+    {"_DropletUtils_find_chimeric", (DL_FUNC) &_DropletUtils_find_chimeric, 5},
     {"_DropletUtils_find_swapped", (DL_FUNC) &_DropletUtils_find_swapped, 6},
     {"_DropletUtils_get_cell_barcodes", (DL_FUNC) &_DropletUtils_get_cell_barcodes, 3},
     {"_DropletUtils_group_cells", (DL_FUNC) &_DropletUtils_group_cells, 2},
