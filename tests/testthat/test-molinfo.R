@@ -16,8 +16,8 @@ test_that("barcode extraction is working correctly", {
          h5 <- h5createFile(out.file)
          h5write(all.barcodes, out.file, "barcode")
 
-         out <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", blen)
-         guess <- .Call(DropletUtils:::cxx_get_cell_barcodes, out.file, "barcode", NULL)
+         out <- DropletUtils:::get_cell_barcodes(out.file, "barcode", blen)
+         guess <- DropletUtils:::get_cell_barcodes(out.file, "barcode", NULL)
          expect_identical(out, guess)
 
          # Manually doing the bit masks.
