@@ -140,7 +140,7 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
         if (cur.type=="sparse") {
             info <- .read_from_sparse(run, version=version, compressed=compressed)
         } else if (cur.type=="prefix") {
-            info <- .read_from_prefix(run, version=version, is.prefix=TRUE, compressed=compressed)
+            info <- .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed)
         } else {
             info <- .read_from_hdf5(run, genome=genome, version=version)
         }
