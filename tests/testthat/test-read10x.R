@@ -101,6 +101,26 @@ test_that("read10xCounts works correctly for sparse counts, version >= 3", {
     expect_identical(sce10x$Barcode, cell.ids)
 })
 
+test_that("read10xCounts works correctly for zipped files", {
+    # Works for version 2:
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    ref <- read10xCounts(tmpdir)
+    lapply(list.files(tmpdir, full.names=TRUE), R.utils::gzip)
+    alt <- read10xCounts(tmpdir)
+    expect_identical(ref, alt)
+
+    # Works for version 3:
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids, version="3")
+
+    ref <- read10xCounts(tmpdir)
+    lapply(list.files(tmpdir, full.names=TRUE), R.utils::gunzip)
+    alt <- read10xCounts(tmpdir)
+    expect_identical(ref, alt)
+})
+
 test_that("read10xCounts works correctly for HDF5 counts, version < 3", {
     tmph5 <- tempfile(fileext=".h5")
     write10xCounts(path=tmph5, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
@@ -147,3 +167,21 @@ test_that("read10xCounts works correctly for HDF5 counts, version >= 3", {
     expect_identical(sce10x$Barcode, cell.ids)
 })
 
+test_that("read10xCounts works correctly for prefixes", {
+    tmpdir1 <- tempfile()
+    write10xCounts(path=tmpdir1, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    tmpdir2 <- tempfile()
+    write10xCounts(path=tmpdir2, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    tmpdir.all <- tempfile()
+    dir.create(tmpdir.all, showWarnings=FALSE)
+    first.files <- list.files(tmpdir1, full.names=TRUE)
+    file.copy(first.files, file.path(tmpdir.all, paste0("jelly_", basename(first.files))))
+    second.files <- list.files(tmpdir2, full.names=TRUE)
+    file.copy(second.files, file.path(tmpdir.all, paste0("peanut_", basename(second.files))))
+
+    out <- read10xCounts(file.path(tmpdir.all, c("jelly_", "peanut_")), type="prefix")
+    alt <- read10xCounts(c(tmpdir1, tmpdir2))
+    expect_identical(assay(out), assay(alt))
+    expect_identical(out$Barcode, alt$Barcode)
+})
