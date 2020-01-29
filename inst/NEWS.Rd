@@ -5,7 +5,10 @@
 \section{Version 1.8.0}{\itemize{
 \item Added the downsampleBatches() function for convenient downsampling of batches.
 
-\item Preliminary support for using the output of write10xCounts() back in cellranger.
+\item Preliminary support for using the output of write10xCounts() back in Cellranger.
+
+\item Support reading in 10X output files via prefixes in read10xCounts().
+Automatic detection of whether a file is Gzipped or not.
 }}
 
 \section{Version 1.6.0}{\itemize{
