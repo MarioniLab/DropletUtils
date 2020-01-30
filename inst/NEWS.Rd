@@ -9,6 +9,8 @@
 
 \item Support reading in 10X output files via prefixes in read10xCounts().
 Automatic detection of whether a file is Gzipped or not.
+
+\item Added chimericDrops() to remove chimeric molecules due to within-sample re-priming.
 }}
 
 \section{Version 1.6.0}{\itemize{
