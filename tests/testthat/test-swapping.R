@@ -42,7 +42,8 @@ library(Matrix)
 set.seed(5717)
 test_that("Removal of swapped drops works correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
+        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, 
+            nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
 
         # Figuring out the correspondence between cell ID and the sorted barcode.
         was.mapped <- c(output$original$gene, output$swapped$gene)!=ngenes
