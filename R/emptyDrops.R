@@ -97,12 +97,11 @@
 #' we suggest doing so using methods from the \pkg{scater} package.
 #'
 #' On occasion, \code{emptyDrops} may identify many more non-empty droplets than the expected number of cells.
-#' This is probably attributable to the generation of multiple cell fragments when a single cell is extensively damaged.
-#' In such cases, it is informative to construct a MA plot comparing the average expression between retained and discarded barcodes
-#' to see which genes are driving the differences (and thus contributing to the larger number of non-empty calls).
-#' Mitochondrial and ribosomal genes are typical offenders. 
+#' This is probably due to the generation of multiple cell fragments when a single cell is extensively damaged.
+#' In such cases, it is informative to construct a MA plot comparing the average expression between retained low-count barcodes and discarded barcodes to see which genes are driving the differences (and thus contributing to the larger number of non-empty calls).
+#' Mitochondrial and ribosomal genes are typical offenders; the former can be either up or down in the ambient solution, depending on whether the damage was severe enough to dissociate mitochondria from the cell fragments, while the latter is usually down in low-count barcodes due to loss of cytoplasmic RNA in cell fragments.
 #'
-#' To mitigate this effect, we may consider filtering out the problematic genes from the matrix provided to \code{emptyDrops}.
+#' To mitigate this effect, we can filtering out the problematic genes from the matrix provided to \code{emptyDrops}.
 #' This eliminates their effect on the significance calculations and reduces the number of uninteresting non-empty calls,
 #' see \url{https://github.com/MarioniLab/DropletUtils/issues/36} for an example.
 #' Of course, the full set of genes can still be retained for downstream analysis.
