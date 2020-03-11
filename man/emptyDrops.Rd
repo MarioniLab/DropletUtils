@@ -131,7 +131,8 @@ Under this definition, these low-count barcodes cannot be cell-containing drople
 
 However, it is still desirable for the number of rows of the output DataFrame to be the same as \code{ncol(m)}.
 This allows easy subsetting of \code{m} based on a logical vector constructed from the output (e.g., to retain all FDR values below a threshold).
-Thus, the rows for the excluded barcodes are filled in with \code{NA} values for all fields in the output.
+To satisfy this requirement, the rows for the excluded barcodes are filled in with \code{NA} values for all fields in the output.
+We suggest using \code{\link{which}} to pick barcodes below a FDR threshold, see the Examples.
 
 If \code{test.ambient=FALSE}, non-\code{NA} statistics will be reported for all barcodes.
 This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes below \code{lower}.
@@ -169,6 +170,11 @@ out
 
 is.cell <- out$FDR <= 0.01
 sum(is.cell, na.rm=TRUE)
+
+# Subsetting the matrix to the cell-containing droplets.
+# (using 'which()' to handle NAs smoothly).
+cell.counts <- my.counts[,which(is.cell),drop=FALSE]
+dim(cell.counts)
 
 # Check if p-values are lower-bounded by 'niters'
 # (increase 'niters' if any Limited==TRUE and Sig==FALSE)
