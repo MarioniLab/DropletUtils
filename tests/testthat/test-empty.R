@@ -1,6 +1,25 @@
 # This tests that the C++ code for emptyDrops does what it says it does.
 # library(DropletUtils); library(testthat); source("test-empty.R")
 
+test_that("Good-Turing protection works correctly", {
+    # Protection gives the same estimates for zeroes when a count
+    # of 1 is redistributed somewhere else.
+    out <- DropletUtils:::.safe_good_turing(c(0,0,2,4))
+    ref <- DropletUtils:::.safe_good_turing(c(0,0,1,2,3))
+
+    expect_equal(sum(ref), 1)
+    expect_equal(sum(out), 1)
+    expect_false(any(ref==0))
+    expect_false(any(out==0))
+
+    expect_equal(out[1:2], ref[1:2])
+
+    # Continues to work with loads of observations.
+    out <- DropletUtils:::.safe_good_turing(c(0,0,2,4,10000))
+    ref <- DropletUtils:::.safe_good_turing(c(0,0,1,2,3,10000))
+    expect_equal(out[1:2], ref[1:2])
+})
+
 test_that("multinomial calculations are correct without alpha", {
     set.seed(1000)
     prop <- runif(100)

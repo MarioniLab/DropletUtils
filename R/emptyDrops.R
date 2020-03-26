@@ -163,7 +163,6 @@
 #' @export
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
-#' @importFrom edgeR goodTuringProportions
 #' @importFrom Matrix rowSums colSums
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) {
     discard <- rowSums(m) == 0
@@ -178,7 +177,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     if (sum(ambient.prof)==0) {
         stop("no counts available to estimate the ambient profile")
     }
-    ambient.prop <- goodTuringProportions(ambient.prof)
+    ambient.prop <- .safe_good_turing(ambient.prof)
 
     # Removing supposed ambient cells from the matrix.
     # Also removing additional cells that don't pass some total count threshold, if required.
@@ -217,6 +216,27 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     output <- DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
     metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
     output
+}
+
+#' @importFrom edgeR goodTuringProportions
+.safe_good_turing <- function(ambient.prof) {
+    ambient.prob <- goodTuringProportions(ambient.prof)
+
+    # Good-Turing returns zero probabilities for zero counts if you don't have
+    # any values of 1 in the profile. This is technically correct but not
+    # helpful, so we protect against this by adding a 'pseudo-feature' with a
+    # single count; this is used to calculate a Good-Turing estimate of
+    # observing any feature that has zero counts, which is then divided to get
+    # the per-feature probability. We scale down all the other probabilities to
+    # make space for this new pseudo-probability.
+    still.zero <- ambient.prob<=0
+    if (any(still.zero)) {
+        pseudo.prob <- 1/sum(ambient.prof)
+        ambient.prob[still.zero] <- pseudo.prob/sum(still.zero)
+        ambient.prob[!still.zero] <- ambient.prob[!still.zero] * (1 - pseudo.prob) 
+    }
+
+    ambient.prob
 }
 
 #' @importFrom BiocParallel bpnworkers SerialParam bpmapply
