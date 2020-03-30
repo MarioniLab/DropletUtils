@@ -106,6 +106,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hashed_deltas
+Rcpp::List hashed_deltas(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count);
+RcppExport SEXP _DropletUtils_hashed_deltas(SEXP matSEXP, SEXP propSEXP, SEXP pseudo_countSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type mat(matSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
+    Rcpp::traits::input_parameter< double >::type pseudo_count(pseudo_countSEXP);
+    rcpp_result_gen = Rcpp::wrap(hashed_deltas(mat, prop, pseudo_count));
+    return rcpp_result_gen;
+END_RCPP
+}
 // montecarlo_pval
 Rcpp::IntegerVector montecarlo_pval(Rcpp::IntegerVector totalval, Rcpp::IntegerVector totallen, Rcpp::NumericVector prob, Rcpp::NumericVector ambient, int iterations, double alpha, Rcpp::List seeds, Rcpp::IntegerVector streams);
 RcppExport SEXP _DropletUtils_montecarlo_pval(SEXP totalvalSEXP, SEXP totallenSEXP, SEXP probSEXP, SEXP ambientSEXP, SEXP iterationsSEXP, SEXP alphaSEXP, SEXP seedsSEXP, SEXP streamsSEXP) {
@@ -133,6 +145,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_DropletUtils_find_swapped", (DL_FUNC) &_DropletUtils_find_swapped, 6},
     {"_DropletUtils_get_cell_barcodes", (DL_FUNC) &_DropletUtils_get_cell_barcodes, 3},
     {"_DropletUtils_group_cells", (DL_FUNC) &_DropletUtils_group_cells, 2},
+    {"_DropletUtils_hashed_deltas", (DL_FUNC) &_DropletUtils_hashed_deltas, 3},
     {"_DropletUtils_montecarlo_pval", (DL_FUNC) &_DropletUtils_montecarlo_pval, 8},
     {NULL, NULL, 0}
 };
