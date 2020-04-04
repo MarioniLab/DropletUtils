@@ -81,12 +81,13 @@
 #' plot(stats$LogFC.1to2, stats$LogFC.2to3)
 #'
 #' # Most cells should be singlets with low NMAD.
-#' hist(stats$NMAD, breaks=50)
+#' hist(stats$NMAD.2to3, breaks=50)
 #'
 #' # Identify doublets at a given NMAD threshold.
 #' is.doublet <- stats$NMAD >= 5
 #' summary(is.doublet)
 #' 
+#' # Chcecking against the known truth, in this case
 #' # 'Best' contains the putative sample of origin.
 #' table(stats$Best, true.sample) 
 #'
