@@ -8,74 +8,68 @@ hashedDrops(x, prop = NULL, pseudo.count = 3)
 }
 \arguments{
 \item{x}{A numeric/integer matrix-like object containing UMI counts.
-Rows correspond to HTO and columns correspond to cell barcodes.}
+Rows correspond to HTOs and columns correspond to cell barcodes.
+Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.}
 
-\item{ambient}{A numeric vector of length equal to \code{nrow(x)},
-specifying the ambient (i.e., background) proportions of each HTO.}
+\item{prop}{A numeric vector of length equal to \code{nrow(x)},
+specifying the relative abundance of each HTO across all samples.}
 
-\item{min.lfc}{Numeric scalar specifying the minimum log-fold change above the ambient noise when testing for significant HTOs.}
-
-\item{lower}{Numeric scalar specifying the total count threshold for using barcodes to compute the ambient proportions.}
-
-\item{ignore}{Numeric scalar specifying the total count threshold for ignoring barcodes.}
+\item{pseudo.count}{A numeric scalar specifying the pseudo-count to add when computing log-fold changes.}
 }
 \value{
 A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
 \itemize{
-\item \code{Total}, integer specifying the total count across all HTOs for this barcode.
-\item \code{Best}, integer specifying the best HTO with the lowest p-value.
-\item \code{PValue}, numeric containing the p-value for the best HTO.
-\item \code{FDR}, a Benjamini-Hochberg-adjusted p-value for the best HTO.
-\item \code{Second}, integer specifying the HTO with the second-lowest p-value.
-\item \code{PValue2}, numeric containing the p-value for the second-best HTO.
-\item \code{FDR2}, a Benjamini-Hochberg-adjusted p-value for the second-best HTO.
-\item \code{LogFC}, numeric containing the log-fold change between the counts of the best and second-best HTO.
+\item \code{Total}, integer specifying the total count across all HTOs for each barcode.
+\item \code{Best}, integer specifying the HTO with the highest deviation from the expected proportions for each barcode.
+\item \code{Second}, integer specifying the HTO with the second-highest deviation from the expected deviation.
+\item \code{LogFC.1to2}, numeric containing the log-fold change between the counts of the best and second-best HTO.
+\item \code{NMAD.1to2}, numeric specifying the number of MADs from the median for each value of \code{LogFC.1to2}.
+\item \code{LogFC.2to3}, numeric containing the log-fold change between the counts of the second-best and third-best HTO.
+\item \code{NMAD.2to3}, numeric specifying the number of MADs from the median for each value of \code{LogFC.2to3}.
 }
-If \code{ignore} is specified, all barcodes with total counts at or below \code{ignore} will have \code{NA} statistics.
 }
 \description{
 Demultiplex cell barcodes into their samples of origin based on the most significant hash tag oligo (HTO).
 Also identify potential doublets based on the presence of multiple significant HTOs.
 }
 \details{
-Note that this function is still experimental and subject to change.
+Note that this function is still experimental; feedback is welcome.
 
 
 The idea behind cell hashing is that cells from the same sample are stained with reagent conjugated with a single HTO.
-Cells are then mixed across multiple samples and subjected to droplet-based single-cell sequencing.
+Cells are mixed across multiple samples and subjected to droplet-based single-cell sequencing.
 Cell barcode libraries can then be demultiplexed into individual samples based on whether their unique HTO is detected.
 
-In this function, we test for differences between each cell barcode's HTO profile and that of the ambient solution.
-The top HTO for each barcode is identified as that which has the lowest p-value from a binomial test,
-using the total count for the barcode as the size and the ambient proportions as the probability.
-This strategy accounts for potential imbalances in the HTO distribution in the ambient solution
-that would confound a simple approach of taking the most abundant HTO.
-We apply the Bonferroni correction across HTOs to obtain the reported \code{PValue}.
+We identify the sample of origin for each cell barcode as that corresponding to the HTO with the greatest deviation from its expected proportion in the multiplexed pool.
+This deviation is quantified by the ratio of the count for each HTO to the corresponding value of \code{prop}.
+The log-fold change between the largest and second-largest ratios is also reported for each barcode, with large log-fold changes representing confident assignment to a single sample.
 
-Once the top HTO is identified for a cell barcode, we remove it from the total count and the ambient proportions.
-We then repeat the aforementioned test procedure to identify the second-best HTO,
-the p-value for which can be used as evidence for the presence of a doublet.
-Note that the \code{PValue2} field is set to the maximum of the p-values of the top and second-best HTOs,
-as it would not be possible to detect a doublet for a barcode that is not even detected as a cell.
+We identify potential doublets by looking at the log-fold change in the second- and third-largest ratios.
+Large log-fold changes indicate that the second HTO is of higher abundance than the third HTO, consistent with a doublet. 
+Note that we assume that the counts for the third and remaining HTOs are due to background contamination;
+this ignores the (hopefully negligible) probability of higher-order multiplets.
 
-Currently, this function does not support combinatorial indexing schemes, 
-i.e., where samples are represented by a unique \emph{combination} of HTOs.
+For both log-fold changes, we compute the number of median absolute deviations (MADs) from the median across all cells.
+This allows users to easily identify doublets as large outliers, e.g., with \code{NMAD.2to3} above some threshold like 3 or 5.
+More sophisticated approaches may also consider \emph{small} outliers with negative values in \code{NMAD.1to2},
+where doublets will reduce the confidence of assignment to any single sample.
+
+We quantify deviation against \code{prop} to account for imbalances in the HTO distribution in the multiplexed sample.
+Ideally, \code{prop} would be set to the HTO profile in the ambient solution in order to capture deviations due to the presence of labelled cells.
+However, such information may not be available in many datasets where non-cell droplets are filtered out.
+As such, the default \code{prop} is instead defined from the row sums of \code{x} under the assumption that the rate of ambient to non-ambient transcripts is the same for each sample.
 }
-\section{Estimating the ambient proportions}{
+\section{Use only on non-empty droplets}{
 
-By default, the ambient proportions are roughly estimated by taking the average count across all barcodes in \code{x}.
-This is probably fine in most cases as long as the rates of lysis/cell damage are consisten across samples
-(especially if they have been pooled together for multiplexed processing).
+This function assumes that cell calling has already been performed, e.g., with \code{\link{emptyDrops}}.
+Specifically, \code{x} should only contain columns corresponding to non-empty droplets.
+If empty droplets are included, their log-fold changes will simply reflect stochastic sampling in the ambient solution
+and violate the assumptions involved in interpreting the \code{NMAD} fields.
 
-A more appropriate estimate may be obtained by computing averages across barcodes with low total counts.
-These barcodes are unlikely to contain cells and thus their profiles are more representative of the ambient solution.
-(A similar approach is used in \code{\link{emptyDrops}} to obtain an estimate of the ambient profile.)
-This can be achieved by setting \code{lower} to only use low-count barcodes for this calculation.
-The definition of \dQuote{low} depends on the sequencing depth of the HTOs and so it is difficult to give a definitive guide,
-but typical datasets might use \code{lower=1000}.
-
-Alternatively, users can supply their own estimates of the ambient proportion to \code{ambient}.
-Note that any vector will automatically be scaled to sum to unity.
+If \code{x} contains columns for both empty and non-empty droplets,
+it is straightforward to simply run \code{\link{emptyDrops}} on the HTO count matrix to identify the latter.
+Note that some fiddling with the \code{lower=} argument may be required,
+depending on the sequencing depth of the HTO libraries.
 }
 
 \examples{
@@ -91,10 +85,28 @@ next.sample <- (true.sample[1:ndoub]  + 1) \%\% nrow(y)
 next.sample[next.sample==0] <- nrow(y)
 y[cbind(next.sample, seq_len(ndoub))] <- 500
 
-# Computing statistics; in this case we expect empty droplets
-# to have total counts below 1000.
+# Computing hashing statistics.
 stats <- hashedDrops(y)
 
+# Doublets show up in the top-left,
+# singlets in the bottom right.
+plot(stats$LogFC.1to2, stats$LogFC.2to3)
+
+# Most cells should be singlets with low NMAD.
+hist(stats$NMAD, breaks=50)
+
+# Identify doublets at a given NMAD threshold.
+is.doublet <- stats$NMAD >= 5
+summary(is.doublet)
+
+# 'Best' contains the putative sample of origin.
+table(stats$Best, true.sample) 
+
+}
+\references{
+Stoeckius M, Zheng S, Houck-Loomis B et al. (2018)
+Cell Hashing with barcoded antibodies enables multiplexing and doublet detection for single cell genomics.
+\emph{Genome Biol.} 19, 1:224
 }
 \author{
 Aaron Lun
