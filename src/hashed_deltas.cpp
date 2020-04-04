@@ -14,9 +14,8 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
     if (prop.size()!=NR) {
         throw std::runtime_error("'length(prop)' should be the same as 'nrow(mat)'");
     }
-    if (NR<3) {
-        throw std::runtime_error("'nrow(mat)' should be at least 3 for doublet detection");
-    }
+
+    const int upto=std::min(NR, 3);
 
     Rcpp::IntegerVector output_best(NC), output_second(NC);
     Rcpp::NumericVector output_fc(NC), output_fc2(NC);
@@ -30,12 +29,28 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
             collected[j].second=j;
         }
 
-        std::partial_sort(collected.begin(), collected.begin()+3,
+        std::partial_sort(collected.begin(), collected.begin()+upto,
             collected.end(), std::greater<std::pair<double, int> >());
-        output_best[i]=collected[0].second;
-        output_second[i]=collected[1].second;
-        output_fc[i]=collected[0].first/collected[1].first;
-        output_fc2[i]=collected[1].first/collected[2].first;
+
+        if (upto < 1) {
+            output_best[i]=NA_INTEGER;
+        } else {
+            output_best[i]=collected[0].second;
+        }
+
+        if (upto < 2) {
+            output_fc[i]=R_NaReal;
+        } else {
+            output_fc[i]=collected[0].first/collected[1].first;
+        }
+
+        if (upto < 3) {
+            output_second[i]=NA_INTEGER;
+            output_fc2[i]=R_NaReal;
+        } else {
+            output_second[i]=collected[1].second;
+            output_fc2[i]=collected[1].first/collected[2].first;
+        }
     }
 
     return Rcpp::List::create(
