@@ -158,6 +158,8 @@
 #' \code{\link{barcodeRanks}}, for choosing the knee point.
 #'
 #' \code{\link{defaultDrops}}, for an implementation of the cell-calling method used by CellRanger version 2.
+#'
+#' \code{\link{maximumAmbience}}, for estimating the maximum possible contribution of the ambient solution to a count profile.
 #' 
 #' @name emptyDrops
 #' @export
