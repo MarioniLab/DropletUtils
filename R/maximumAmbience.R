@@ -39,15 +39,14 @@
 #' and generally do not need to be changed.
 #'
 #' @section Caveats:
-#' The algorithm implemented here is, admittedly, rather \emph{ad hoc} and offers little in the way of theoretical guarantees.
-#' The p-value is largely used as a score here, rather than providing any meaningful error control;
-#' thus it is best to think of the behavior of this algorithm in more empirical terms.
-#' Decreasing \code{threshold} will return a higher scaling factor by making the estimation robust to drop-outs in \code{y},
-#' at the cost of increasing the risk of over-estimation of the ambient contribution.
+#' The algorithm implemented in this function is, admittedly, rather \emph{ad hoc} and offers little in the way of theoretical guarantees.
+#' The reported scaling often exceeds the actual contribution, especially at low counts where the reduced power fails to penalize overly large scaling factors.
+#' The p-value is largely used as a score rather than providing any meaningful error control.
+#' Empirically, decreasing \code{threshold} will return a higher scaling factor by making the estimation more robust to drop-outs in \code{y}, at the cost of increasing the risk of over-estimation of the ambient contribution.
 #'
-#' It is also important to note that this function returns the \emph{maximum possible} contribution in \code{y}, not the actual contribution.
+#' It is also important to note that this function returns the \emph{maximum possible} contribution of the ambient solution to \code{y}, not the actual contribution.
 #' It is probably unwise to attempt to obtain a \dQuote{cleaned} expression profile by subtracting the scaled ambient proportions from \code{y}.
-#' In the most extreme case, if the ambient profile is similar to the expectation of \code{y} (e.g., due to sequencing a relatively homogeneous cell population), the maximum possible contribution of the ambient solution would be 100% of \code{y}, and subtraction would yield an empty count vector!
+#' In the most extreme case, if the ambient profile is similar to the expectation of \code{y} (e.g., due to sequencing a relatively homogeneous cell population), the maximum possible contribution of the ambient solution would be 100\% of \code{y}, and subtraction would yield an empty count vector!
 #' 
 #' @author Aaron Lun
 #'
