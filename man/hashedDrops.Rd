@@ -109,6 +109,9 @@ Stoeckius M, Zheng S, Houck-Loomis B et al. (2018)
 Cell Hashing with barcoded antibodies enables multiplexing and doublet detection for single cell genomics.
 \emph{Genome Biol.} 19, 1:224
 }
+\seealso{
+\code{\link{emptyDrops}}, to identify which barcodes are likely to contain cells.
+}
 \author{
 Aaron Lun
 }

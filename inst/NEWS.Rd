@@ -13,6 +13,8 @@ Automatic detection of whether a file is Gzipped or not.
 \item Added chimericDrops() to remove chimeric molecules due to within-sample re-priming.
 
 \item Added hashedDrops() to demultiplex cell hashing experiments.
+
+\item Added maximumAmbience() to estimate the maximum contribution of the ambient profile.
 }}
 
 \section{Version 1.6.0}{\itemize{
