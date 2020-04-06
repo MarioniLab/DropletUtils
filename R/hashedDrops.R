@@ -116,14 +116,17 @@ hashedDrops <- function(x, prop=NULL, pseudo.count=3) {
     prop <- prop[!discard]
 
     output <- hashed_deltas(x, prop, pseudo.count)
+    output$FC <- log2(output$FC)
+    output$FC2 <- log2(output$FC2)
+
     DataFrame(
         row.names=cell.names,
         Total=totals,
         Best=output$Best+1L,
         Second=output$Second+1L,
-        LogFC.1to2=log2(output$FC),
+        LogFC.1to2=output$FC,
         NMAD.1to2=.nmads(output$FC),
-        LogFC.2to3=log2(output$FC2),
+        LogFC.2to3=output$FC2,
         NMAD.2to3=.nmads(output$FC2)
     )
 }
