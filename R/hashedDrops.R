@@ -102,38 +102,43 @@
 #' @export
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
-hashedDrops <- function(x, prop=NULL, pseudo.count=3) {
+#' @importFrom stats median
+hashedDrops <- function(x, ambient=NULL, pseudo.scale=1, nmads=3) {
     totals <- colSums(x)
     cell.names <- colnames(x)
 
-    if (is.null(prop)) {
-        prop <- rowMeans(x)
+    if (is.null(ambient)) {
+        ambient <- vapply(seq_len(nrow(x)), function(i) median(x[i,]), 0)
     }
 
-    prop <- prop/mean(prop)
-    discard <- prop == 0
+    discard <- ambient == 0
     x <- x[!discard,,drop=FALSE]
-    prop <- prop[!discard]
+    ambient <- ambient[!discard]
 
-    output <- hashed_deltas(x, prop, pseudo.count)
-    output$FC <- log2(output$FC)
-    output$FC2 <- log2(output$FC2)
+    output <- hashed_deltas(x, ambient, pseudo.scale)
+    lfc.1to2 <- log2(output$FC)
+    lfc.2to3 <- log2(output$FC2)
+
+    # Using *directional* MADs to avoid 
+    med.2to3 <- median(lfc.2to3)
+    delta.2to3 <- lfc.2to3[lfc.2to3 > med.2to3] - med.2to3
+    upper.threshold <- med.2to3 + nmads * median(delta.2to3) 
+    is.doublet <- lfc.2to3 > upper.threshold 
+
+    lfc.singlet <- lfc.1to2[!is.doublet]
+    med.singlet <- median(lfc.singlet)
+    delta.singlet <- med.singlet - lfc.singlet[lfc.singlet < med.singlet]
+    lower.threshold <- med.singlet - nmads * median(delta.singlet) 
+    confident.singlet <- lfc.1to2 > lower.threshold & !is.doublet
 
     DataFrame(
         row.names=cell.names,
         Total=totals,
         Best=output$Best+1L,
         Second=output$Second+1L,
-        LogFC.1to2=output$FC,
-        NMAD.1to2=.nmads(output$FC),
-        LogFC.2to3=output$FC2,
-        NMAD.2to3=.nmads(output$FC2)
+        LogFC.1to2=lfc.1to2,
+        LogFC.2to3=lfc.2to3,
+        Doublet=is.doublet,
+        Confident=confident.singlet
     )
-}
-
-#' @importFrom stats median mad
-.nmads <- function(fc) {
-    med <- median(fc)
-    mad <- mad(fc)
-    (fc - med)/mad
 }
