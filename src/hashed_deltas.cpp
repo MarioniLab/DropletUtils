@@ -15,7 +15,7 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
         throw std::runtime_error("'length(prop)' should be the same as 'nrow(mat)'");
     }
 
-    const double mean_prop=std::accumulate(prop.begin(), prop.end(), 0)/NR; 
+    const double mean_prop=std::accumulate(prop.begin(), prop.end(), 0.0)/NR; 
     const int upto=std::min(NR, 3);
 
     Rcpp::IntegerVector output_best(NC), output_second(NC);
@@ -31,19 +31,22 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
         }
 
         // Estimating the scaling effect.
-        const int half=NR/2;
-        std::partial_sort(collected.begin(), collected.begin() + half + 1, 
-            collected.end(), std::greater<std::pair<double, int> >());
+        double scaling=0;
 
-        double scaling;
-        if (NR <= 3) {
-            scaling=collected[NR-1].first;
-        } else if (NR == 4) {
-            scaling=collected[2].first;
-        } else if ((NR % 2)==1) {
-            scaling=collected[half].first;
-        } else {
-            scaling=(collected[half-1].first + collected[half].first)/2;
+        if (NR) {
+            const int half=NR/2;
+            std::partial_sort(collected.begin(), collected.begin() + half + 1, 
+                collected.end(), std::greater<std::pair<double, int> >());
+
+            if (NR <= 3) {
+                scaling=collected[NR-1].first;
+            } else if (NR == 4) {
+                scaling=collected[2].first;
+            } else if ((NR % 2)==1) {
+                scaling=collected[half].first;
+            } else {
+                scaling=(collected[half-1].first + collected[half].first)/2;
+            }
         }
 
         /* First, subtracting the ambient solution. Then adding back a constant

@@ -14,43 +14,80 @@ next.sample <- (true.sample[1:ndoub]  + 1) %% nrow(y)
 next.sample[next.sample==0] <- nrow(y)
 y[cbind(next.sample, seq_len(ndoub))] <- 500
 
-test_that("hashed_deltas works as expected", {
-    p <- runif(nhto)
-    p <- p/mean(p)
-    pseudo <- 1
 
-    output <- DropletUtils:::hashed_deltas(y, p, pseudo=pseudo)
+REF <- function(y, p, pseudo) {
+    ncells <- ncol(y)
+    nhto <- nrow(y)
 
     ref.best <- ref.second <- integer(ncells)
     ref.fc <- ref.fc2 <- numeric(ncells)
-    for (i in seq_len(ncells)) {
-        current <- y[,i]/p + pseudo
 
-        o <- order(current, decreasing=TRUE)
+    for (i in seq_len(ncells)) {
+        Y <- y[,i]
+
+        adj <- Y/p
+        if (nhto>=5) {
+            scaling <- median(adj)
+        } else if (nhto==4) {
+            scaling <- sort(adj, decreasing=TRUE)[3]
+        } else {
+            scaling <- min(adj)
+        }
+
+        ambient <- scaling * p
+        Y0 <- pmax(0, Y - ambient)
+        Y0 <- Y0 + max(1, mean(ambient)) * pseudo
+
+        o <- order(Y0, decreasing=TRUE)
         ref.best[i] <- o[1]
         ref.second[i] <- o[2]
         
-        sorted <- current[o]
+        sorted <- Y0[o]
         lfc <- diff(log2(sorted))
-        ref.fc[i] <- -lfc[1]
-        ref.fc2[i] <- -lfc[2]
+        ref.fc[i] <- lfc[1]
+        ref.fc2[i] <- lfc[2]
     }
 
-    expect_identical(output$Best, ref.best-1L)
-    expect_identical(output$Second, ref.second-1L)
-    expect_equal(output$FC, 2^ref.fc)
-    expect_equal(output$FC2, 2^ref.fc2)
+    list(Best=ref.best, Second=ref.second, FC=2^-ref.fc, FC2=2^-ref.fc2)   
+}
+
+test_that("hashed_deltas works as expected", {
+    # Cycling across pseudo.
+    for (PSEUDO in c(1, 3, 5)) {
+        p <- runif(nhto)
+        output <- DropletUtils:::hashed_deltas(y, p, pseudo=PSEUDO)
+        ref <- REF(y, p, PSEUDO)
+
+        expect_identical(output$Best, ref$Best-1L)
+        expect_identical(output$Second, ref$Second-1L)
+        expect_equal(output$FC, ref$FC)
+        expect_equal(output$FC2, ref$FC2)
+    }
+
+    # Cycling across different number of samples.
+    for (N in 3:6) {
+        z <- y[1:N,,drop=FALSE]
+        q <- runif(N)
+        pseudo <- 1
+
+        output <- DropletUtils:::hashed_deltas(z, q, pseudo=pseudo)
+        ref <- REF(z, q, pseudo)
+
+        expect_identical(output$Best, ref$Best-1L)
+        expect_identical(output$Second, ref$Second-1L)
+        expect_equal(output$FC, ref$FC)
+        expect_equal(output$FC2, ref$FC2)
+    }
 })
 
 test_that("hashed_deltas falls back when there are very few samples", {
     p <- runif(2)
-    p <- p/mean(p)
     pseudo <- 2
     output <- DropletUtils:::hashed_deltas(y[1:2,], p, pseudo=pseudo)
 
-    adj <- y[1:2,]/p
-    expect_equal(output$Best + 1, max.col(t(adj)))
-    expect_equal(output$FC, 2^abs( log2(adj[1,] + pseudo) - log2(adj[2,] + pseudo) ))
+    ref <- REF(y[1:2,], p, pseudo)
+    expect_equal(output$Best + 1, ref$Best)
+    expect_equal(output$FC, ref$FC)
 
     expect_true(all(is.na(output$Second)))
     expect_true(all(is.na(output$FC2)))
@@ -75,8 +112,10 @@ test_that("hashed_deltas falls back when there are very few samples", {
 test_that("hashedDrops works as expected", {
     out <- hashedDrops(y)
     expect_identical(out$Total, colSums(y))
-    expect_identical(order(out$NMAD.1to2), order(out$LogFC.1to2))
-    expect_identical(order(out$NMAD.2to3), order(out$LogFC.2to3))
+    expect_false(any(out$Doublet & out$Confident))
+    
+    expect_true(min(out$LogFC.2to3[out$Doublet]) > max(out$LogFC.2to3[!out$Doublet]))
+    expect_true(min(out$LogFC.1to2[out$Confident]) > max(out$LogFC.1to2[!out$Doublet & !out$Confident]))
 
     # Testing against the known truth.
     expect_identical(out$Best, true.sample)
