@@ -55,12 +55,6 @@
 #' Confident assignments are marked in the \code{Confident} field of the output.
 #' Note that any library for which \code{Confident} is {TRUE} will have \code{Doublet} set to \code{FALSE}, and vice versa.
 #'
-#' Besides the use of directionality,
-#' another difference from \code{\link{mad}} is that we do not multiply by the normality constant.
-#' This is primarily motivated by the admission that the distributions are not normal anyway.
-#' In practice, this means that \code{nmad} is effectively lower than what it would otherwise be,
-#' but that hardly matters all that much for an arbitrary threshold.
-#'
 #' @section Computing abundances:
 #' HTO abundances require some care to compute due to the presence of ambient contamination in each library.
 #' Ideally, the experiment would be performed in such a manner that the concentration of each HTO is the same.
@@ -132,11 +126,11 @@
 #' plot(stats$LogFC.1to2, stats$LogFC.2to3)
 #'
 #' # Most cells should be singlets with low NMAD.
-#' hist(stats$NMAD.2to3, breaks=50)
+#' hist(stats$LogFC.2to3, breaks=50)
 #'
-#' # Identify doublets at a given NMAD threshold.
-#' is.doublet <- stats$NMAD >= 5
-#' summary(is.doublet)
+#' # Identify confident singlets or doublets at the given NMAD threshold.
+#' summary(stats$Confident)
+#' summary(stats$Doublet)
 #' 
 #' # Chcecking against the known truth, in this case
 #' # 'Best' contains the putative sample of origin.
@@ -173,13 +167,13 @@ hashedDrops <- function(x, ambient=NULL, pseudo.scale=1, nmads=3) {
     # Using *directional* MADs to avoid 
     med.2to3 <- median(lfc.2to3)
     delta.2to3 <- lfc.2to3[lfc.2to3 > med.2to3] - med.2to3
-    upper.threshold <- med.2to3 + nmads * median(delta.2to3) 
+    upper.threshold <- med.2to3 + nmads * median(delta.2to3) * 1.4826 
     is.doublet <- lfc.2to3 > upper.threshold 
 
     lfc.singlet <- lfc.1to2[!is.doublet]
     med.singlet <- median(lfc.singlet)
     delta.singlet <- med.singlet - lfc.singlet[lfc.singlet < med.singlet]
-    lower.threshold <- med.singlet - nmads * median(delta.singlet) 
+    lower.threshold <- med.singlet - nmads * median(delta.singlet) * 1.4826
     confident.singlet <- lfc.1to2 > lower.threshold & !is.doublet
 
     DataFrame(
