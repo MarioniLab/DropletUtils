@@ -14,10 +14,11 @@
 #' @param BPPARAM A BiocParallelParam object indicating whether parallelization should be used to compute p-values.
 #' @param retain A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
+#' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.
 #' @param ... Further arguments to pass to \code{testEmptyDrops}.
 #' 
 #' @section Details about \code{testEmptyDrops}:
-#' The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
+#' The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{estimateAmbience}} for details).
 #' This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 #' Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 #' The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
@@ -55,11 +56,6 @@
 #' All barcodes with total counts above \code{retain} are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 #' This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 #' However, their original Monte Carlo p-values are still reported in the output, as these may be useful for diagnostic purposes.
-#' 
-#' This function will also attempt to detect whether \code{m} contains non-integer values by seeing if the column and row sums are discrete.
-#' If such values are present, \code{m} is first \code{\link{round}}ed to the nearest integer value before proceeding.
-#' This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
-#' Rounding is performed as discrete count values are necessary for the Good-Turing algorithm and for the multinomial simulations.
 #' 
 #' In general, users should call \code{emptyDrops} rather than \code{testEmptyDrops}.
 #' The latter is a \dQuote{no frills} version that is largely intended for use within other functions.
@@ -166,20 +162,16 @@
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix rowSums colSums
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, BPPARAM=SerialParam()) {
-    discard <- rowSums(m) == 0
-    m <- m[!discard,,drop=FALSE]
-    ncells <- ncol(m)
-
-    # Computing the average profile from the ambient cells.
-    umi.sum <- as.integer(round(colSums(m)))
-    ambient <- umi.sum <= lower # lower => "T" in the text.
-    ambient.cells <- m[,ambient]
-    ambient.prof <- rowSums(ambient.cells)
-    if (sum(ambient.prof)==0) {
-        stop("no counts available to estimate the ambient profile")
-    }
-    ambient.prop <- .safe_good_turing(ambient.prof)
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
+    round=TRUE, BPPARAM=SerialParam()) 
+{
+    m <- .rounded_to_integer(m, round)
+    astats <- .compute_ambient_stats(m, lower=lower)
+    m <- astats$m
+    umi.sum <- astats$umi.sum
+    ambient <- astats$ambient
+    ambient.cells <- astats$ambient.cells
+    ambient.prop <- astats$ambient.prop
 
     # Removing supposed ambient cells from the matrix.
     # Also removing additional cells that don't pass some total count threshold, if required.
@@ -218,27 +210,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     output <- DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
     metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
     output
-}
-
-#' @importFrom edgeR goodTuringProportions
-.safe_good_turing <- function(ambient.prof) {
-    ambient.prob <- goodTuringProportions(ambient.prof)
-
-    # Good-Turing returns zero probabilities for zero counts if you don't have
-    # any values of 1 in the profile. This is technically correct but not
-    # helpful, so we protect against this by adding a 'pseudo-feature' with a
-    # single count; this is used to calculate a Good-Turing estimate of
-    # observing any feature that has zero counts, which is then divided to get
-    # the per-feature probability. We scale down all the other probabilities to
-    # make space for this new pseudo-probability.
-    still.zero <- ambient.prob<=0
-    if (any(still.zero)) {
-        pseudo.prob <- 1/sum(ambient.prof)
-        ambient.prob[still.zero] <- pseudo.prob/sum(still.zero)
-        ambient.prob[!still.zero] <- ambient.prob[!still.zero] * (1 - pseudo.prob) 
-    }
-
-    ambient.prob
 }
 
 #' @importFrom BiocParallel bpnworkers SerialParam bpmapply
@@ -366,15 +337,15 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 #' @rdname emptyDrops
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
-emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...) 
+emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ...) 
 # Combined function that puts these all together, always keeping cells above the knee 
 # point (they are given p-values of 0, as they are always rejected). 
 # 
 # written by Aaron Lun
 # created 7 August 2017
 {
-    m <- .rounded_to_integer(m)
-    stats <- testEmptyDrops(m, lower=lower, ...)
+    m <- .rounded_to_integer(m, round)
+    stats <- testEmptyDrops(m, lower=lower, round=FALSE, ...)
     tmp <- stats$PValue
     
     if (is.null(retain)) {
@@ -390,7 +361,7 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), ...)
 }
 
 #' @importFrom Matrix colSums rowSums
-.rounded_to_integer <- function(m) {
+.rounded_to_integer <- function(m, round) {
     cs <- colSums(m)
     rs <- rowSums(m)
     if (!isTRUE(all.equal(cs, round(cs))) ||

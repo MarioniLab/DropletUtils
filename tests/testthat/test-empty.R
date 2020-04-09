@@ -1,6 +1,28 @@
 # This tests that the C++ code for emptyDrops does what it says it does.
 # library(DropletUtils); library(testthat); source("test-empty.R")
 
+test_that("estimateAmbience works correctly", {
+    # Mocking up some counts.
+    set.seed(1000)
+    my.counts <- DropletUtils:::simCounts()
+    limit <- 100
+
+    out <- estimateAmbience(my.counts)
+    keep <- colSums(my.counts) <= limit
+    naive <- rowSums(my.counts[,keep])
+    expect_false(is.unsorted(out[order(naive)]))
+
+    my.counts2 <- my.counts
+    rownames(my.counts2) <- NULL
+    out2 <- estimateAmbience(my.counts2)
+    expect_identical(unname(out), out2)
+
+    # Deals with zeroes properly.
+    my.counts3 <- rbind(0,0,0,my.counts)
+    out3 <- estimateAmbience(my.counts3)
+    expect_identical(out, tail(out3, -3))
+})
+
 test_that("Good-Turing protection works correctly", {
     # Protection gives the same estimates for zeroes when a count
     # of 1 is redistributed somewhere else.
