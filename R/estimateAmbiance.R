@@ -40,7 +40,7 @@
 #' @export
 estimateAmbience <- function(m, lower=100, round=TRUE) {
     m <- .rounded_to_integer(m, round)
-    a <- .ambient_calculator(m, lower=lower)
+    a <- .compute_ambient_stats(m, lower=lower)
 
     output <- numeric(nrow(m))
     output[!a$discard] <- a$ambient.prop
@@ -49,7 +49,7 @@ estimateAmbience <- function(m, lower=100, round=TRUE) {
 }
 
 #' @importFrom Matrix colSums rowSums
-.ambient_calculator <- function(m, lower) {
+.compute_ambient_stats <- function(m, lower) {
     discard <- rowSums(m) == 0
     m <- m[!discard,,drop=FALSE]
     ncells <- ncol(m)
@@ -58,8 +58,8 @@ estimateAmbience <- function(m, lower=100, round=TRUE) {
     umi.sum <- as.integer(round(colSums(m)))
 
     ambient <- umi.sum <= lower # lower => "T" in the text.
-    ambient.cells <- m[,ambient]
-    ambient.prof <- rowSums(ambient.cells)
+    ambient.m <- m[,ambient,drop=FALSE]
+    ambient.prof <- rowSums(ambient.m)
 
     if (sum(ambient.prof)==0) {
         stop("no counts available to estimate the ambient profile")
@@ -67,11 +67,11 @@ estimateAmbience <- function(m, lower=100, round=TRUE) {
     ambient.prop <- .safe_good_turing(ambient.prof)
 
     list(
-        m=m,
+        m=m, # this MUST have the same number of columns as input.
         discard=discard,
         umi.sum=umi.sum,
         ambient=ambient,
-        ambient.cells=ambient.cells,
+        ambient.m=ambient.m,
         ambient.prop=ambient.prop
     )
 }

@@ -170,8 +170,14 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     m <- astats$m
     umi.sum <- astats$umi.sum
     ambient <- astats$ambient
-    ambient.cells <- astats$ambient.cells
     ambient.prop <- astats$ambient.prop
+
+    # Estimating the alpha from the discarded ambient droplets, if desired.
+    if (is.null(alpha)) {
+        ambient.m <- astats$ambient.m
+        ambient.totals <- umi.sum[ambient]
+        alpha <- .estimate_alpha(ambient.m, ambient.prop, ambient.totals) 
+    }
 
     # Removing supposed ambient cells from the matrix.
     # Also removing additional cells that don't pass some total count threshold, if required.
@@ -183,26 +189,24 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     if (!is.null(ignore)) { 
         keep <- keep & umi.sum > ignore
     }
-    obs <- m[,keep,drop=FALSE]
+    obs.m <- m[,keep,drop=FALSE]
     obs.totals <- umi.sum[keep]
 
-    # Estimating the alpha from the discarded ambient droplets, if desired.
-    if (is.null(alpha)) {
-        alpha <- .estimate_alpha(m[,ambient,drop=FALSE], ambient.prop, umi.sum[ambient]) 
-    }
-
     # Calculating the log-multinomial probability for each cell.
-    obs.P <- .compute_multinom_prob_data(obs, ambient.prop, alpha=alpha)
+    obs.P <- .compute_multinom_prob_data(obs.m, ambient.prop, alpha=alpha)
     rest.P <- .compute_multinom_prob_rest(obs.totals, alpha=alpha)
 
     # Computing the p-value for each observed probability.
-    n.above <- .permute_counter(totals=obs.totals, probs=obs.P, ambient=ambient.prop, iter=niters, BPPARAM=BPPARAM, alpha=alpha)
+    n.above <- .permute_counter(totals=obs.totals, probs=obs.P, 
+        ambient=ambient.prop, iter=niters, BPPARAM=BPPARAM, alpha=alpha)
     limited <- n.above==0L
     pval <- (n.above+1)/(niters+1)
 
     # Collating into some sensible output.
+    ncells <- ncol(m)
     all.p <- all.lr <- all.exp <- rep(NA_real_, ncells)
     all.lim <- rep(NA, ncells)
+
     all.p[keep] <- pval
     all.lr[keep] <- obs.P + rest.P 
     all.lim[keep] <- limited
@@ -361,7 +365,7 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRU
 }
 
 #' @importFrom Matrix colSums rowSums
-.rounded_to_integer <- function(m, round) {
+.rounded_to_integer <- function(m, round=TRUE) {
     cs <- colSums(m)
     rs <- rowSums(m)
     if (!isTRUE(all.equal(cs, round(cs))) ||
