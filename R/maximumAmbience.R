@@ -10,6 +10,7 @@
 #' Defaults to zero, i.e., a Poisson model.
 #' @param num.points Integer scalar specifying the number of points to use for the grid search.
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
+#' @param mode String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.
 #' 
 #' @return A numeric scalar quantifying the \dQuote{contribution} of the ambient solution to \code{y}.
 #' The product of this scalar and \code{ambient} yields the expected number of ambient transcripts for each gene in \code{y}.
@@ -64,12 +65,17 @@
 #' scaling
 #'
 #' # Estimating the maximum contribution to 'y' by 'ambient'.
-#' contribution <- scaling*ambient
+#' contribution <- maximumAmbience(y, ambient, mode="profile")
 #' DataFrame(ambient=contribution, total=y)
 #' 
+#' @seealso 
+#' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
+#'
 #' @export
 #' @importFrom stats p.adjust ppois pnbinom
-maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=100, num.iter=5) {
+maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=100, num.iter=5, 
+    mode=c("scale", "profile", "proportion")) 
+{
     if (dispersion==0) {
         FUN <- function(y, mu) {
             ppois(y, lambda=mu)
@@ -114,5 +120,16 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=
         iter <- iter+1L
     }
 
-    (lower+upper)/2
+    scale <- (lower+upper)/2
+
+    mode <- match.arg(mode)
+    switch(mode,
+        scale=scale,
+        profile=scale * ambient,
+        proportion={
+            prop <- pmin(1, scale * ambient/y)
+            prop[is.na(prop)] <- 0
+            prop
+        }
+    )
 }
