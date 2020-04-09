@@ -10,7 +10,8 @@ maximumAmbience(
   threshold = 0.1,
   dispersion = 0,
   num.points = 100,
-  num.iter = 5
+  num.iter = 5,
+  mode = c("scale", "profile", "proportion")
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ Defaults to zero, i.e., a Poisson model.}
 \item{num.points}{Integer scalar specifying the number of points to use for the grid search.}
 
 \item{num.iter}{Integer scalar specifying the number of iterations to use for the grid search.}
+
+\item{mode}{String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.}
 }
 \value{
 A numeric scalar quantifying the \dQuote{contribution} of the ambient solution to \code{y}.
@@ -82,12 +85,14 @@ scaling <- maximumAmbience(y, ambient)
 scaling
 
 # Estimating the maximum contribution to 'y' by 'ambient'.
-contribution <- scaling*ambient
+contribution <- maximumAmbience(y, ambient, mode="profile")
 DataFrame(ambient=contribution, total=y)
 
 }
 \seealso{
 \code{\link{emptyDrops}}, which uses the ambient profile to call cells.
+
+\code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
 }
 \author{
 Aaron Lun

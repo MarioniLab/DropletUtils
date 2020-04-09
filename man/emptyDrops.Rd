@@ -12,10 +12,18 @@ testEmptyDrops(
   test.ambient = FALSE,
   ignore = NULL,
   alpha = NULL,
+  round = TRUE,
   BPPARAM = SerialParam()
 )
 
-emptyDrops(m, lower = 100, retain = NULL, barcode.args = list(), ...)
+emptyDrops(
+  m,
+  lower = 100,
+  retain = NULL,
+  barcode.args = list(),
+  round = TRUE,
+  ...
+)
 }
 \arguments{
 \item{m}{A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
@@ -32,6 +40,8 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{ignore}{A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).}
 
 \item{alpha}{A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.}
+
+\item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.}
 
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 
@@ -60,7 +70,7 @@ Distinguish between droplets containing cells and ambient RNA in a droplet-based
 }
 \section{Details about \code{testEmptyDrops}}{
 
-The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
+The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{estimateAmbience}} for details).
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
@@ -100,11 +110,6 @@ Users can also set \code{retain=Inf} to disable automatic retention of barcodes 
 All barcodes with total counts above \code{retain} are assigned p-values of zero \emph{during correction}, reflecting our assumption that they are true positives.
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 However, their original Monte Carlo p-values are still reported in the output, as these may be useful for diagnostic purposes.
-
-This function will also attempt to detect whether \code{m} contains non-integer values by seeing if the column and row sums are discrete.
-If such values are present, \code{m} is first \code{\link{round}}ed to the nearest integer value before proceeding.
-This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
-Rounding is performed as discrete count values are necessary for the Good-Turing algorithm and for the multinomial simulations.
 
 In general, users should call \code{emptyDrops} rather than \code{testEmptyDrops}.
 The latter is a \dQuote{no frills} version that is largely intended for use within other functions.
