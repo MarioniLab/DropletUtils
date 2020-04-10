@@ -33,4 +33,12 @@ test_that("maximumAmbience function is robust to extra zeroes", {
     scaling <- maximumAmbience(y2, ambient)
     scaling2 <- maximumAmbience(c(0,0,0,y2), c(0,0,0,ambient))
     expect_equal(scaling, scaling2)
+
+    prof <- maximumAmbience(y2, ambient, mode="profile")
+    prof2 <- maximumAmbience(c(0,0,0,y2), c(0,0,0,ambient), mode="profile")
+    expect_equal(c(0,0,0,prof), prof2)
+
+    prop <- maximumAmbience(y2, ambient, mode="proportion")
+    prop2 <- maximumAmbience(c(0,0,0,y2), c(0,0,0,ambient), mode="proportion")
+    expect_equal(c(NaN,NaN,NaN,prop), prop2)
 })

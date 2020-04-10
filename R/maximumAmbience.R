@@ -87,6 +87,9 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=
     }
 
     # Removing all-zero genes in the ambient profile.
+    original.y <- y 
+    original.ambient <- ambient
+    
     strip <- ambient==0
     y <- y[!strip]
     ambient <- ambient[!strip]
@@ -125,10 +128,10 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=
     mode <- match.arg(mode)
     switch(mode,
         scale=scale,
-        profile=scale * ambient,
+        profile=scale * original.ambient,
         proportion={
-            prop <- pmin(1, scale * ambient/y)
-            prop[is.na(prop)] <- 0
+            prop <- pmin(1, scale * original.ambient/original.y)
+            prop[original.y==0] <- NaN
             prop
         }
     )
