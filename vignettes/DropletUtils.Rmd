@@ -202,7 +202,77 @@ plot(e.out$Total, -e.out$LogProb, col=ifelse(is.cell, "red", "black"),
     xlab="Total UMI count", ylab="-Log Probability")
 ```
 
-# Removing the effect of barcode swapping
+# Demultiplexing hashed libraries
+
+Cell hashing experiments can be demultiplexed using the `hashedDrops()` function on the set of cell-containing barcode libraries.
+To demonstrate, we will mock up some hash tag oligo (HTO) counts for a population with cells from each of 10 samples.
+We will also add some doublets and empty droplets for some flavor:
+
+```{r}
+set.seed(10000)
+
+# Simulating empty droplets:
+nbarcodes <- 1000
+nhto <- 10
+y <- matrix(rpois(nbarcodes*nhto, 20), nrow=nhto)
+
+# Simulating cells:
+ncells <- 100
+true.sample <- sample(nhto, ncells, replace=TRUE)
+y[cbind(true.sample, seq_len(ncells))] <- 1000
+
+# Simulating doublets:
+ndoub <- ncells/10
+next.sample <- (true.sample[1:ndoub]  + 1) %% nrow(y)
+next.sample[next.sample==0] <- nrow(y)
+y[cbind(next.sample, seq_len(ndoub))] <- 500
+```
+
+Our first task is to identify the barcodes that actually contain cells.
+If we already did the calling with `emptyDrops()`, we could just re-use those calls;
+otherwise we can obtain calls directly from the HTO count matrix, 
+though this requires some fiddling with `lower=` to match the sequencing depth of the HTO library.
+
+```{r}
+hto.calls <- emptyDrops(y, lower=500)
+has.cell <- hto.calls$FDR <= 0.001
+summary(has.cell)
+```
+
+Each cell-containing barcode libary is simply assigned to the sample of origin based on its most abundant HTO.
+The confidence of the assignment is quantified by the log-fold change between the top and second-most abundant HTOs.
+The function will also adjust for differences in the ambient levels of each HTO based on the ambient profile;
+if this is not provided, it will instead attempt to estimate the ambient profile from the supplied count matrix.
+
+```{r}
+demux <- hashedDrops(y[,which(has.cell)], 
+    ambient=metadata(hto.calls)$ambient)
+demux
+```
+
+It is then a simple matter to assign each cell back to its sample of origin.
+We provide `Confident` calls to indicate which cells are confident singlets,
+based on the fact that they are (i) not doublets and (ii) do not have small log-fold changes between the top and second HTO.
+The definition of "small" is relative and can be changed with the `nmad=` argument.
+
+```{r}
+table(demux$Best[demux$Confident])
+```
+
+We also identify doublets based on the log-fold change between the second and third-most abundant HTO.
+Here, the assumption is that counts for the third or later HTOs are caused by ambient contamination.
+A large log-fold change indicates that the second HTO exceeds that from contamination, 
+consistent with the presence of a doublet.
+
+```{r}
+colors <- ifelse(demux$Confident, "black",
+    ifelse(demux$Doublet, "red", "grey"))
+plot(demux$LogFC.1to2, demux$LogFC.2to3, col=colors)
+```
+
+# Removing swapping effects
+
+## Barcode swapping between samples
 
 Barcode swapping is a phenomenon that occurs upon multiplexing samples on the Illumina 4000 sequencer.
 Molecules from one sample are incorrectly labelled with _sample_ barcodes from another sample, resulting in their misassignment upon demultiplexing.
@@ -231,6 +301,21 @@ class(s.out$cleaned[[1]])
 For combinations where 90% of the reads belong to a single sample, the molecule is assigned to that sample rather than being removed.
 This assumes that swapping is relatively rare, so that the read count should be highest in the sample of origin.
 The exact percentage can be tuned by altering `min.frac` in the `swappedDrops` call.
+
+## Chimeric reads within cells
+
+On occasion, chimeric molecules are generated during library preparation where incomplete PCR products from one cDNA molecule hybridise to another molecule for extension using shared sequences like the poly-A tail for 3' protocols.
+This produces an amplicon where the UMI and cell barcode originate from one transcript molecule but the gene sequence is from another, equivalent to swapping of reads between genes.
+We handle this effect by removing all molecules in the same cell with the same UMI sequence using the `chimericDrops()` function.
+This is applied below to a molecule information file to obtain a single cleaned count matrix for the relevant sample.
+
+```{r}
+out <- chimericDrops(mult.mol.info[1])
+class(out)
+```
+
+Of course, this may also remove non-chimeric molecules that have the same UMI by chance, but for typical UMI lengths (10-12 bp for 10X protocols) we expect UMI collisions to be very rare between molecules from the same cell.
+Nonetheless, to mitigate losses due to collisions, we retain any molecule that has a much greater number of reads compared to all other molecules with the same UMI in the same cell.
 
 # Session information
 
