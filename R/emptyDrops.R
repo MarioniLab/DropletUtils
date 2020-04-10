@@ -155,6 +155,8 @@
 #'
 #' \code{\link{defaultDrops}}, for an implementation of the cell-calling method used by CellRanger version 2.
 #'
+#' \code{\link{estimateAmbience}}, for more details on estimation of the ambient profile.
+#'
 #' \code{\link{maximumAmbience}}, for estimating the maximum possible contribution of the ambient solution to a count profile.
 #' 
 #' @name emptyDrops
@@ -366,12 +368,14 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRU
 
 #' @importFrom Matrix colSums rowSums
 .rounded_to_integer <- function(m, round=TRUE) {
-    cs <- colSums(m)
-    rs <- rowSums(m)
-    if (!isTRUE(all.equal(cs, round(cs))) ||
-        !isTRUE(all.equal(rs, round(rs)))) 
-    {
-        m <- round(m)
+    if (round) {
+        cs <- colSums(m)
+        rs <- rowSums(m)
+        if (!isTRUE(all.equal(cs, round(cs))) ||
+            !isTRUE(all.equal(rs, round(rs)))) 
+        {
+            m <- round(m)
+        }
     }
     m
 }

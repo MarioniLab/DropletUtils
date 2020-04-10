@@ -51,10 +51,13 @@ estimateAmbience <- function(m, lower=100, round=TRUE) {
 #' @importFrom Matrix colSums rowSums
 .compute_ambient_stats <- function(m, lower) {
     discard <- rowSums(m) == 0
-    m <- m[!discard,,drop=FALSE]
+    if (any(discard)) {
+        m <- m[!discard,,drop=FALSE]
+    }
     ncells <- ncol(m)
 
     # Computing the average profile from the ambient cells.
+    # Enforcing discreteness mainly for emptyDrops()'s Monte Carlo step.
     umi.sum <- as.integer(round(colSums(m)))
 
     ambient <- umi.sum <= lower # lower => "T" in the text.
@@ -90,5 +93,3 @@ estimateAmbience <- function(m, lower=100, round=TRUE) {
 
     ambient.prob
 }
-
-
