@@ -11,6 +11,7 @@ test_that("estimateAmbience works correctly", {
     keep <- colSums(my.counts) <= limit
     naive <- rowSums(my.counts[,keep])
     expect_false(is.unsorted(out[order(naive)]))
+    expect_identical(naive, estimateAmbience(my.counts, good.turing=FALSE))
 
     my.counts2 <- my.counts
     rownames(my.counts2) <- NULL

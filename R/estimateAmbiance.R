@@ -3,6 +3,7 @@
 #' Estimate the transcript proportions in the ambient solution using the Good-Turing method.
 #'
 #' @inheritParams emptyDrops
+#' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
 #'
 #' @details
 #' This function obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
@@ -19,12 +20,17 @@
 #' The modified profile is used to calculate a Good-Turing estimate of observing any feature that has zero counts, which is then divided to get the per-feature probability. 
 #' We scale down all the other probabilities to make space for this new pseudo-probability, which has some properties of unclear utility (see \url{https://github.com/MarioniLab/DropletUtils/issues/39}). 
 #' 
-#' Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero,
-#' as they are likely to be completely irrelevant to downstream steps. 
+#' Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero.
+#' This ensures that the estimation is not affected by the presence/absence of non-expressed genes in different annotations.
+#' In any case, such genes are likely to be completely irrelevant to downstream steps and can be safely ignored.
+#'
+#' Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
 #' 
 #' @return
 #' A numeric vector of length equal to \code{nrow(m)},
 #' containing the estimated proportion of each transcript in the ambient solution.
+#'
+#' If \code{good.turing=FALSE}, the vector instead contains the sum of counts for each gene across all low-count barcodes.
 #'
 #' @author Aaron Lun
 #' @examples
@@ -37,14 +43,21 @@
 #'
 #' @seealso
 #' \code{\link{emptyDrops}} and \code{\link{hashedDrops}}, where the ambient profile estimates are used for testing.
+#'
 #' @export
-estimateAmbience <- function(m, lower=100, round=TRUE) {
+#' @importFrom Matrix rowSums colSums
+estimateAmbience <- function(m, lower=100, round=TRUE, good.turing=TRUE) {
     m <- .rounded_to_integer(m, round)
-    a <- .compute_ambient_stats(m, lower=lower)
 
-    output <- numeric(nrow(m))
-    output[!a$discard] <- a$ambient.prop
-    names(output) <- rownames(m)
+    if (good.turing) {
+        a <- .compute_ambient_stats(m, lower=lower)
+        output <- numeric(nrow(m))
+        output[!a$discard] <- a$ambient.prop
+        names(output) <- rownames(m)
+    } else {
+        output <- rowSums(m[,colSums(m) <= lower,drop=FALSE])
+    }
+
     output
 }
 
