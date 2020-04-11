@@ -4,7 +4,7 @@
 \alias{estimateAmbience}
 \title{Estimate the ambient profile}
 \usage{
-estimateAmbience(m, lower = 100, round = TRUE)
+estimateAmbience(m, lower = 100, round = TRUE, good.turing = TRUE)
 }
 \arguments{
 \item{m}{A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
@@ -15,10 +15,14 @@ Columns represent barcoded droplets, rows represent genes.}
 at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.}
+
+\item{good.turing}{Logical scalar indicating whether to perform Good-Turing estimation of the proportions.}
 }
 \value{
 A numeric vector of length equal to \code{nrow(m)},
 containing the estimated proportion of each transcript in the ambient solution.
+
+If \code{good.turing=FALSE}, the vector instead contains the sum of counts for each gene across all low-count barcodes.
 }
 \description{
 Estimate the transcript proportions in the ambient solution using the Good-Turing method.
@@ -38,8 +42,11 @@ This is technically correct but not helpful, so we protect against this by addin
 The modified profile is used to calculate a Good-Turing estimate of observing any feature that has zero counts, which is then divided to get the per-feature probability. 
 We scale down all the other probabilities to make space for this new pseudo-probability, which has some properties of unclear utility (see \url{https://github.com/MarioniLab/DropletUtils/issues/39}). 
 
-Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero,
-as they are likely to be completely irrelevant to downstream steps.
+Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero.
+This ensures that the estimation is not affected by the presence/absence of non-expressed genes in different annotations.
+In any case, such genes are likely to be completely irrelevant to downstream steps and can be safely ignored.
+
+Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
 }
 \examples{
 # Mocking up some data:

@@ -200,6 +200,8 @@ Permutation P-values should never be zero: calculating exact P-values when permu
 
 \code{\link{defaultDrops}}, for an implementation of the cell-calling method used by CellRanger version 2.
 
+\code{\link{estimateAmbience}}, for more details on estimation of the ambient profile.
+
 \code{\link{maximumAmbience}}, for estimating the maximum possible contribution of the ambient solution to a count profile.
 }
 \author{
