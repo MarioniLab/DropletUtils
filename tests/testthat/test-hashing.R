@@ -14,7 +14,6 @@ next.sample <- (true.sample[1:ndoub]  + 1) %% nrow(y)
 next.sample[next.sample==0] <- nrow(y)
 y[cbind(next.sample, seq_len(ndoub))] <- 500
 
-
 REF <- function(y, p, pseudo) {
     ncells <- ncol(y)
     nhto <- nrow(y)
@@ -36,19 +35,19 @@ REF <- function(y, p, pseudo) {
 
         ambient <- scaling * p
         Y0 <- pmax(0, Y - ambient)
-        Y0 <- Y0 + max(1, mean(ambient)) * pseudo
+        PS <- max(1, mean(ambient)) * pseudo
+        Y0 <- Y0 + PS
 
         o <- order(Y0, decreasing=TRUE)
         ref.best[i] <- o[1]
         ref.second[i] <- o[2]
         
         sorted <- Y0[o]
-        lfc <- diff(log2(sorted))
-        ref.fc[i] <- lfc[1]
-        ref.fc2[i] <- lfc[2]
+        ref.fc[i] <- sorted[1]/sorted[2]
+        ref.fc2[i] <- sorted[2]/PS
     }
 
-    list(Best=ref.best, Second=ref.second, FC=2^-ref.fc, FC2=2^-ref.fc2)   
+    list(Best=ref.best, Second=ref.second, FC=ref.fc, FC2=ref.fc2)   
 }
 
 test_that("hashed_deltas works as expected", {
@@ -114,11 +113,11 @@ test_that("hashedDrops works as expected", {
     expect_identical(out$Total, colSums(y))
     expect_false(any(out$Doublet & out$Confident))
     
-    expect_true(min(out$LogFC.2to3[out$Doublet]) > max(out$LogFC.2to3[!out$Doublet]))
-    expect_true(min(out$LogFC.1to2[out$Confident]) > max(out$LogFC.1to2[!out$Doublet & !out$Confident]))
+    expect_true(min(out$LogFC2[out$Doublet]) > max(out$LogFC2[!out$Doublet]))
+    expect_true(min(out$LogFC[out$Confident]) > max(out$LogFC[!out$Doublet & !out$Confident]))
 
     # Testing against the known truth.
     expect_identical(out$Best, true.sample)
     expect_equal(out$Second[1:ndoub], next.sample[1:ndoub])
-    expect_true(min(out$LogFC.2to3[1:ndoub]) > max(out$LogFC.2to3[-(1:ndoub)]))
+    expect_true(min(out$LogFC2[1:ndoub]) > max(out$LogFC2[-(1:ndoub)]))
 })

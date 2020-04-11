@@ -241,8 +241,8 @@ summary(has.cell)
 
 Each cell-containing barcode libary is simply assigned to the sample of origin based on its most abundant HTO.
 The confidence of the assignment is quantified by the log-fold change between the top and second-most abundant HTOs.
-The function will also adjust for differences in the ambient levels of each HTO based on the ambient profile;
-if this is not provided, it will instead attempt to estimate the ambient profile from the supplied count matrix.
+The function will automatically adjust for differences in the ambient levels of each HTO based on the ambient profile;
+if this is not provided, it is roughly estimated the ambient profile from the supplied count matrix.
 
 ```{r}
 demux <- hashedDrops(y[,which(has.cell)], 
@@ -250,24 +250,24 @@ demux <- hashedDrops(y[,which(has.cell)],
 demux
 ```
 
-It is then a simple matter to assign each cell back to its sample of origin.
+It is then a simple matter to determine the sample of origin for each cell.
 We provide `Confident` calls to indicate which cells are confident singlets,
-based on the fact that they are (i) not doublets and (ii) do not have small log-fold changes between the top and second HTO.
+based on the whether they are (i) not doublets and (ii) do not have small log-fold changes between the top and second HTO.
 The definition of "small" is relative and can be changed with the `nmad=` argument.
 
 ```{r}
 table(demux$Best[demux$Confident])
 ```
 
-We also identify doublets based on the log-fold change between the second and third-most abundant HTO.
-Here, the assumption is that counts for the third or later HTOs are caused by ambient contamination.
-A large log-fold change indicates that the second HTO exceeds that from contamination, 
-consistent with the presence of a doublet.
+We also identify doublets based on the log-fold change between the second HTO's abundance and the ambient contamination.
+A large log-fold change indicates that the second HTO exceeds that from contamination, consistent with the presence of a doublet.
 
 ```{r}
 colors <- ifelse(demux$Confident, "black",
     ifelse(demux$Doublet, "red", "grey"))
-plot(demux$LogFC.1to2, demux$LogFC.2to3, col=colors)
+plot(demux$LogFC, demux$LogFC2, col=colors,
+    xlab="Log-fold change between best and second HTO",
+    ylab="Log-fold change between second HTO and ambient")
 ```
 
 # Removing swapping effects
