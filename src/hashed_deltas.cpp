@@ -30,7 +30,9 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
             collected[j].second=j;
         }
 
-        // Estimating the scaling effect.
+        /* Estimating the scaling effect. For NR=3 or 4, we're using the 
+         * third HTO rather than the median, to avoid problems with doublets.
+         */
         double scaling=0;
 
         if (NR) {
@@ -66,7 +68,6 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
             x.first = std::max(x.first, 0.0) + PSEUDO;
         }
 
-        // Estimating the actual log-fold changes now. 
         std::partial_sort(collected.begin(), collected.begin()+upto,
             collected.end(), std::greater<std::pair<double, int> >());
 
@@ -86,8 +87,10 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
             output_second[i]=NA_INTEGER;
             output_fc2[i]=R_NaReal;
         } else {
+            // We use PSEUDO as this is the level of ambient contamination
+            // after all adjustments have been applied.
             output_second[i]=collected[1].second;
-            output_fc2[i]=collected[1].first/collected[2].first;
+            output_fc2[i]=collected[1].first/PSEUDO;
         }
     }
 
