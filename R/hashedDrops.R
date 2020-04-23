@@ -14,6 +14,7 @@
 #' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
 #' @param doublet.nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.
 #' @param doublet.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.
+#' @param doublet.mixture Logical scalar indicating whether to use a 2-component mixture model to identify doublets.
 #' @param confident.nmads A numeric scalar specifying the number of MADs to use to identify confidently assigned singlets.
 #' @param confident.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.
 #'
@@ -41,11 +42,18 @@
 #' Large log-fold changes indicate that the second HTO has greater abundance than expected, consistent with a doublet.
 #'
 #' To facilitate quality control, we explicitly identify problematic barcodes as outliers on the relevant metrics.
-#' We identify putative doublets as those with \code{LogFC2} values that are (i) \code{doublet.nmads} MADs above the median
-#' and (ii) greater than \code{doublet.min}.
-#' The hard threshold is more-or-less arbitrary and aims to avoid overly aggressive detection of large outliers in a naturally right-skewed distribution 
+#' \itemize{
+#' \item By default, we identify putative doublets as those with \code{LogFC2} values that are
+#' (i) \code{doublet.nmads} MADs above the median and (ii) greater than \code{doublet.min}.
+#' The hard threshold is more-or-less arbitrary and aims to avoid overly aggressive detection 
+#' of large outliers in a naturally right-skewed distribution 
 #' (given that the log-fold changes are positive by definition, and most of the distribution is located near zero).
-#'
+#' \item Alternatively, if \code{doublet.mixture=TRUE}, we fit a two-component mixture model to the \code{LogFC2} distribution.
+#' Doublets are identified as all members of the component with the larger mean.
+#' This avoids the need for the arbitrary parameters mentioned above
+#' but only works when the doublet proportion is sufficiently large;
+#' otherwise, both components will be fitted to the non-doublet values.
+#' }
 #' Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are (i) \emph{not} less than \code{confident.nmads} MADs below the median and (ii) greater than \code{confident.min}.
 #' The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
 #' typically from an inflation of the MAD when the \code{LogFC} values are large, positive and highly variable.
@@ -142,7 +150,8 @@
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
 hashedDrops <- function(x, ambient=NULL, pseudo.count=5, 
-    doublet.nmads=3, doublet.min=2, confident.nmads=3, confident.min=2)
+    doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE,
+    confident.nmads=3, confident.min=2)
 { 
     totals <- colSums(x)
     cell.names <- colnames(x)
@@ -159,12 +168,20 @@ hashedDrops <- function(x, ambient=NULL, pseudo.count=5,
     lfc <- log2(output$FC)
     lfc2 <- log2(output$FC2)
 
-    # Using outlier detection to prune out doublets.
-    med2 <- median(lfc2)
-    mad2 <- mad(lfc2, center=med2)
-    upper.threshold <- med2 + doublet.nmads * mad2
-    upper.threshold <- max(upper.threshold, doublet.min)
-    is.doublet <- lfc2 > upper.threshold 
+    if (!doublet.mixture) {
+        # Using outlier detection to prune out doublets.
+        med2 <- median(lfc2)
+        mad2 <- mad(lfc2, center=med2)
+        upper.threshold <- med2 + doublet.nmads * mad2
+        upper.threshold <- max(upper.threshold, doublet.min)
+        is.doublet <- lfc2 > upper.threshold 
+    } else {
+        # Ridiculous! mclust can't find its own internals without attaching!
+        # TODO: find the mclust maintainer and get them to fix their nonsense.
+        suppressPackageStartupMessages(require("mclust", character.only=TRUE))
+        mod <- mclust::Mclust(lfc2, G=2, verbose=FALSE)
+        is.doublet <- which.max(mod$parameters$mean) == mod$classification
+    }
 
     # Using outlier detection to identify confident singlets.
     lfc.singlet <- lfc[!is.doublet]

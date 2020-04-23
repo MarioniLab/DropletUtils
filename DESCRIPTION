@@ -25,7 +25,8 @@ Suggests:
     beachmat,
     knitr,
     BiocStyle,
-    rmarkdown
+    rmarkdown,
+    mclust
 biocViews: 
     ImmunoOncology,
     SingleCell,

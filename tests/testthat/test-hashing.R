@@ -35,7 +35,7 @@ REF <- function(y, p, pseudo) {
 
         ambient <- scaling * p
         Y0 <- pmax(0, Y - ambient)
-        PS <- max(1, mean(ambient)) * pseudo
+        PS <- max(pseudo, mean(ambient))
         Y0 <- Y0 + PS
 
         o <- order(Y0, decreasing=TRUE)
@@ -120,4 +120,9 @@ test_that("hashedDrops works as expected", {
     expect_identical(out$Best, true.sample)
     expect_equal(out$Second[1:ndoub], next.sample[1:ndoub])
     expect_true(min(out$LogFC2[1:ndoub]) > max(out$LogFC2[-(1:ndoub)]))
+
+    # Works with mixture models.
+    out <- hashedDrops(y, doublet.mixture=TRUE)
+    expect_true(min(out$LogFC2[out$Doublet]) > max(out$LogFC2[!out$Doublet]))
+    expect_true(min(out$LogFC[out$Confident]) > max(out$LogFC[!out$Doublet & !out$Confident]))
 })
