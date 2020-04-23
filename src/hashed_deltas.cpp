@@ -53,15 +53,15 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
 
         /* First, subtracting the ambient solution. Then adding back a constant
          * to be used as the pseudo-count. The product `scaling * mean_prop`
-         * represents the average ambient contamination for each HTO, so we just
-         * use it as a pseudo-count (scaled by the `pseudo_count` value). Nice 
-         * thing about this is that it adapts to the sequencing depth, under 
-         * some assumptions; see documentation for more details.
+         * represents the average ambient contamination for each HTO, so we
+         * just use it as a pseudo-count. Nice thing about this is that it
+         * adapts to the sequencing depth, under some assumptions; see
+         * documentation for more details.
          *
          * We do require, at least, that the pseudo count be at least
          * `pseudo_count`, just to avoid problems at `scaling=0`!
          */
-        const double PSEUDO=std::max(1.0, scaling * mean_prop) * pseudo_count; 
+        const double PSEUDO=std::max(pseudo_count, scaling * mean_prop); 
 
         for (auto& x : collected) {
             x.first = tmp[x.second] - scaling * prop[x.second];

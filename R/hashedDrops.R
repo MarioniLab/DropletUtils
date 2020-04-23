@@ -11,8 +11,7 @@
 #' @param ambient A numeric vector of length equal to \code{nrow(x)},
 #' specifying the relative abundance of each HTO in the ambient solution.
 #' See below for details.
-#' @param pseudo.scale A numeric scalar specifying the scaling of the pseudo-count when computing log-fold changes.
-#' Also serves as the minimum pseudo-count.
+#' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
 #' @param nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use for calling outliers.
 #'
 #' @return
@@ -71,9 +70,10 @@
 #' After subtraction of the ambient noise but before calculation of the log-fold changes,
 #' we need to add a pseudo-count to ensure that the log-fold changes are well-defined.
 #' We set the pseudo-count to the average ambient HTO count (i.e., the average of the scaled \code{ambient}), effectively exploiting the ambient contamination as a natural pseudo-count that scales with barcode-specific capture efficiency and sequencing depth.
+#' (In libraries with low sequencing depth, we still enforce a minimum pseudo-count of \code{pseudo.count}.)
 #'
 #' This scaling behavior is useful as it ensures that shrinkage of the log-fold changes is not more severe for libraries that have not been sequenced as deeply.
-#' We thus avoid excessive variability in the log-fold change distribution (and reduction in precision of outlier detection).
+#' We thus avoid excessive variability in the log-fold change distribution that would otherwise reduce the precision of outlier detection.
 #' The implicit assumption is that the number of contaminating transcript molecules is roughly the same in each droplet, meaning that any differences in ambient coverage between libraries reflect technical biases that would also affect cell-derived HTO counts. 
 #'
 #' Another nice aspect of this entire procedure (subtraction and re-addition) is that it collapses to a no-op if the experiment is well-executed with identical concentrations of all HTOs in the ambient solution.
@@ -133,7 +133,7 @@
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
-hashedDrops <- function(x, ambient=NULL, pseudo.scale=1, nmads=3) {
+hashedDrops <- function(x, ambient=NULL, pseudo.count=5, doublet.nmads=3, confident.nmads) { 
     totals <- colSums(x)
     cell.names <- colnames(x)
 
@@ -145,15 +145,17 @@ hashedDrops <- function(x, ambient=NULL, pseudo.scale=1, nmads=3) {
     x <- x[!discard,,drop=FALSE]
     ambient <- ambient[!discard]
 
-    output <- hashed_deltas(x, ambient, pseudo.scale)
+    output <- hashed_deltas(x, ambient, pseudo.count)
     lfc <- log2(output$FC)
     lfc2 <- log2(output$FC2)
 
+    # Using median detection to prune out doublets.
     med2 <- median(lfc2)
     mad2 <- mad(lfc2, center=med2)
     upper.threshold <- med2 + nmads * mad2
     is.doublet <- lfc2 > upper.threshold 
 
+    # Using densities to 
     lfc.singlet <- lfc[!is.doublet]
     med.singlet <- median(lfc.singlet)
     mad.singlet <- mad(lfc.singlet, center=med.singlet)
