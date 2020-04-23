@@ -4,7 +4,16 @@
 \alias{hashedDrops}
 \title{Demultiplex cell hashing data}
 \usage{
-hashedDrops(x, ambient = NULL, pseudo.scale = 1, nmads = 3)
+hashedDrops(
+  x,
+  ambient = NULL,
+  pseudo.count = 5,
+  doublet.nmads = 3,
+  doublet.min = 2,
+  doublet.mixture = FALSE,
+  confident.nmads = 3,
+  confident.min = 2
+)
 }
 \arguments{
 \item{x}{A numeric/integer matrix-like object containing UMI counts.
@@ -15,10 +24,17 @@ Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed t
 specifying the relative abundance of each HTO in the ambient solution.
 See below for details.}
 
-\item{pseudo.scale}{A numeric scalar specifying the scaling of the pseudo-count when computing log-fold changes.
-Also serves as the minimum pseudo-count.}
+\item{pseudo.count}{A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.}
 
-\item{nmads}{A numeric scalar specifying the number of median absolute deviations (MADs) to use for calling outliers.}
+\item{doublet.nmads}{A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.}
+
+\item{doublet.min}{A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.}
+
+\item{doublet.mixture}{Logical scalar indicating whether to use a 2-component mixture model to identify doublets.}
+
+\item{confident.nmads}{A numeric scalar specifying the number of MADs to use to identify confidently assigned singlets.}
+
+\item{confident.min}{A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.}
 }
 \value{
 A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -51,9 +67,21 @@ We also report the log-fold change of the second-most abundant HTO over the esti
 Large log-fold changes indicate that the second HTO has greater abundance than expected, consistent with a doublet.
 
 To facilitate quality control, we explicitly identify problematic barcodes as outliers on the relevant metrics.
-We first identify putative doublets as those with \code{LogFC2} values that are \code{nmad} MADs above the median.
-Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are \emph{not} less than \code{nmad} MADs below the median.
-In general, the magnitude of \code{nmad} is inversely proportional to the stringency of the filtering.
+\itemize{
+\item By default, we identify putative doublets as those with \code{LogFC2} values that are
+(i) \code{doublet.nmads} MADs above the median and (ii) greater than \code{doublet.min}.
+The hard threshold is more-or-less arbitrary and aims to avoid overly aggressive detection 
+of large outliers in a naturally right-skewed distribution 
+(given that the log-fold changes are positive by definition, and most of the distribution is located near zero).
+\item Alternatively, if \code{doublet.mixture=TRUE}, we fit a two-component mixture model to the \code{LogFC2} distribution.
+Doublets are identified as all members of the component with the larger mean.
+This avoids the need for the arbitrary parameters mentioned above
+but only works when the doublet proportion is sufficiently large;
+otherwise, both components will be fitted to the non-doublet values.
+}
+Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are (i) \emph{not} less than \code{confident.nmads} MADs below the median and (ii) greater than \code{confident.min}.
+The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
+typically from an inflation of the MAD when the \code{LogFC} values are large, positive and highly variable.
 }
 \section{Adjusting abundances for ambient contamination}{
 
@@ -88,9 +116,10 @@ This does assume that there are at least 3 HTOs with evenly distributed numbers 
 After subtraction of the ambient noise but before calculation of the log-fold changes,
 we need to add a pseudo-count to ensure that the log-fold changes are well-defined.
 We set the pseudo-count to the average ambient HTO count (i.e., the average of the scaled \code{ambient}), effectively exploiting the ambient contamination as a natural pseudo-count that scales with barcode-specific capture efficiency and sequencing depth.
+(In libraries with low sequencing depth, we still enforce a minimum pseudo-count of \code{pseudo.count}.)
 
 This scaling behavior is useful as it ensures that shrinkage of the log-fold changes is not more severe for libraries that have not been sequenced as deeply.
-We thus avoid excessive variability in the log-fold change distribution (and reduction in precision of outlier detection).
+We thus avoid excessive variability in the log-fold change distribution that would otherwise reduce the precision of outlier detection.
 The implicit assumption is that the number of contaminating transcript molecules is roughly the same in each droplet, meaning that any differences in ambient coverage between libraries reflect technical biases that would also affect cell-derived HTO counts. 
 
 Another nice aspect of this entire procedure (subtraction and re-addition) is that it collapses to a no-op if the experiment is well-executed with identical concentrations of all HTOs in the ambient solution.
