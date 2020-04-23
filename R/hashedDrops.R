@@ -12,7 +12,10 @@
 #' specifying the relative abundance of each HTO in the ambient solution.
 #' See below for details.
 #' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
-#' @param nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use for calling outliers.
+#' @param doublet.nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.
+#' @param doublet.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.
+#' @param confident.nmads A numeric scalar specifying the number of MADs to use to identify confidently assigned singlets.
+#' @param confident.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.
 #'
 #' @return
 #' A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -38,9 +41,14 @@
 #' Large log-fold changes indicate that the second HTO has greater abundance than expected, consistent with a doublet.
 #'
 #' To facilitate quality control, we explicitly identify problematic barcodes as outliers on the relevant metrics.
-#' We first identify putative doublets as those with \code{LogFC2} values that are \code{nmad} MADs above the median.
-#' Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are \emph{not} less than \code{nmad} MADs below the median.
-#' In general, the magnitude of \code{nmad} is inversely proportional to the stringency of the filtering.
+#' We identify putative doublets as those with \code{LogFC2} values that are (i) \code{doublet.nmads} MADs above the median
+#' and (ii) greater than \code{doublet.min}.
+#' The hard threshold is more-or-less arbitrary and aims to avoid overly aggressive detection of large outliers in a naturally right-skewed distribution 
+#' (given that the log-fold changes are positive by definition, and most of the distribution is located near zero).
+#'
+#' Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are (i) \emph{not} less than \code{confident.nmads} MADs below the median and (ii) greater than \code{confident.min}.
+#' The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
+#' typically from an inflation of the MAD when the \code{LogFC} values are large, positive and highly variable.
 #'
 #' @section Adjusting abundances for ambient contamination:
 #' HTO abundances require some care to compute due to the presence of ambient contamination in each library.
@@ -133,7 +141,9 @@
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
-hashedDrops <- function(x, ambient=NULL, pseudo.count=5, doublet.nmads=3, confident.nmads) { 
+hashedDrops <- function(x, ambient=NULL, pseudo.count=5, 
+    doublet.nmads=3, doublet.min=2, confident.nmads=3, confident.min=2)
+{ 
     totals <- colSums(x)
     cell.names <- colnames(x)
 
@@ -149,17 +159,20 @@ hashedDrops <- function(x, ambient=NULL, pseudo.count=5, doublet.nmads=3, confid
     lfc <- log2(output$FC)
     lfc2 <- log2(output$FC2)
 
-    # Using median detection to prune out doublets.
+    # Using outlier detection to prune out doublets.
     med2 <- median(lfc2)
     mad2 <- mad(lfc2, center=med2)
-    upper.threshold <- med2 + nmads * mad2
+    upper.threshold <- med2 + doublet.nmads * mad2
+    upper.threshold <- max(upper.threshold, doublet.min)
     is.doublet <- lfc2 > upper.threshold 
 
-    # Using densities to 
+    # Using outlier detection to identify confident singlets.
     lfc.singlet <- lfc[!is.doublet]
     med.singlet <- median(lfc.singlet)
     mad.singlet <- mad(lfc.singlet, center=med.singlet)
-    lower.threshold <- med.singlet - nmads * mad.singlet
+
+    lower.threshold <- med.singlet - confident.nmads * mad.singlet
+    lower.threshold <- max(lower.threshold, confident.min)
     confident.singlet <- lfc > lower.threshold & !is.doublet
 
     DataFrame(
