@@ -7,7 +7,7 @@
 hashedDrops(
   x,
   ambient = NULL,
-  assume.constant = FALSE,
+  min.prop = 0.05,
   pseudo.count = 5,
   doublet.nmads = 3,
   doublet.min = 2,
@@ -24,8 +24,8 @@ Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed t
 \item{ambient}{A numeric vector of length equal to \code{nrow(x)},
 specifying the relative abundance of each HTO in the ambient solution - see Details.}
 
-\item{assume.constant}{Logical scalar indicating whether the ambient abundance of each HTO should be assumed to be constant.
-Ignored if \code{ambient} is provided.}
+\item{min.prop}{Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.
+Only used for estimating the ambient profile when \code{ambient=NULL}.}
 
 \item{pseudo.count}{A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.}
 
@@ -50,6 +50,9 @@ A \linkS4class{DataFrame} with one row per column of \code{x}, containing the fo
 \item \code{Doublet}, logical specifying whether a barcode is a doublet.
 \item \code{Confident}, logical specifying whether a barcode is a confidently assigned singlet.
 }
+In addition, the metadata contains \code{ambient}, a numeric vector containing the (estimate of the) ambient profile;
+\code{doublet.threshold}, the threshold applied to \code{LogFC2} to identify doublets;
+and \code{confident.threshold}, the threshold applied to non-doublet \code{LogFC} values to identify confident singlets.
 }
 \description{
 Demultiplex cell barcodes into their samples of origin based on the most significant hash tag oligo (HTO).
@@ -78,9 +81,9 @@ of large outliers in a naturally right-skewed distribution
 (given that the log-fold changes are positive by definition, and most of the distribution is located near zero).
 \item Alternatively, if \code{doublet.mixture=TRUE}, we fit a two-component mixture model to the \code{LogFC2} distribution.
 Doublets are identified as all members of the component with the larger mean.
-This avoids the need for the arbitrary parameters mentioned above
-but only works when the doublet proportion is sufficiently large;
-otherwise, both components will be fitted to the non-doublet values.
+This avoids the need for the arbitrary parameters mentioned above but only works when there are many doublets,
+otherwise both components will be fitted to the non-doublet values.
+(Initialization of the model assumes at least 5\% doublets.)
 }
 Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are (i) \emph{not} less than \code{confident.nmads} MADs below the median and (ii) greater than \code{confident.min}.
 The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
@@ -111,15 +114,14 @@ For example, we could get this information from the \code{\link{metadata}} of th
 had we run \code{\link{emptyDrops}} on the HTO count matrix (see below).
 
 Unfortunately, in some cases (e.g., public data), counts are provided for only the cell-containing barcodes.
-In such cases where \code{ambient=NULL}, the function will either:
-\itemize{
-\item Robustly estimate the profile using the median of each HTO across all cell barcodes.
-This assumes that no single sample contributes more than 50\% of barcodes
-and requires deep sequencing to obtain precise estimates.
-\item Assume that all HTOs are present at equal ambient levels, if \code{assume.constant=TRUE}.
-This may be safer if imbalanced pools (i.e., unequal contributions from each sample) are expected,
-which will violate the assumptions required for automatic estimation.
-}
+If \code{ambient=NULL}, the function will fit a two-component mixture model to each HTO's count distribution.
+All barcodes assigned to the lower component are considered to have background counts for that HTO,
+and the mean of those counts is used as an estimate of the ambient contribution.
+
+The initialization of the mixture model is controlled by \code{min.prop}, 
+which starts the means of the lower and upper components at the \code{min.prop} and \code{1-min.prop} quantiles, respectively.
+This means that each sample is expected to contribute somewhere between \code{[min.prop, 1-min.prop]} barcodes.
+Larger values improve convergence but require stronger assumptions about the relative proportions of multiplexed samples.
 }
 
 \section{Computing the log-fold changes}{
