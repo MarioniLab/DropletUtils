@@ -7,6 +7,7 @@
 hashedDrops(
   x,
   ambient = NULL,
+  assume.constant = FALSE,
   pseudo.count = 5,
   doublet.nmads = 3,
   doublet.min = 2,
@@ -21,8 +22,10 @@ Rows correspond to HTOs and columns correspond to cell barcodes.
 Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(x)},
-specifying the relative abundance of each HTO in the ambient solution.
-See below for details.}
+specifying the relative abundance of each HTO in the ambient solution - see Details.}
+
+\item{assume.constant}{Logical scalar indicating whether the ambient abundance of each HTO should be assumed to be constant.
+Ignored if \code{ambient} is provided.}
 
 \item{pseudo.count}{A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.}
 
@@ -106,9 +109,17 @@ For experiments with only 2 HTOs, doublet detection is not possible as the secon
 Ideally, \code{ambient} would be obtained from libraries that do not correspond to cell-containing droplets.
 For example, we could get this information from the \code{\link{metadata}} of the \code{\link{emptyDrops}} output,
 had we run \code{\link{emptyDrops}} on the HTO count matrix (see below).
+
 Unfortunately, in some cases (e.g., public data), counts are provided for only the cell-containing barcodes.
-To handle this, we compute the median of each HTO across all barcodes to obtain a rough proxy for the ambient profile.
-This does assume that there are at least 3 HTOs with evenly distributed numbers of cells in each sample.
+In such cases where \code{ambient=NULL}, the function will either:
+\itemize{
+\item Robustly estimate the profile using the median of each HTO across all cell barcodes.
+This assumes that no single sample contributes more than 50\% of barcodes
+and requires deep sequencing to obtain precise estimates.
+\item Assume that all HTOs are present at equal ambient levels, if \code{assume.constant=TRUE}.
+This may be safer if imbalanced pools (i.e., unequal contributions from each sample) are expected,
+which will violate the assumptions required for automatic estimation.
+}
 }
 
 \section{Computing the log-fold changes}{

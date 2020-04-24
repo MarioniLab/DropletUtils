@@ -9,8 +9,9 @@
 #' Rows correspond to HTOs and columns correspond to cell barcodes.
 #' Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.
 #' @param ambient A numeric vector of length equal to \code{nrow(x)},
-#' specifying the relative abundance of each HTO in the ambient solution.
-#' See below for details.
+#' specifying the relative abundance of each HTO in the ambient solution - see Details.
+#' @param assume.constant Logical scalar indicating whether the ambient abundance of each HTO should be assumed to be constant.
+#' Ignored if \code{ambient} is provided.
 #' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
 #' @param doublet.nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.
 #' @param doublet.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.
@@ -78,9 +79,17 @@
 #' Ideally, \code{ambient} would be obtained from libraries that do not correspond to cell-containing droplets.
 #' For example, we could get this information from the \code{\link{metadata}} of the \code{\link{emptyDrops}} output,
 #' had we run \code{\link{emptyDrops}} on the HTO count matrix (see below).
+#'
 #' Unfortunately, in some cases (e.g., public data), counts are provided for only the cell-containing barcodes.
-#' To handle this, we compute the median of each HTO across all barcodes to obtain a rough proxy for the ambient profile.
-#' This does assume that there are at least 3 HTOs with evenly distributed numbers of cells in each sample.
+#' In such cases where \code{ambient=NULL}, the function will either:
+#' \itemize{
+#' \item Robustly estimate the profile using the median of each HTO across all cell barcodes.
+#' This assumes that no single sample contributes more than 50\% of barcodes
+#' and requires deep sequencing to obtain precise estimates.
+#' \item Assume that all HTOs are present at equal ambient levels, if \code{assume.constant=TRUE}.
+#' This may be safer if imbalanced pools (i.e., unequal contributions from each sample) are expected,
+#' which will violate the assumptions required for automatic estimation.
+#' }
 #'
 #' @section Computing the log-fold changes:
 #' After subtraction of the ambient noise but before calculation of the log-fold changes,
@@ -149,15 +158,18 @@
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
-hashedDrops <- function(x, ambient=NULL, pseudo.count=5, 
-    doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE,
-    confident.nmads=3, confident.min=2)
+hashedDrops <- function(x, ambient=NULL, assume.constant=FALSE, pseudo.count=5, 
+    doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2)
 { 
     totals <- colSums(x)
     cell.names <- colnames(x)
 
     if (is.null(ambient)) {
-        ambient <- vapply(seq_len(nrow(x)), function(i) median(x[i,]), 0)
+        if (assume.constant) {
+            ambient <- rep(1, nrow(x))
+        } else {
+            ambient <- vapply(seq_len(nrow(x)), function(i) median(x[i,]), 0)
+        }
     }
 
     discard <- ambient == 0
@@ -176,9 +188,8 @@ hashedDrops <- function(x, ambient=NULL, pseudo.count=5,
         upper.threshold <- max(upper.threshold, doublet.min)
         is.doublet <- lfc2 > upper.threshold 
     } else {
-        # Ridiculous! mclust can't find its own internals without attaching!
         # TODO: find the mclust maintainer and get them to fix their nonsense.
-        suppressPackageStartupMessages(require("mclust", character.only=TRUE))
+        mclustBIC <- mclust::mclustBIC
         mod <- mclust::Mclust(lfc2, G=2, verbose=FALSE)
         is.doublet <- which.max(mod$parameters$mean) == mod$classification
     }

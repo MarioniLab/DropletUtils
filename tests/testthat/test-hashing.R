@@ -125,4 +125,9 @@ test_that("hashedDrops works as expected", {
     out <- hashedDrops(y, doublet.mixture=TRUE)
     expect_true(min(out$LogFC2[out$Doublet]) > max(out$LogFC2[!out$Doublet]))
     expect_true(min(out$LogFC[out$Confident]) > max(out$LogFC[!out$Doublet & !out$Confident]))
+
+    # Works with the ambient estimation turned off.
+    out <- hashedDrops(y, assume.constant=TRUE)
+    expect_true(min(out$LogFC2[out$Doublet]) > max(out$LogFC2[!out$Doublet]))
+    expect_true(min(out$LogFC[out$Confident]) > max(out$LogFC[!out$Doublet & !out$Confident]))
 })
