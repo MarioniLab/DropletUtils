@@ -10,8 +10,8 @@
 #' Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.
 #' @param ambient A numeric vector of length equal to \code{nrow(x)},
 #' specifying the relative abundance of each HTO in the ambient solution - see Details.
-#' @param assume.constant Logical scalar indicating whether the ambient abundance of each HTO should be assumed to be constant.
-#' Ignored if \code{ambient} is provided.
+#' @param min.prop Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.
+#' Only used for estimating the ambient profile when \code{ambient=NULL}.
 #' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
 #' @param doublet.nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.
 #' @param doublet.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.
@@ -30,6 +30,9 @@
 #' \item \code{Doublet}, logical specifying whether a barcode is a doublet.
 #' \item \code{Confident}, logical specifying whether a barcode is a confidently assigned singlet.
 #' }
+#' In addition, the metadata contains \code{ambient}, a numeric vector containing the (estimate of the) ambient profile;
+#' \code{doublet.threshold}, the threshold applied to \code{LogFC2} to identify doublets;
+#' and \code{confident.threshold}, the threshold applied to non-doublet \code{LogFC} values to identify confident singlets.
 #'
 #' @details
 #' The idea behind cell hashing is that cells from the same sample are stained with reagent conjugated with a single HTO.
@@ -51,9 +54,9 @@
 #' (given that the log-fold changes are positive by definition, and most of the distribution is located near zero).
 #' \item Alternatively, if \code{doublet.mixture=TRUE}, we fit a two-component mixture model to the \code{LogFC2} distribution.
 #' Doublets are identified as all members of the component with the larger mean.
-#' This avoids the need for the arbitrary parameters mentioned above
-#' but only works when the doublet proportion is sufficiently large;
-#' otherwise, both components will be fitted to the non-doublet values.
+#' This avoids the need for the arbitrary parameters mentioned above but only works when there are many doublets,
+#' otherwise both components will be fitted to the non-doublet values.
+#' (Initialization of the model assumes at least 5\% doublets.)
 #' }
 #' Of the non-doublet libraries, we consider them to be confidently assigned to a single sample if their \code{LogFC} values are (i) \emph{not} less than \code{confident.nmads} MADs below the median and (ii) greater than \code{confident.min}.
 #' The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
@@ -81,15 +84,14 @@
 #' had we run \code{\link{emptyDrops}} on the HTO count matrix (see below).
 #'
 #' Unfortunately, in some cases (e.g., public data), counts are provided for only the cell-containing barcodes.
-#' In such cases where \code{ambient=NULL}, the function will either:
-#' \itemize{
-#' \item Robustly estimate the profile using the median of each HTO across all cell barcodes.
-#' This assumes that no single sample contributes more than 50\% of barcodes
-#' and requires deep sequencing to obtain precise estimates.
-#' \item Assume that all HTOs are present at equal ambient levels, if \code{assume.constant=TRUE}.
-#' This may be safer if imbalanced pools (i.e., unequal contributions from each sample) are expected,
-#' which will violate the assumptions required for automatic estimation.
-#' }
+#' If \code{ambient=NULL}, the function will fit a two-component mixture model to each HTO's count distribution.
+#' All barcodes assigned to the lower component are considered to have background counts for that HTO,
+#' and the mean of those counts is used as an estimate of the ambient contribution.
+#'
+#' The initialization of the mixture model is controlled by \code{min.prop}, 
+#' which starts the means of the lower and upper components at the \code{min.prop} and \code{1-min.prop} quantiles, respectively.
+#' This means that each sample is expected to contribute somewhere between \code{[min.prop, 1-min.prop]} barcodes.
+#' Larger values improve convergence but require stronger assumptions about the relative proportions of multiplexed samples.
 #'
 #' @section Computing the log-fold changes:
 #' After subtraction of the ambient noise but before calculation of the log-fold changes,
@@ -158,17 +160,18 @@
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
-hashedDrops <- function(x, ambient=NULL, assume.constant=FALSE, pseudo.count=5, 
+hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
     doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2)
 { 
     totals <- colSums(x)
     cell.names <- colnames(x)
 
     if (is.null(ambient)) {
-        if (assume.constant) {
-            ambient <- rep(1, nrow(x))
-        } else {
-            ambient <- vapply(seq_len(nrow(x)), function(i) median(x[i,]), 0)
+        ambient <- numeric(nrow(x))
+        for (i in seq_along(ambient)) {
+            current <- x[i,]
+            chosen <- .get_lower_dist(log1p(current), p=min.prop)
+            ambient[i] <- mean(current[chosen])
         }
     }
 
@@ -188,10 +191,8 @@ hashedDrops <- function(x, ambient=NULL, assume.constant=FALSE, pseudo.count=5,
         upper.threshold <- max(upper.threshold, doublet.min)
         is.doublet <- lfc2 > upper.threshold 
     } else {
-        # TODO: find the mclust maintainer and get them to fix their nonsense.
-        mclustBIC <- mclust::mclustBIC
-        mod <- mclust::Mclust(lfc2, G=2, verbose=FALSE)
-        is.doublet <- which.max(mod$parameters$mean) == mod$classification
+        is.doublet <- !.get_lower_dist(lfc2, p=0.05)
+        upper.threshold <- max(lfc2[!is.doublet])
     }
 
     # Using outlier detection to identify confident singlets.
@@ -203,7 +204,7 @@ hashedDrops <- function(x, ambient=NULL, assume.constant=FALSE, pseudo.count=5,
     lower.threshold <- max(lower.threshold, confident.min)
     confident.singlet <- lfc > lower.threshold & !is.doublet
 
-    DataFrame(
+    output <- DataFrame(
         row.names=cell.names,
         Total=totals,
         Best=output$Best+1L,
@@ -213,4 +214,22 @@ hashedDrops <- function(x, ambient=NULL, assume.constant=FALSE, pseudo.count=5,
         Doublet=is.doublet,
         Confident=confident.singlet
     )
+    
+    metadata(output) <- list(
+        ambient=ambient,
+        confident.threshold=lower.threshold,
+        doublet.threshold=upper.threshold
+    )
+
+    output
 }
+
+#' @importFrom stats kmeans
+.get_lower_dist <- function(x, p) 
+# Effectively using Lloyd's algorithm as a special case of mixture models,
+# to (i) avoid dependencies and (ii) avoid problems with non-normal data.
+{
+    out <- kmeans(x, centers=quantile(x, c(p, 1-p)))
+    out$cluster == which.min(out$centers)
+}
+
