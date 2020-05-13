@@ -267,60 +267,48 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     list(seeds=seeds.per.core, streams=streams.per.core)
 }
 
-#' @importFrom methods is
-#' @importClassesFrom Matrix dgTMatrix
-#' @importFrom stats aggregate
+#' @importFrom scuttle whichNonZero
 .compute_multinom_prob_data <- function(mat, prop, alpha=Inf)
 # Efficiently calculates the data-dependent component of the log-multinomial probability.
 # Also does so for the Dirichlet-multinomial log-probability for a given 'alpha'.
 {
-    if (is(mat, "dgTMatrix")) {
-        i <- mat@i + 1L
-        j <- mat@j + 1L
-        x <- mat@x
+    nonzero <- whichNonZero(mat)
+    i <- nonzero$i
+    j <- nonzero$j
+    x <- nonzero$x
 
-        if (is.infinite(alpha)) {
-            p.n0 <- x * log(prop[i]) - lfactorial(x)
-        } else {
-            p.n0 <- lgamma(alpha * prop[i] + x) - lfactorial(x) - lgamma(alpha * prop[i])
-        }
-
-        by.col <- aggregate(p.n0, list(Col=j), sum)
-        obs.P <- numeric(ncol(mat))
-        obs.P[by.col$Col] <- by.col$x
+    if (is.infinite(alpha)) {
+        p.n0 <- x * log(prop[i]) - lfactorial(x)
     } else {
-        obs.P <- compute_multinom(mat, prop, alpha)
+        alpha.prop <- alpha * prop[i]
+        p.n0 <- lgamma(alpha.prop + x) - lfactorial(x) - lgamma(alpha.prop)
     }
-    obs.P
+
+    # No need to defend against NA values from tapply,
+    # these should not be present after removal of all-zero columns.
+    j <- factor(j, levels=seq_len(ncol(mat)))
+    obs.P <- tapply(p.n0, INDEX=j, FUN=sum)
+    as.numeric(obs.P)
 }
 
 .compute_multinom_prob_rest <- function(totals, alpha=Inf) 
 # Efficiently calculates the total-dependent component of the multinomial log-probability.
 {
     if (is.infinite(alpha)) { 
-        return(lfactorial(totals))
+        lfactorial(totals)
     } else {
-        return(lfactorial(totals) + lgamma(alpha) - lgamma(totals + alpha))
+        lfactorial(totals) + lgamma(alpha) - lgamma(totals + alpha)
     }
 }
 
-#' @importFrom methods is
-#' @importClassesFrom Matrix dgTMatrix
-#' @importMethodsFrom Matrix which
+#' @importFrom scuttle whichNonZero
 #' @importFrom stats optimize 
 .estimate_alpha <- function(mat, prop, totals, interval=c(0.01, 10000))
 # Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution.
 {
-    if (is(mat, "dgTMatrix")) {
-        i <- mat@i + 1L
-        j <- mat@j + 1L
-        x <- mat@x
-    } else {
-        keep <- which(mat > 0, arr.ind=TRUE)
-        i <- keep[,1]
-        j <- keep[,2]
-        x <- mat[keep]
-    }
+    nonzero <- whichNonZero(mat)
+    i <- nonzero$i
+    x <- nonzero$x
 
     per.prop <- prop[i] 
     LOGLIK <- function(alpha) {
