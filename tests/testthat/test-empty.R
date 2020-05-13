@@ -93,6 +93,39 @@ test_that("multinomial calculations are correct with alpha", {
     }
 })
 
+rdirmultinom <- function(ambient, totals, alpha) {
+    true.prob <- ambient * alpha
+    collected <- vector("list", length(totals))
+    for (i in seq_along(collected)) {
+        prob <- rgamma(length(true.prob), true.prob) # pre-simulation of the Dirichlet
+        sim <- rmultinom(1, totals[i], prob=prob)
+        collected[[i]] <- sim
+    }
+    collected
+}
+
+set.seed(100010010)
+test_that("dispersion calculation is close to correct", {
+    totals <- sample(10000, 100, replace=TRUE)
+    ambient <- runif(2000)
+    ambient <- ambient/sum(ambient)
+    
+    simulated <- rdirmultinom(ambient, totals, alpha=5)
+    mat <- do.call(cbind, simulated)
+    x <- DropletUtils:::.estimate_alpha(mat, ambient, totals)
+    expect_true(abs(x - 5) <= 0.2)
+
+    simulated <- rdirmultinom(ambient, totals, alpha=20)
+    mat <- do.call(cbind, simulated)
+    x <- DropletUtils:::.estimate_alpha(mat, ambient, totals)
+    expect_true(abs(x - 20) <= 1)
+
+    simulated <- rdirmultinom(ambient, totals, alpha=100)
+    mat <- do.call(cbind, simulated)
+    x <- DropletUtils:::.estimate_alpha(mat, ambient, totals)
+    expect_true(abs(x - 100) <= 5)
+})
+
 UNICHECKER <- function(values, tol=1.25) {
     for (thresh in c(0.01, 0.05, 0.1, 0.2, 0.5)) { 
         # Generous boundaries for thresholds.
@@ -152,15 +185,16 @@ test_that("p-value calculations are correct with alpha", {
     SIMSTUFF <- function(nbarcodes, ngenes, alpha) { 
         totals <- sample(1000, nbarcodes, replace=TRUE)
         ambient <- runif(ngenes)
-        true.prob <- ambient * alpha
+        simulated <- rdirmultinom(ambient, totals, alpha)
 
+        true.prob <- ambient * alpha
         probs <- numeric(length(totals))
-        for (i in seq_along(totals)) { 
-            prob <- rgamma(ngenes, true.prob) # pre-simulation of the Dirichlet
-            sim <- rmultinom(1, totals[i], prob=prob)
+        for (i in seq_along(simulated)) { 
+            sim <- simulated[[i]]
             probs[i] <- sum(lgamma(sim + true.prob) - lfactorial(sim) - lgamma(true.prob))
         }
-        return(list(totals=totals, probs=probs, ambient=ambient))
+
+        list(totals=totals, probs=probs, ambient=ambient)
     }
 
     # Checking for uniformity.
