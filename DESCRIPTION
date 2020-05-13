@@ -8,18 +8,19 @@ Authors@R: c(
     person("Davis", "McCarthy", role="ctb"))
 Depends: SingleCellExperiment
 Imports: 
-    S4Vectors,
-    BiocParallel,
-    Rcpp,
-    Matrix,
-    methods,
     utils,
     stats,
-    edgeR,
-    rhdf5,
+    methods,
+    Matrix,
+    Rcpp,
+    S4Vectors,
+    BiocParallel,
     HDF5Array,
+    rhdf5,
+    edgeR,
     R.utils,
-    dqrng
+    dqrng,
+    scuttle
 Suggests: 
     testthat,
     beachmat,
@@ -44,6 +45,12 @@ Description:
 License: GPL-3
 NeedsCompilation: yes
 VignetteBuilder: knitr
-LinkingTo: Rcpp, beachmat, Rhdf5lib, BH, dqrng
+LinkingTo: 
+    Rcpp, 
+    beachmat, 
+    Rhdf5lib, 
+    BH, 
+    dqrng,
+    scuttle
 SystemRequirements: C++11, GNU make
 RoxygenNote: 7.1.0
