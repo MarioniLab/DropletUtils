@@ -93,29 +93,11 @@ This information can be useful for quality control purposes, especially when the
 Note that the function will automatically guess the length of the barcode sequence, as this is not formally defined in the molecule information file.
 For most experiments, the guess is correct, but users can force the function to use a known barcode length with the `barcode.length` argument.
 
-# Downsampling across batches
-
-## From the count matrix
+# Downsampling on the reads
 
 Given multiple batches of very different sequencing depths, it can be beneficial to downsample the deepest batches to match the coverage of the shallowest batches. 
 This avoids differences in technical noise that can drive clustering by batch.
-We can achieve this using the `downsampleMatrix` function on the count matrix:
-
-```{r}
-set.seed(100)
-new.counts <- downsampleMatrix(counts(sce), prop=0.5)
-library(Matrix)
-colSums(counts(sce))
-colSums(new.counts)
-```
-
-The above code will downsample the counts for each cell such that the total count is halved.
-Calculation of an appropriate `prop` is the responsibility of the user, depending on the number of batches in their experiment and which ones have the lowest coverage.
-You can also downsample with cell-specific proportions by supplying a vector to `prop`.
-
-## From the reads
-
-Technically, downsampling on the reads is more appropriate as it recapitulates the effect of differences in sequencing depth per cell.
+The `r Biocpkg("scuttle")` package provides some utilities to downsample count matrices, but technically speaking, downsampling on the reads is more appropriate as it recapitulates the effect of differences in sequencing depth per cell.
 This can be achieved by applying the `downsampleReads` function to the molecule information file containing the read counts:
 
 ```{r}
@@ -127,8 +109,8 @@ sum(with.sampling)
 ```
 
 The above code will downsample the **reads** to 50% of the original coverage across the experiment.
-However, the function will return a matrix of **UMI counts**, so the final total count may not actually decrease if sequencing saturation is high!
-Users should use `downsampleMatrix` instead if they want to guarantee similar total counts after downsampling.
+However, the function will return a matrix of **UMI counts**, so the final total count may not actually decrease if the libraries are sequenced to to saturation!
+Users should use `downsampleMatrix()` instead if they want to guarantee similar total counts after downsampling.
 
 # Computing barcode ranks
 
