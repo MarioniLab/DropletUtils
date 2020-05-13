@@ -5,42 +5,28 @@
 
 using namespace Rcpp;
 
-// compute_multinom
-Rcpp::NumericVector compute_multinom(Rcpp::RObject mat, Rcpp::NumericVector prop, double alpha);
-RcppExport SEXP _DropletUtils_compute_multinom(SEXP matSEXP, SEXP propSEXP, SEXP alphaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< Rcpp::RObject >::type mat(matSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
-    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_multinom(mat, prop, alpha));
-    return rcpp_result_gen;
-END_RCPP
-}
-// downsample_matrix
-Rcpp::RObject downsample_matrix(Rcpp::RObject rmat, Rcpp::NumericVector prop, bool bycol);
-RcppExport SEXP _DropletUtils_downsample_matrix(SEXP rmatSEXP, SEXP propSEXP, SEXP bycolSEXP) {
+// downsample_run
+Rcpp::IntegerVector downsample_run(Rcpp::IntegerVector reads, double prop);
+RcppExport SEXP _DropletUtils_downsample_run(SEXP readsSEXP, SEXP propSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::RObject >::type rmat(rmatSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
-    Rcpp::traits::input_parameter< bool >::type bycol(bycolSEXP);
-    rcpp_result_gen = Rcpp::wrap(downsample_matrix(rmat, prop, bycol));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type reads(readsSEXP);
+    Rcpp::traits::input_parameter< double >::type prop(propSEXP);
+    rcpp_result_gen = Rcpp::wrap(downsample_run(reads, prop));
     return rcpp_result_gen;
 END_RCPP
 }
-// downsample_runs
-Rcpp::IntegerVector downsample_runs(Rcpp::IntegerVector cells, Rcpp::IntegerVector reads, Rcpp::NumericVector prop, bool bycol);
-RcppExport SEXP _DropletUtils_downsample_runs(SEXP cellsSEXP, SEXP readsSEXP, SEXP propSEXP, SEXP bycolSEXP) {
+// downsample_run_per_cell
+Rcpp::IntegerVector downsample_run_per_cell(Rcpp::IntegerVector cells, Rcpp::IntegerVector reads, Rcpp::NumericVector prop);
+RcppExport SEXP _DropletUtils_downsample_run_per_cell(SEXP cellsSEXP, SEXP readsSEXP, SEXP propSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type cells(cellsSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type reads(readsSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
-    Rcpp::traits::input_parameter< bool >::type bycol(bycolSEXP);
-    rcpp_result_gen = Rcpp::wrap(downsample_runs(cells, reads, prop, bycol));
+    rcpp_result_gen = Rcpp::wrap(downsample_run_per_cell(cells, reads, prop));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -137,9 +123,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_DropletUtils_compute_multinom", (DL_FUNC) &_DropletUtils_compute_multinom, 3},
-    {"_DropletUtils_downsample_matrix", (DL_FUNC) &_DropletUtils_downsample_matrix, 3},
-    {"_DropletUtils_downsample_runs", (DL_FUNC) &_DropletUtils_downsample_runs, 4},
+    {"_DropletUtils_downsample_run", (DL_FUNC) &_DropletUtils_downsample_run, 2},
+    {"_DropletUtils_downsample_run_per_cell", (DL_FUNC) &_DropletUtils_downsample_run_per_cell, 3},
     {"_DropletUtils_encode_sequences", (DL_FUNC) &_DropletUtils_encode_sequences, 1},
     {"_DropletUtils_find_chimeric", (DL_FUNC) &_DropletUtils_find_chimeric, 5},
     {"_DropletUtils_find_swapped", (DL_FUNC) &_DropletUtils_find_swapped, 6},
