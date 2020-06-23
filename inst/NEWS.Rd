@@ -2,6 +2,12 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.10.0}{\itemize{
+\item Migrated \code{downsampleMatrix()} to \pkg{scuttle} with a re-export.
+
+\item Added \code{features=} to \code{downsampleReads()} for per-feature-set downsampling.
+}}
+
 \section{Version 1.8.0}{\itemize{
 \item Added the downsampleBatches() function for convenient downsampling of batches.
 
