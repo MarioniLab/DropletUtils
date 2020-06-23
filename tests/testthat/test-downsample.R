@@ -85,3 +85,27 @@ test_that("downsampling from the reads compares correctly to downsampleMatrix", 
     Y <- downsampleReads(out.file, prop=0.55, bycol=TRUE)
     expect_equal(Y, Z)
 })
+
+test_that("downsampling from the reads works correctly with feature subsets", {
+    barcode <- 4L
+    tmpdir <- tempfile()
+    dir.create(tmpdir)
+    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.length=barcode) 
+
+    # Full matrix is correctly extracted without any downsampling.
+    collated <- read10xMolInfo(out.paths, barcode)
+    all.cells <- sort(unique(collated$data$cell))
+    full.tab <- makeCountMatrix(collated$data$gene, collated$data$cell, all.genes=collated$genes)
+    colnames(full.tab) <- paste0(colnames(full.tab), "-1")
+
+    features <- collated$genes[sort(sample(length(collated$genes), length(collated$genes)/2))]
+    out <- downsampleReads(out.paths, barcode, prop=1, features=features)
+    expect_equal(out, full.tab[as.character(features),])
+    expect_identical(rownames(out), features)
+
+    # Downsampling behaves as expected.
+    out2 <- downsampleReads(out.paths, barcode, prop=0.1, features=features)
+    expect_identical(rownames(out), rownames(out2))
+    expect_true(all(out >= out2))
+    expect_true(sum(out) >= sum(out2))
+})

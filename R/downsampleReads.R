@@ -1,5 +1,5 @@
 #' @export
-downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE) 
+downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE, features=NULL) 
 # Downsamples the reads to produce a matrix of UMI counts, given
 # a HDF5 file containing molecule information.
 #
@@ -7,6 +7,12 @@ downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE)
 # created 19 December 2017    
 {
     incoming <- read10xMolInfo(sample, barcode.length, get.umi=FALSE)
+    if (!is.null(features)) {
+        present <- which(incoming$genes %in% features)
+        incoming$data$gene <- m <- match(incoming$data$gene, present)
+        incoming$data <- incoming$data[!is.na(m),,drop=FALSE]
+        incoming$genes <- incoming$genes[present]
+    }
     
     out <- .get_cell_ordering(incoming$data$cell, incoming$data$gem_group)
     o <- out$order
