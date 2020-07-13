@@ -6,6 +6,8 @@
 \item Migrated \code{downsampleMatrix()} to \pkg{scuttle} with a re-export.
 
 \item Added \code{features=} to \code{downsampleReads()} for per-feature-set downsampling.
+
+\item Added matrix support for \code{y=} and \code{ambient=} in \code{maximumAmbience()}.
 }}
 
 \section{Version 1.8.0}{\itemize{

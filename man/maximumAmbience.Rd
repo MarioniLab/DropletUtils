@@ -15,10 +15,12 @@ maximumAmbience(
 )
 }
 \arguments{
-\item{y}{A numeric vector of gene-level counts.}
+\item{y}{A numeric count matrix where each row represents a gene and each column represents an expression profile
+(usually aggregated across multiple droplets in a sample).}
 
 \item{ambient}{A numeric vector of length equal to \code{y},
-containing the proportions of transcripts for each gene in the ambient solution.}
+containing the proportions of transcripts for each gene in the ambient solution.
+Alternatively, a matrix where each column contains a specific ambient profile for the corresponding column of \code{y}.}
 
 \item{threshold}{Numeric scalar specifying the p-value threshold to use, see Details.}
 
@@ -32,8 +34,13 @@ Defaults to zero, i.e., a Poisson model.}
 \item{mode}{String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.}
 }
 \value{
-A numeric scalar quantifying the \dQuote{contribution} of the ambient solution to \code{y}.
-The product of this scalar and \code{ambient} yields the expected number of ambient transcripts for each gene in \code{y}.
+If \code{mode="scale"},
+a numeric vector is returned quantifying the \dQuote{contribution} of the ambient solution to each column of \code{y}.
+Scaling columns of \code{ambient} by this vector yields the expected ambient profile for each column of \code{y},
+which can also be obtained by setting \code{mode="profile"}.
+
+If \code{mode="proportion"}, a numeric matrix is returned containing the expected proportion of counts in \code{y} that are attributed to ambient contamination.
+This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
 }
 \description{
 Estimate the maximum contribution of the ambient solution to a particular expression profile.

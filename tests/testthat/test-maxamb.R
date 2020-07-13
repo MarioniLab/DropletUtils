@@ -16,6 +16,21 @@ test_that("maximumAmbience function works as expected", {
     expect_true(scaling < sum(y2)/sum(ambient))
 })
 
+test_that("maximumAmbience function handles matrix ambience", {
+    stuff <- maximumAmbience(cbind(y, y2), ambient)
+    expect_identical(stuff[1], maximumAmbience(y, ambient))
+    expect_identical(stuff[2], maximumAmbience(y2, ambient))
+
+    ambient2 <- c(runif(900, 0, 0.1), runif(100))
+    stuff <- maximumAmbience(cbind(y, y2), cbind(ambient, ambient2))
+    expect_identical(stuff[1], maximumAmbience(y, ambient))
+    expect_identical(stuff[2], maximumAmbience(y2, ambient2))
+
+    stuff <- maximumAmbience(cbind(y, y2), cbind(ambient, ambient2), mode="profile")
+    expect_identical(stuff[,1,drop=FALSE], maximumAmbience(y, ambient, mode="profile"))
+    expect_identical(stuff[,2,drop=FALSE], maximumAmbience(y2, ambient2, mode="profile"))
+})
+
 test_that("maximumAmbience function handles dispersion and threshold changes", {
     scaling <- maximumAmbience(y2, ambient)
 
@@ -36,9 +51,9 @@ test_that("maximumAmbience function is robust to extra zeroes", {
 
     prof <- maximumAmbience(y2, ambient, mode="profile")
     prof2 <- maximumAmbience(c(0,0,0,y2), c(0,0,0,ambient), mode="profile")
-    expect_equal(c(0,0,0,prof), prof2)
+    expect_equal(c(0,0,0,prof), prof2[,1])
 
     prop <- maximumAmbience(y2, ambient, mode="proportion")
     prop2 <- maximumAmbience(c(0,0,0,y2), c(0,0,0,ambient), mode="proportion")
-    expect_equal(c(NaN,NaN,NaN,prop), prop2)
+    expect_equal(c(NaN,NaN,NaN,prop), prop2[,1])
 })

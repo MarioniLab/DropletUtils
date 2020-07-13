@@ -2,9 +2,11 @@
 #'
 #' Estimate the maximum contribution of the ambient solution to a particular expression profile.
 #'
-#' @param y A numeric vector of gene-level counts.
+#' @param y A numeric count matrix where each row represents a gene and each column represents an expression profile
+#' (usually aggregated across multiple droplets in a sample).
 #' @param ambient A numeric vector of length equal to \code{y},
 #' containing the proportions of transcripts for each gene in the ambient solution.
+#' Alternatively, a matrix where each column contains a specific ambient profile for the corresponding column of \code{y}.
 #' @param threshold Numeric scalar specifying the p-value threshold to use, see Details.
 #' @param dispersion Numeric scalar specifying the dispersion to use in the negative binomial model.
 #' Defaults to zero, i.e., a Poisson model.
@@ -12,8 +14,14 @@
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
 #' @param mode String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.
 #' 
-#' @return A numeric scalar quantifying the \dQuote{contribution} of the ambient solution to \code{y}.
-#' The product of this scalar and \code{ambient} yields the expected number of ambient transcripts for each gene in \code{y}.
+#' @return 
+#' If \code{mode="scale"},
+#' a numeric vector is returned quantifying the \dQuote{contribution} of the ambient solution to each column of \code{y}.
+#' Scaling columns of \code{ambient} by this vector yields the expected ambient profile for each column of \code{y},
+#' which can also be obtained by setting \code{mode="profile"}.
+#'
+#' If \code{mode="proportion"}, a numeric matrix is returned containing the expected proportion of counts in \code{y} that are attributed to ambient contamination.
+#' This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
 #'
 #' @details
 #' On occasion, it is useful to estimate the maximum possible contribution of the ambient solution to a count profile.
@@ -66,16 +74,43 @@
 #'
 #' # Estimating the maximum contribution to 'y' by 'ambient'.
 #' contribution <- maximumAmbience(y, ambient, mode="profile")
-#' DataFrame(ambient=contribution, total=y)
+#' DataFrame(ambient=drop(contribution), total=y)
 #' 
 #' @seealso 
 #' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
 #'
 #' @export
 #' @importFrom stats p.adjust ppois pnbinom
-maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=100, num.iter=5, 
-    mode=c("scale", "profile", "proportion")) 
+maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, 
+    num.points=100, num.iter=5, mode=c("scale", "profile", "proportion")) 
 {
+    mode <- match.arg(mode)
+    args <- list(threshold=threshold, dispersion=dispersion, num.points=num.points, num.iter=num.iter, mode=mode)
+
+    if (is.null(dim(y))) {
+        y <- cbind(y) 
+    }
+
+    collated <- vector("list", ncol(y))
+    names(collated) <- colnames(collated)
+
+    for (i in seq_along(collated)) {
+        if (is.null(dim(ambient))) {
+            A <- ambient
+        } else {
+            A <- ambient[,i]
+        }
+        collated[[i]] <- do.call(.maximum_ambience, c(list(y=y[,i], ambient=A), args))
+    }
+
+    if (mode=="scale") {
+        unlist(collated)
+    } else {
+        do.call(cbind, collated)
+    }
+}
+
+.maximum_ambience <- function(y, ambient, threshold, dispersion, num.points, num.iter, mode) {
     if (dispersion==0) {
         FUN <- function(y, mu) {
             ppois(y, lambda=mu)
@@ -125,7 +160,6 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, num.points=
 
     scale <- (lower+upper)/2
 
-    mode <- match.arg(mode)
     switch(mode,
         scale=scale,
         profile=scale * original.ambient,
