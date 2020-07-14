@@ -42,7 +42,7 @@ library(Matrix)
 set.seed(5717)
 test_that("Removal of swapped drops works correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, 
+        output <- DropletUtils:::simSwappedMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, 
             nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
 
         # Figuring out the correspondence between cell ID and the sorted barcode.
@@ -96,7 +96,7 @@ test_that("Removal of swapped drops works correctly", {
 
 test_that("Alternative input/output parameters work correctly", {
     for (nmolecules in c(10, 100, 1000, 10000)) { 
-        output <- DropletUtils:::sim10xMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
+        output <- DropletUtils:::simSwappedMolInfo(tmpdir, return.tab=TRUE, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=nmolecules)
 
         # Further input/output tests.
         min.frac <- 0.9001
@@ -130,13 +130,13 @@ test_that("Alternative input/output parameters work correctly", {
 })
 
 test_that("swappedDrops functions correctly for silly inputs", {
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
+    output <- DropletUtils:::simSwappedMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=ngenes, nmolecules=0)
     deswapped <- swappedDrops(output)
     for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(ngenes, 0L))
     }   
 
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
+    output <- DropletUtils:::simSwappedMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=0, nmolecules=0)
     deswapped <- swappedDrops(output)
     for (ref in deswapped$cleaned) {
         expect_identical(dim(ref), c(0L, 0L))
@@ -146,12 +146,12 @@ test_that("swappedDrops functions correctly for silly inputs", {
     tmpdir2 <- tempfile()
     dir.create(tmpdir2)
 
-    o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=100, nmolecules=0)
-    o2 <- DropletUtils:::sim10xMolInfo(tmpdir2, barcode.length=barcode, nsamples=3, ngenes=10, nmolecules=0)
+    o1 <- DropletUtils:::simSwappedMolInfo(tmpdir, barcode.length=barcode, nsamples=3, ngenes=100, nmolecules=0)
+    o2 <- DropletUtils:::simSwappedMolInfo(tmpdir2, barcode.length=barcode, nsamples=3, ngenes=10, nmolecules=0)
     expect_error(swappedDrops(c(o1, o2)), "gene information differs")
 
     # Spits out a warning if you have multiple GEM groups.
-    o1 <- DropletUtils:::sim10xMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
+    o1 <- DropletUtils:::simSwappedMolInfo(tmpdir, barcode.length=barcode, nsamples=1, ngenes=100, nmolecules=100)
     rhdf5::h5write(sample(3L, 100, replace=TRUE), o1, "gem_group")
     expect_warning(swappedDrops(o1), "contains multiple GEM groups")
 

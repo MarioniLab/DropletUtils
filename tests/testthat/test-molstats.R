@@ -19,7 +19,7 @@ REFFUN <- function(cells, gems) {
 
 set.seed(909)
 test_that("Combined cell/gem reordering works correctly", {
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1)
+    output <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode)
     raw <- read10xMolInfo(output)
     expect_identical(DropletUtils:::.get_cell_ordering(raw$data$cell, raw$data$gem_group), 
             REFFUN(raw$data$cell, raw$data$gem_group))
@@ -30,7 +30,7 @@ test_that("Combined cell/gem reordering works correctly", {
             REFFUN(raw$data$cell, raw$data$gem_group))
 
     # Sparser data.
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1, nmolecules=500)
+    output <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode, nmolecules=500)
     raw <- read10xMolInfo(output)
     expect_identical(DropletUtils:::.get_cell_ordering(raw$data$cell, raw$data$gem_group), 
             REFFUN(raw$data$cell, raw$data$gem_group))
@@ -43,7 +43,7 @@ test_that("Combined cell/gem reordering works correctly", {
 
 set.seed(909)
 test_that("Calculation of statistics is correct", {
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1)
+    output <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode)
     stats <- get10xMolInfoStats(output)
     expect_identical(order(stats$cell, stats$gem_group), seq_len(nrow(stats)))
 
@@ -54,7 +54,7 @@ test_that("Calculation of statistics is correct", {
     expect_identical(stats$num.genes, vapply(split(raw$data$gene[raw.groups$order], raw.groups$id), FUN=function(x) { length(unique(x)) }, FUN.VALUE=integer(1), USE.NAMES=FALSE))
 
     # Sparser data.
-    output <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1, nmolecules=500)
+    output <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode, nmolecules=500)
     stats <- get10xMolInfoStats(output)
     expect_identical(order(stats$cell, stats$gem_group), seq_len(nrow(stats)))
 
@@ -65,7 +65,7 @@ test_that("Calculation of statistics is correct", {
     expect_identical(stats$num.genes, vapply(split(raw$data$gene[raw.groups$order], raw.groups$id), FUN=function(x) { length(unique(x)) }, FUN.VALUE=integer(1), USE.NAMES=FALSE))
 
     # Behaves when there are no molecules.
-    empty <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1, nmolecules=0)
+    empty <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode, nmolecules=0)
     stats <- get10xMolInfoStats(empty)
     expect_identical(nrow(stats), 0L)
 })

@@ -61,7 +61,7 @@
 #' 
 #' @examples
 #' # Mocking up some 10X HDF5-formatted data.
-#' out <- DropletUtils:::sim10xMolInfo(tempfile())
+#' out <- DropletUtils:::simBasicMolInfo(tempfile())
 #' 
 #' # Reading the resulting file.
 #' read10xMolInfo(out)

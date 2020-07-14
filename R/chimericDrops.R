@@ -53,7 +53,7 @@
 #'
 #' @examples
 #' # Mocking up some 10x HDF5-formatted data.
-#' curfile <- DropletUtils:::sim10xMolInfo(tempfile())
+#' curfile <- DropletUtils:::simBasicMolInfo(tempfile())
 #' 
 #' out <- chimericDrops(curfile)
 #' dim(out$cleaned)

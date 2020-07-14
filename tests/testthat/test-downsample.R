@@ -8,7 +8,7 @@ test_that("downsampling from the reads yields correct results", {
     barcode <- 4L
     tmpdir <- tempfile()
     dir.create(tmpdir)
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.length=barcode) 
    
     # Creating the full matrix, and checking that it's the same when no downsampling is requested.
     collated <- read10xMolInfo(out.paths, barcode)
@@ -31,7 +31,7 @@ test_that("downsampling from the reads yields correct results", {
     }
 
     # Making it easier to check the totals, by making all UMIs have a read count of 1.
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.len=barcode, ave.read=0) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.len=barcode, ave.read=0) 
     full.tab <- downsampleReads(out.paths, barcode, prop=1)
     expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.555)), round(0.555*sum(full.tab))) # Again, avoiding rounding differences.
     expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.111)), round(0.111*sum(full.tab)))
@@ -40,11 +40,11 @@ test_that("downsampling from the reads yields correct results", {
 
     # Checking behaviour on silly inputs where there are no reads, or no genes.
     ngenes <- 20L
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, swap.frac=0, ngenes=ngenes, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, nmolecules=0, ngenes=ngenes, barcode.length=barcode) 
     out <- downsampleReads(out.paths, barcode, prop=0.5)
     expect_identical(dim(out), c(ngenes, 0L))
 
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, nmolecules=0, ngenes=0, swap.frac=0, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, nmolecules=0, ngenes=0, barcode.length=barcode) 
     out <- downsampleReads(out.paths, barcode, prop=0.5)
     expect_identical(dim(out), c(0L, 0L))
 })
@@ -90,7 +90,7 @@ test_that("downsampling from the reads works correctly with feature subsets", {
     barcode <- 4L
     tmpdir <- tempfile()
     dir.create(tmpdir)
-    out.paths <- DropletUtils:::sim10xMolInfo(tmpdir, nsamples=1, ngenes=100, swap.frac=0, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.length=barcode) 
 
     # Full matrix is correctly extracted without any downsampling.
     collated <- read10xMolInfo(out.paths, barcode)

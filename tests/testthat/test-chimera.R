@@ -14,7 +14,7 @@ test_that("chimericDrops removes no duplicated UMIs with standard simulations", 
 
     # Default is to not remove anything,
     # as UMI sampling is done without replacement.
-    fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+    fname <- DropletUtils:::simBasicMolInfo(tmpdir)
 
     output <- chimericDrops(fname, get.chimeric=TRUE)
 
@@ -27,7 +27,7 @@ test_that("chimericDrops removes no duplicated UMIs with standard simulations", 
 test_that("chimericDrops removes duplicated UMIs in more complex cases", {
     for (actual.unique in c(1000, 5000, 9000)) {
         tmpdir <- tempfile()
-        fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+        fname <- DropletUtils:::simBasicMolInfo(tmpdir)
         EDIT_H5(fname, subset=actual.unique) # introducing duplicates.
 
         info <- read10xMolInfo(fname)
@@ -65,7 +65,7 @@ test_that("chimericDrops removes duplicated UMIs in more complex cases", {
 test_that("chimericDrops reports diagnostics correctly", {
     for (actual.unique in c(1000, 5000, 9000)) {
         tmpdir <- tempfile()
-        fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+        fname <- DropletUtils:::simBasicMolInfo(tmpdir)
         EDIT_H5(fname, subset=actual.unique) # introducing duplicates.
 
         info <- read10xMolInfo(fname)
