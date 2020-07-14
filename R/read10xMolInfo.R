@@ -169,7 +169,9 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
 }
 
 #' @importFrom rhdf5 h5read
-.extract_mol_info <- function(..., use.library=NULL, get.library=FALSE, extract.library.info=FALSE, subset.library.features=FALSE) {
+.extract_mol_info <- function(sample, ..., use.library=NULL, get.library=FALSE, 
+    extract.library.info=FALSE, subset.library.features=FALSE) 
+{
     original.get <- get.library
     original.extract <- extract.library.info
 
@@ -181,7 +183,7 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
         }
     }
 
-    output <- read10xMolInfo(..., get.library=get.library, extract.library.info=extract.library.info)
+    output <- read10xMolInfo(sample, ..., get.library=get.library, extract.library.info=extract.library.info)
 
     has.library <- !is.null(output$data$library)
 
@@ -197,7 +199,7 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
 
         if (subset.library.features) {
             all.types <- as.vector(h5read(sample, "/features/feature_type"))
-            output <- .reindex_mol_info_features(output, all.types %in% available.lib)
+            output <- .reindex_mol_info_features(output, all.types %in% available.lib[use.library])
         }
     }
 
