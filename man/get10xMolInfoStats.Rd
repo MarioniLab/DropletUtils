@@ -5,12 +5,14 @@
 \description{Compute some basic per-cell statistics from the 10x molecule information file.}
 
 \usage{
-get10xMolInfoStats(sample, barcode.length=NULL)
+get10xMolInfoStats(sample, barcode.length=NULL, use.library=NULL)
 }
 
 \arguments{
 \item{sample}{A string containing the path to the molecule information HDF5 file.}
 \item{barcode.length}{An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.}
+\item{use.library}{An integer vector specifying the library indices for which to extract molecules from \code{sample}.
+Alternatively, a character vector specifying the library type(s), e.g., \code{"Gene expression"}.}
 }
 
 \value{
