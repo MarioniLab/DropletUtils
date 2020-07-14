@@ -84,7 +84,8 @@ test_that("Extraction of subsets of the molinfo fields works correctly", {
     expect_identical(ncol(subbed$data), 0L)
     expect_identical(subbed$genes, full$genes)
 
-    subbed <- read10xMolInfo(output, get.gem=FALSE, get.reads=FALSE, get.cell=FALSE, get.gene=FALSE, get.umi=FALSE, keep.unmapped=TRUE)
+    subbed <- read10xMolInfo(output, get.gem=FALSE, get.reads=FALSE, get.cell=FALSE, get.gene=FALSE, get.umi=FALSE, 
+        get.library=FALSE, keep.unmapped=TRUE)
     expect_identical(nrow(subbed$data), nrow(fullun$data))
     expect_identical(ncol(subbed$data), 0L)
     expect_identical(subbed$genes, fullun$genes)
@@ -111,7 +112,13 @@ test_that("read10xMolInfo responds correctly to the CellRanger version", {
     expect_true("barcode_idx" %in% rhdf5::h5ls(output)$name)
     restored2 <-read10xMolInfo(output)
 
-    expect_identical(restored, restored2)
+    expect_identical(restored2$data$library, rep(1L, nrow(restored2$data)))
+    restored2$data$library <- NULL
+    expect_identical(restored$data, restored2$data)
+
+    # Pulling out the library information as JSON.
+    full.plus <- read10xMolInfo(output, extract.library.info=TRUE)
+    expect_identical(length(full.plus$library.info), 1L)
 })
 
 set.seed(907)

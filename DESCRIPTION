@@ -1,6 +1,6 @@
 Package: DropletUtils
-Version: 1.9.3
-Date: 2020-07-12
+Version: 1.9.4
+Date: 2020-07-13
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
     person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
@@ -26,7 +26,8 @@ Suggests:
     beachmat,
     knitr,
     BiocStyle,
-    rmarkdown
+    rmarkdown,
+    jsonlite
 biocViews: 
     ImmunoOncology,
     SingleCell,

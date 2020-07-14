@@ -67,14 +67,18 @@ sim10xMolInfo <- function(prefix, nsamples=1, umi.length=10, barcode.length=4,
             h5write(current$reads, out.file, "reads")
             h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
         } else {
+            # Technically these should be saved as 64-bit, but... whatever.
             actual.barcodes <- factor(.unmask_barcode(current$cell, barcode.length))
-            h5write(as.integer(actual.barcodes) - 1L, out.file, "barcode_idx") # technically should be saved as 64-bit, but not possible here.
+            h5write(as.integer(actual.barcodes) - 1L, out.file, "barcode_idx") 
             h5write(levels(actual.barcodes), out.file, "barcodes")
 
             h5write(current$gene, out.file, "feature_idx")
+            h5write(rep(0L, nrow(current)), out.file, "library_idx")
             h5write(current$reads, out.file, "count")
             h5createGroup(out.file, "features")
             h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "features/id")
+
+            h5write('[{"library_id":"0", "library_type":"Gene expression", "gem_group":1}]', out.file, "library_info")
         }
 
         h5write(current$umi, out.file, "umi")
