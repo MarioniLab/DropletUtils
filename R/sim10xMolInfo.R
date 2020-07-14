@@ -55,7 +55,7 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
         
         current <- fulltab[fulltab$sample==sample,]
         .write_stripped_mol_info(out.file, current, 
-             gene.names=sprintf("ENSG%i", seq_len(ngenes))
+             gene.names=sprintf("ENSG%i", seq_len(ngenes)),
              feature.types=rep("A", ngenes),
              library.info=list(library_type="A", library_id=0, gem_group=1),
              version=version)
@@ -69,16 +69,18 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
 }
 
 #' @importFrom S4Vectors DataFrame
-simBasicMolInfo <- function(out.file, nsamples=1, umi.length=10, barcode.length=4, 
-    ngenes=20, nmolecules=10000, ave.read=10, version=c("2", "3"))
+simBasicMolInfo <- function(out.file, ngems=1, umi.length=10, barcode.length=4, 
+    ngenes=20, nmolecules=10000, ave.read=10, version=c("2", "3"), return.tab=FALSE)
 {
     ncells <- 4L^as.integer(barcode.length)
     cell <- sample(ncells, nmolecules, replace = TRUE)
     umi <- sample(4L^as.integer(umi.length), nmolecules)
     gene <- sample(ngenes+1L, nmolecules, replace = TRUE)
     reads <- pmax(1L, rpois(nmolecules, lambda = ave.read))
-    current <- DataFrame(cell = cell, umi = umi, gene = gene, reads=reads)
+    gem_group <- sample(ngems, nmolecules, replace=TRUE)
+    current <- DataFrame(cell = cell, umi = umi, gene = gene, reads=reads, gem_group=gem_group)
 
+    version <- match.arg(version)
     if (version=="3") {
         library.info <- list(
             list(library_type="A", library_id=0L, gem_group=1L),
@@ -101,6 +103,12 @@ simBasicMolInfo <- function(out.file, nsamples=1, umi.length=10, barcode.length=
         feature.types=feature.types,
         library.info=library.info,
         version=match.arg(version))
+
+    if (return.tab) {
+        list(files=out.file, original=current)
+    } else {
+        out.file
+    }
 }
 
 #' @importFrom rhdf5 h5write h5createGroup h5createFile
