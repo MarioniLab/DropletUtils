@@ -110,7 +110,8 @@ swappedDrops <- function(samples, barcode.length=NULL, use.library=NULL, ...) {
     names(cells) <- names(samples)
 
     for (i in seq_along(samples)) {
-        mol.info <- .extract_mol_info(samples[i], barcode.length=barcode.length, use.library=use.library)
+        mol.info <- .extract_mol_info(samples[i], barcode.length=barcode.length, 
+            use.library=use.library, subset.library.features=TRUE)
 
         if (is.null(ref.genes)) {
             ref.genes <- mol.info$genes            
