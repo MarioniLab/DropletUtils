@@ -30,7 +30,10 @@
 #' A field will not be present in the DataFrame if the corresponding \code{get.*} argument is \code{FALSE}, 
 #' 
 #' The second element of the list is \code{genes}, a character vector containing the names of all genes in the annotation.
-#' This contains the names of the various entries of \code{gene} for the individual molecules.
+#' This is indexed by the \code{gene} field in the \code{data} DataFrame.
+#'
+#' If \code{version="3"}, a \code{feature.type} entry is added to the list.
+#' This is a character vector of the same length as \code{genes}, containing the feature type for each gene.
 #'
 #' If \code{extract.library.info=TRUE}, an additional element named \code{library.info} is returned.
 #' This is a list of lists containing per-library information such as the \code{"library_type"}.
@@ -61,7 +64,7 @@
 #' 
 #' @examples
 #' # Mocking up some 10X HDF5-formatted data.
-#' out <- DropletUtils:::sim10xMolInfo(tempfile())
+#' out <- DropletUtils:::simBasicMolInfo(tempfile())
 #' 
 #' # Reading the resulting file.
 #' read10xMolInfo(out)
@@ -160,9 +163,13 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
     # Don't define the total cell pool here, as higher level functions may want to use gem_group.
     output <- list(data=data, genes=gene.ids)
 
-    if (version=='3' && extract.library.info) {
-        lib.info <- h5read(sample, "/library_info")
-        output$library.info <- jsonlite::fromJSON(lib.info, simplifyVector=FALSE)
+    if (version=='3') {
+        output$feature.type <- as.vector(h5read(sample, "/features/feature_type"))
+
+        if (extract.library.info) {
+            lib.info <- h5read(sample, "/library_info")
+            output$library.info <- jsonlite::fromJSON(lib.info, simplifyVector=FALSE)
+        }
     }
 
     output
@@ -198,7 +205,7 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
         output$data <- output$data[output$data$library %in% use.library,,drop=FALSE]
 
         if (subset.library.features) {
-            all.types <- as.vector(h5read(sample, "/features/feature_type"))
+            all.types <- output$feature.type
             output <- .reindex_mol_info_features(output, all.types %in% available.lib[use.library])
         }
     }
@@ -217,5 +224,6 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
     mol.info$data$gene <- m <- match(mol.info$data$gene, present)
     mol.info$data <- mol.info$data[!is.na(m),,drop=FALSE]
     mol.info$genes <- mol.info$genes[present]
+    mol.info$feature.type <- mol.info$feature.type[present]
     mol.info
 }

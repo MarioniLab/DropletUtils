@@ -62,7 +62,7 @@ The features of interest can also be directly specified with \code{features}.
 }
 \examples{
 # Mocking up some 10X HDF5-formatted data.
-out <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=1)
+out <- DropletUtils:::simBasicMolInfo(tempfile())
 
 # Downsampling by the reads.
 downsampleReads(out, barcode.length=4, prop=0.5)

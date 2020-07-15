@@ -36,7 +36,7 @@ A DataFrame containing one row per cell library, with the fields:
 
 \examples{
 # Mocking up some 10X HDF5-formatted data.
-out <- DropletUtils:::sim10xMolInfo(tempfile())
+out <- DropletUtils:::simBasicMolInfo(tempfile())
 
 get10xMolInfoStats(out)    
 }

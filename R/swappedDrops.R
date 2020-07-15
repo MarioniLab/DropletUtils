@@ -89,7 +89,7 @@
 #' 
 #' @examples
 #' # Mocking up some 10x HDF5-formatted data, with swapping.
-#' curfiles <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=3)
+#' curfiles <- DropletUtils:::simSwappedMolInfo(tempfile(), nsamples=3)
 #' 
 #' # Obtaining count matrices with swapping removed.
 #' out <- swappedDrops(curfiles)
@@ -110,7 +110,8 @@ swappedDrops <- function(samples, barcode.length=NULL, use.library=NULL, ...) {
     names(cells) <- names(samples)
 
     for (i in seq_along(samples)) {
-        mol.info <- .extract_mol_info(samples[i], barcode.length=barcode.length, use.library=use.library)
+        mol.info <- .extract_mol_info(samples[i], barcode.length=barcode.length, 
+            use.library=use.library, subset.library.features=TRUE)
 
         if (is.null(ref.genes)) {
             ref.genes <- mol.info$genes            

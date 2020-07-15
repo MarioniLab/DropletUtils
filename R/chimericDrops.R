@@ -60,7 +60,7 @@
 #'
 #' @examples
 #' # Mocking up some 10x HDF5-formatted data.
-#' curfile <- DropletUtils:::sim10xMolInfo(tempfile())
+#' curfile <- DropletUtils:::simBasicMolInfo(tempfile())
 #' 
 #' out <- chimericDrops(curfile)
 #' dim(out$cleaned)
@@ -75,7 +75,8 @@
 #'
 #' @export
 chimericDrops <- function(sample, barcode.length=NULL, use.library=NULL, ...) {
-    mol.info <- .extract_mol_info(sample, barcode.length=barcode.length, use.library=use.library)
+    mol.info <- .extract_mol_info(sample, barcode.length=barcode.length, 
+        use.library=use.library, subset.library.features=TRUE)
     df <- mol.info$data
     removeChimericDrops(df$cell, df$umi, df$gene, df$reads, ref.genes=mol.info$genes, ...)
 }

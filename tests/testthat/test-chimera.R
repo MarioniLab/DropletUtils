@@ -14,7 +14,7 @@ test_that("chimericDrops removes no duplicated UMIs with standard simulations", 
 
     # Default is to not remove anything,
     # as UMI sampling is done without replacement.
-    fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+    fname <- DropletUtils:::simBasicMolInfo(tmpdir)
 
     output <- chimericDrops(fname, get.chimeric=TRUE)
 
@@ -27,7 +27,7 @@ test_that("chimericDrops removes no duplicated UMIs with standard simulations", 
 test_that("chimericDrops removes duplicated UMIs in more complex cases", {
     for (actual.unique in c(1000, 5000, 9000)) {
         tmpdir <- tempfile()
-        fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+        fname <- DropletUtils:::simBasicMolInfo(tmpdir)
         EDIT_H5(fname, subset=actual.unique) # introducing duplicates.
 
         info <- read10xMolInfo(fname)
@@ -62,10 +62,31 @@ test_that("chimericDrops removes duplicated UMIs in more complex cases", {
     }
 })
 
+test_that("chimericDrops respects the use.library= restriction", {
+    tmpdir <- tempfile(fileext=".h5")
+    fname <- DropletUtils:::simBasicMolInfo(tmpdir, version="3")
+
+    # Behaves properly when no restriction is placed down.
+    ref <- chimericDrops(fname, get.chimeric=TRUE)
+    expect_true(all(dim(ref[[1]]) > 0L))
+    expect_true(all(dim(ref[[2]]) > 0L))
+
+    ref2 <- chimericDrops(fname, get.chimeric=TRUE, use.library=1:3)
+    expect_identical(ref, ref2)
+
+    # Correctly empties out when a restriction is applied.
+    output <- chimericDrops(fname, get.chimeric=TRUE, use.library="XXX")
+    expect_true(all(dim(output[[1]]) == 0L))
+    expect_true(all(dim(output[[2]]) == 0L))
+
+    output <- chimericDrops(fname, get.chimeric=TRUE, use.library="A")
+    expect_true(nrow(output[[1]]) < nrow(ref[[1]]))
+})
+
 test_that("chimericDrops reports diagnostics correctly", {
     for (actual.unique in c(1000, 5000, 9000)) {
         tmpdir <- tempfile()
-        fname <- DropletUtils:::sim10xMolInfo(tmpdir)
+        fname <- DropletUtils:::simBasicMolInfo(tmpdir)
         EDIT_H5(fname, subset=actual.unique) # introducing duplicates.
 
         info <- read10xMolInfo(fname)
