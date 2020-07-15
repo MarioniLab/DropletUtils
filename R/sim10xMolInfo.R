@@ -55,10 +55,11 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
         
         current <- fulltab[fulltab$sample==sample,]
         .write_stripped_mol_info(out.file, current, 
-             gene.names=sprintf("ENSG%i", seq_len(ngenes)),
-             feature.types=rep("A", ngenes),
-             library.info=list(library_type="A", library_id=0, gem_group=1),
-             version=version)
+            barcode.length=barcode.length,
+            gene.names=sprintf("ENSG%i", seq_len(ngenes)),
+            feature.types=rep("A", ngenes),
+            library.info=list(library_type="A", library_id=0, gem_group=1),
+            version=version)
     }
 
     if (return.tab) { 
@@ -99,6 +100,7 @@ simBasicMolInfo <- function(out.file, ngems=1, umi.length=10, barcode.length=4,
     }
 
     .write_stripped_mol_info(out.file, current, 
+        barcode.length=barcode.length,
         gene.names=sprintf("ENSG%i", seq_len(ngenes)),
         feature.types=feature.types,
         library.info=library.info,
@@ -112,7 +114,10 @@ simBasicMolInfo <- function(out.file, ngems=1, umi.length=10, barcode.length=4,
 }
 
 #' @importFrom rhdf5 h5write h5createGroup h5createFile
-.write_stripped_mol_info <- function(out.file, current, gene.names, feature.types, library.info, version="2") {
+.write_stripped_mol_info <- function(out.file, current, barcode.length, 
+    gene.names, feature.types, library.info, version="2")
+{
+    unlink(out.file)
     h5 <- h5createFile(out.file)
 
     # Technically these should be saved as 64-bit, but not possible here.
@@ -139,8 +144,8 @@ simBasicMolInfo <- function(out.file, ngems=1, umi.length=10, barcode.length=4,
     }
 
     if (version=="3") {
-        h5write(current$library, out.file, "library_idx")
-        h5write(jsonlite::toJSON(library.info, auto_unbox=TRUE), out.file, "library_info")
+        h5write(current$library - 1L, out.file, "library_idx")
+        h5write(as.character(jsonlite::toJSON(library.info, auto_unbox=TRUE)), out.file, "library_info")
     }
 
     h5write(current$umi, out.file, "umi")
