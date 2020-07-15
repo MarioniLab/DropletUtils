@@ -6,6 +6,8 @@
 #' produced by CellRanger for 10X Genomics data.
 #' Each file corresponds to one sample in a multiplexed pool.
 #' @param barcode.length An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.
+#' @param use.library An integer scalar specifying the library index for which to extract molecules from \code{sample}.
+#' Alternatively, a string specifying the library type, e.g., \code{"Gene expression"}.
 #' @param ... Further arguments to be passed to \code{removeSwappedDrops}.
 #' @param cells A list of character vectors containing cell barcodes.
 #' Each vector corresponds to one sample in a multiplexed pool, and each entry of the vector corresponds to one molecule.
@@ -63,14 +65,20 @@
 #' Each molecule information file should contain data from only a single 10X run.
 #' Users should \emph{not} combine multiple samples into a single molecule information file.
 #' The function will emit a warning upon detecting multiple GEM groups from any molecule information file.
-#' Molecules with different GEMs will not be recognised as coming from a different sample, though they will be recognised as being derived from different cell-level libraries.
+#' Molecules with different GEM groups will not be recognised as coming from a different sample, though they will be recognised as being derived from different cell-level libraries.
 #' 
 #' In files produced by CellRanger version 3.0, an additional per-molecule field is present indicating the (c)DNA library from which the molecule was derived.
 #' Library preparation can be performed separately for different features (e.g., antibodies, CRISPR tags) such that one 10X run can contain data from multiple libraries.
 #' This allows for arbitrarily complicated multiplexing schemes - for example, gene expression libraries might be multiplexed together across one set of samples,
 #' while the antibody-derived libraries might be multiplexed across another \emph{different} set of samples.
 #' For simplicity, we assume that multiplexing was performed across the same set of \code{samples} for all libraries therein.
-#' 
+#'
+#' If a different multiplexing scheme was applied for each library type, users can set \code{use.library} to only check for swapping within a given library type(s).
+#' For example, if the multiplexed set of samples for the gene expression libraries is different from the multiplexed set for the CRISPR libraries,
+#' one could run \code{swappedDrops} separately on each set of samples with \code{use.library} set to the corresponding type. 
+#' This avoids having to take the union of both sets of samples for a single \code{swappedDrops} run,
+#' which could detect spurious swaps between samples that were never multiplexed together for the same library type.
+#'
 #' @author
 #' Jonathan Griffiths,
 #' with modifications by Aaron Lun
@@ -96,13 +104,13 @@
 #' \emph{Nat. Commun.} 9, 1:2667.
 #'
 #' @export
-swappedDrops <- function(samples, barcode.length=NULL, ...) {
+swappedDrops <- function(samples, barcode.length=NULL, use.library=NULL, ...) {
     ref.genes <- NULL
     cells <- umis <- genes <- nreads <- vector("list", length(samples))
     names(cells) <- names(samples)
 
     for (i in seq_along(samples)) {
-        mol.info <- read10xMolInfo(samples[i], barcode.length=barcode.length)
+        mol.info <- .extract_mol_info(samples[i], barcode.length=barcode.length, use.library=use.library)
 
         if (is.null(ref.genes)) {
             ref.genes <- mol.info$genes            

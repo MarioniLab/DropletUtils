@@ -5,6 +5,8 @@
 #' @param sample String containing paths to the molecule information HDF5 files, 
 #' produced by CellRanger for 10X Genomics data.
 #' @param barcode.length An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.
+#' @param use.library An integer vector specifying the library indices for which to extract molecules from \code{sample}.
+#' Alternatively, a character string specifying one or more library types, e.g., \code{"Gene expression"}.
 #' @param ... Further arguments to be passed to \code{removeChimericDrops}.
 #' @param cells Character vector containing cell barcodes, where each entry corresponds to one molecule.
 #' @param umis Integer vector containing encoded UMI sequences, see \code{?\link{encodeSequences}} for details.
@@ -49,6 +51,11 @@
 #' For all molecules with the same UMI within a given cell, we compute the proportion of reads assigned to each molecule and we keep the molecule with a proportion above \code{min.frac}.
 #' If no molecule passes this threshold, the entire set is discarded.
 #'
+#' The \code{use.library} argument can be used to only check for chimeras within a given feature type, e.g., CRISPR tags.
+#' This is most relevant in situations where \code{sample} contains multiple libraries that involve different sets of shared sequences,
+#' such that chimeras are unlikely to form between molecules from different libraries.
+#' Analysis of just one library can be achieved by setting \code{use.library} to the name or index of the desired feature set.
+#'
 #' @author Aaron Lun
 #'
 #' @examples
@@ -67,8 +74,8 @@
 #' \emph{biorXiv}, \url{https://doi.org/10.1101/093237}
 #'
 #' @export
-chimericDrops <- function(sample, barcode.length=NULL, ...) {
-    mol.info <- read10xMolInfo(sample, barcode.length=barcode.length)
+chimericDrops <- function(sample, barcode.length=NULL, use.library=NULL, ...) {
+    mol.info <- .extract_mol_info(sample, barcode.length=barcode.length, use.library=use.library)
     df <- mol.info$data
     removeChimericDrops(df$cell, df$umi, df$gene, df$reads, ref.genes=mol.info$genes, ...)
 }

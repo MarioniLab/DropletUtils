@@ -9,7 +9,8 @@ downsampleReads(
   prop,
   barcode.length = NULL,
   bycol = FALSE,
-  features = NULL
+  features = NULL,
+  use.library = NULL
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ All values should lie in [0, 1] specifying the downsampling proportion for the m
 \item{bycol}{A logical scalar indicating whether downsampling should be performed on a column-by-column basis.}
 
 \item{features}{A character vector containing the names of the features on which to perform downsampling.}
+
+\item{use.library}{An integer vector specifying the library indices for which to extract molecules from \code{sample}.
+Alternatively, a character vector specifying the library type(s), e.g., \code{"Gene expression"}.}
 }
 \value{
 A numeric sparse matrix containing the downsampled UMI counts for each gene (row) and barcode (column).
@@ -50,9 +54,11 @@ The total number of reads for each cell after downsampling is guaranteed to be \
 Different proportions can be specified for different cells by setting \code{prop} to a vector, 
 where each proportion corresponds to a cell/GEM combination in the order returned by \code{\link{get10xMolInfoStats}}.
 
-The \code{features} argument is intended for studies with multiple feature type, e.g., antibody capture or CRISPR tags.
+The \code{use.library} argument is intended for studies with multiple feature types, e.g., antibody capture or CRISPR tags.
 As the reads for each feature type are generated in a separate sequencing library, it is generally most appropriate to downsample reads for each feature type separately.
-This can be achieved by setting \code{features} to the names of the features in each set (\emph{not} the names of the feature sets themselves).
+This can be achieved by setting \code{use.library} to the name or index of the desired feature set.
+The features of interest can also be directly specified with \code{features}.
+(This will be intersected with any \code{use.library} choice if both are specified.)
 }
 \examples{
 # Mocking up some 10X HDF5-formatted data.

@@ -5,7 +5,7 @@
 \alias{removeChimericDrops}
 \title{Remove chimeric molecules}
 \usage{
-chimericDrops(sample, barcode.length = NULL, ...)
+chimericDrops(sample, barcode.length = NULL, use.library = NULL, ...)
 
 removeChimericDrops(
   cells,
@@ -23,6 +23,9 @@ removeChimericDrops(
 produced by CellRanger for 10X Genomics data.}
 
 \item{barcode.length}{An integer scalar specifying the length of the cell barcode, see \code{\link{read10xMolInfo}}.}
+
+\item{use.library}{An integer vector specifying the library indices for which to extract molecules from \code{sample}.
+Alternatively, a character string specifying one or more library types, e.g., \code{"Gene expression"}.}
 
 \item{...}{Further arguments to be passed to \code{removeChimericDrops}.}
 
@@ -78,6 +81,11 @@ we retain any molecule that has a much greater number of reads compared to all o
 This is based on the expectation that the original non-chimeric molecule will have undergone more rounds of PCR amplification compared to its chimeric offspring, and thus will have higher read coverage.
 For all molecules with the same UMI within a given cell, we compute the proportion of reads assigned to each molecule and we keep the molecule with a proportion above \code{min.frac}.
 If no molecule passes this threshold, the entire set is discarded.
+
+The \code{use.library} argument can be used to only check for chimeras within a given feature type, e.g., CRISPR tags.
+This is most relevant in situations where \code{sample} contains multiple libraries that involve different sets of shared sequences,
+such that chimeras are unlikely to form between molecules from different libraries.
+Analysis of just one library can be achieved by setting \code{use.library} to the name or index of the desired feature set.
 }
 \examples{
 # Mocking up some 10x HDF5-formatted data.

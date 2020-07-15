@@ -9,6 +9,8 @@
 #' All values should lie in [0, 1] specifying the downsampling proportion for the matrix or for each cell.
 #' @param bycol A logical scalar indicating whether downsampling should be performed on a column-by-column basis.
 #' @param features A character vector containing the names of the features on which to perform downsampling.
+#' @param use.library An integer vector specifying the library indices for which to extract molecules from \code{sample}.
+#' Alternatively, a character vector specifying the library type(s), e.g., \code{"Gene expression"}.
 #' 
 #' @details
 #' This function downsamples the reads for each molecule by the specified \code{prop}, using the information in \code{sample}.
@@ -28,9 +30,11 @@
 #' Different proportions can be specified for different cells by setting \code{prop} to a vector, 
 #' where each proportion corresponds to a cell/GEM combination in the order returned by \code{\link{get10xMolInfoStats}}.
 #'
-#' The \code{features} argument is intended for studies with multiple feature type, e.g., antibody capture or CRISPR tags.
+#' The \code{use.library} argument is intended for studies with multiple feature types, e.g., antibody capture or CRISPR tags.
 #' As the reads for each feature type are generated in a separate sequencing library, it is generally most appropriate to downsample reads for each feature type separately.
-#' This can be achieved by setting \code{features} to the names of the features in each set (\emph{not} the names of the feature sets themselves).
+#' This can be achieved by setting \code{use.library} to the name or index of the desired feature set.
+#' The features of interest can also be directly specified with \code{features}.
+#' (This will be intersected with any \code{use.library} choice if both are specified.)
 #' 
 #' @return
 #' A numeric sparse matrix containing the downsampled UMI counts for each gene (row) and barcode (column).
@@ -53,19 +57,18 @@
 #' 
 #'
 #' @export
-downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE, features=NULL) 
+downsampleReads <- function(sample, prop, barcode.length=NULL, bycol=FALSE, features=NULL, use.library=NULL) 
 # Downsamples the reads to produce a matrix of UMI counts, given
 # a HDF5 file containing molecule information.
 #
 # written by Aaron Lun
 # created 19 December 2017    
 {
-    incoming <- read10xMolInfo(sample, barcode.length, get.umi=FALSE)
+    incoming <- .extract_mol_info(sample, barcode.length=barcode.length, get.umi=FALSE, 
+        use.library=use.library, subset.library.features=TRUE)
+
     if (!is.null(features)) {
-        present <- which(incoming$genes %in% features)
-        incoming$data$gene <- m <- match(incoming$data$gene, present)
-        incoming$data <- incoming$data[!is.na(m),,drop=FALSE]
-        incoming$genes <- incoming$genes[present]
+        incoming <- .reindex_mol_info_features(incoming, incoming$genes %in% features)
     }
     
     out <- .get_cell_ordering(incoming$data$cell, incoming$data$gem_group)
