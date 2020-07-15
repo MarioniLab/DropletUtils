@@ -51,7 +51,10 @@ Only reported when \code{version="3"}.}
 A field will not be present in the DataFrame if the corresponding \code{get.*} argument is \code{FALSE}, 
 
 The second element of the list is \code{genes}, a character vector containing the names of all genes in the annotation.
-This contains the names of the various entries of \code{gene} for the individual molecules.
+This is indexed by the \code{gene} field in the \code{data} DataFrame.
+
+If \code{version="3"}, a \code{feature.type} entry is added to the list.
+This is a character vector of the same length as \code{genes}, containing the feature type for each gene.
 
 If \code{extract.library.info=TRUE}, an additional element named \code{library.info} is returned.
 This is a list of lists containing per-library information such as the \code{"library_type"}.
@@ -78,7 +81,7 @@ Aside from the missing field, the results are guaranteed to be identical, i.e., 
 }
 \examples{
 # Mocking up some 10X HDF5-formatted data.
-out <- DropletUtils:::sim10xMolInfo(tempfile())
+out <- DropletUtils:::simBasicMolInfo(tempfile())
 
 # Reading the resulting file.
 read10xMolInfo(out)

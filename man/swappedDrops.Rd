@@ -116,7 +116,7 @@ which could detect spurious swaps between samples that were never multiplexed to
 
 \examples{
 # Mocking up some 10x HDF5-formatted data, with swapping.
-curfiles <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=3)
+curfiles <- DropletUtils:::simSwappedMolInfo(tempfile(), nsamples=3)
 
 # Obtaining count matrices with swapping removed.
 out <- swappedDrops(curfiles)
