@@ -23,19 +23,20 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
     sample <- sample(nsamples, noriginal, replace = TRUE)
     original <- DataFrame(cell = cell, umi = umi, gene = gene, sample = sample, gem_group=rep(1L, noriginal))
 
-    # Creating swapped molecules (unless nsamples==1L, in which case we skip this).
-    if (nsamples > 1L) { 
-        swapped <- original[sample(nrow(original), nmolecules - noriginal),]
-        samp.vec <- seq_len(nsamples)
-        new.sample <- swapped$sample
-        for (x in samp.vec) {
-            current <- swapped$sample==x
-            new.sample[current] <- sample(samp.vec[-x], sum(current), replace=TRUE)
-        }
-        swapped$sample <- new.sample
-    } else {
-        swapped <- original[integer(0),]
+    version <- match.arg(version)
+    if (version=="3") {
+        original$library <- rep(1L, nrow(original))
     }
+
+    # Creating swapped molecules.
+    swapped <- original[sample(nrow(original), nmolecules - noriginal),]
+    samp.vec <- seq_len(nsamples)
+    new.sample <- swapped$sample
+    for (x in samp.vec) {
+        current <- swapped$sample==x
+        new.sample[current] <- sample(samp.vec[-x], sum(current), replace=TRUE)
+    }
+    swapped$sample <- new.sample
     
     # Simulating the number of reads (swapped reads only get 1).
     original$reads <- rpois(nrow(original), lambda = ave.read) + 1L
@@ -44,7 +45,6 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
 
     # Writing them to 10X-like HDF5 files.
     out.files <- paste0(prefix, ".", seq_len(nsamples), ".h5")
-    version <- match.arg(version)
 
     for (i in seq_along(out.files)){
         sample <- seq_len(nsamples)[i]
@@ -58,7 +58,7 @@ simSwappedMolInfo <- function(prefix, nsamples=2, umi.length=10, barcode.length=
             barcode.length=barcode.length,
             gene.names=sprintf("ENSG%i", seq_len(ngenes)),
             feature.types=rep("A", ngenes),
-            library.info=list(library_type="A", library_id=0, gem_group=1),
+            library.info=list(list(library_type="A", library_id=0, gem_group=1)),
             version=version)
     }
 
