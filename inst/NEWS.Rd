@@ -8,6 +8,11 @@
 \item Added \code{features=} to \code{downsampleReads()} for per-feature-set downsampling.
 
 \item Added matrix support for \code{y=} and \code{ambient=} in \code{maximumAmbience()}.
+
+\item Report library index and feature type in output of \code{read10xMolInfo()}.
+
+\item Support subsetting by library index/type in functions that use the molecule information file,
+such as \code{swappedDrops()} and \code{chimericDrops()}.
 }}
 
 \section{Version 1.8.0}{\itemize{
