@@ -1,7 +1,7 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
-get10xMolInfoStats <- function(sample, barcode.length=NULL) {
-    incoming <- read10xMolInfo(sample, barcode.length, get.umi=FALSE)
+get10xMolInfoStats <- function(sample, barcode.length=NULL, use.library=NULL) {
+    incoming <- .extract_mol_info(sample, barcode.length=barcode.length, get.umi=FALSE, use.library=use.library)
 
     out <- .get_cell_ordering(incoming$data$cell, incoming$data$gem_group)
     o <- out$order

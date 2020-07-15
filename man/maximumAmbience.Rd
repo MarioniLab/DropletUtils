@@ -93,7 +93,7 @@ scaling
 
 # Estimating the maximum contribution to 'y' by 'ambient'.
 contribution <- maximumAmbience(y, ambient, mode="profile")
-DataFrame(ambient=contribution, total=y)
+DataFrame(ambient=drop(contribution), total=y)
 
 }
 \seealso{

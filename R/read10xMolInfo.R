@@ -168,3 +168,54 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
     output
 }
 
+#' @importFrom rhdf5 h5read
+.extract_mol_info <- function(sample, ..., use.library=NULL, get.library=FALSE, 
+    extract.library.info=FALSE, subset.library.features=FALSE) 
+{
+    original.get <- get.library
+    original.extract <- extract.library.info
+
+    if (!is.null(use.library)) {
+        get.library <- TRUE
+        needs.lib.info <- is.character(use.library) || subset.library.features
+        if (needs.lib.info) {
+            extract.library.info <- TRUE
+        }
+    }
+
+    output <- read10xMolInfo(sample, ..., get.library=get.library, extract.library.info=extract.library.info)
+
+    has.library <- !is.null(output$data$library)
+
+    if (!is.null(use.library) && has.library) {
+        if (needs.lib.info) {
+            available.lib <- vapply(output$library.info, FUN="[[", i="library_type", FUN.VALUE="")
+            if (is.character(use.library)) {
+                use.library <- which(available.lib %in% use.library) 
+            }
+        }
+
+        output$data <- output$data[output$data$library %in% use.library,,drop=FALSE]
+
+        if (subset.library.features) {
+            all.types <- as.vector(h5read(sample, "/features/feature_type"))
+            output <- .reindex_mol_info_features(output, all.types %in% available.lib[use.library])
+        }
+    }
+
+    if (!original.get) {
+        output$data$library <- NULL
+    }
+    if (!original.extract) {
+        output$library.info <- NULL
+    }
+    output
+}
+
+.reindex_mol_info_features <- function(mol.info, keep) {
+    present <- which(keep)
+    mol.info$data$gene <- m <- match(mol.info$data$gene, present)
+    mol.info$data <- mol.info$data[!is.na(m),,drop=FALSE]
+    mol.info$genes <- mol.info$genes[present]
+    mol.info
+}
