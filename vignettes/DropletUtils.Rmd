@@ -78,7 +78,7 @@ For demonstration purposes, we create an example molecule information file below
 
 ```{r}
 set.seed(1000)
-mol.info.file <- DropletUtils:::sim10xMolInfo(tempfile())
+mol.info.file <- DropletUtils:::simBasicMolInfo(tempfile())
 mol.info.file
 ```
 
@@ -268,7 +268,7 @@ To demonstrate, we mock up a set of molecule information files for three multipl
 
 ```{r}
 set.seed(1000)
-mult.mol.info <- DropletUtils:::sim10xMolInfo(tempfile(), nsamples=3)
+mult.mol.info <- DropletUtils:::simSwappedMolInfo(tempfile(), nsamples=3)
 mult.mol.info
 ```
 
