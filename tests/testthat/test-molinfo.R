@@ -1,8 +1,7 @@
 # This tests that extraction of molecule information works correctly.
 # library(DropletUtils); library(testthat); source("test-molinfo.R")
 
-tmpdir <- tempfile()
-dir.create(tmpdir)
+tmpdir <- tempfile(fileext=".h5")
 barcode <- 4L
 ngenes <- 20L
 
@@ -30,15 +29,13 @@ set.seed(909)
 test_that("Extraction of molecule information fields works correctly", {
     output <- DropletUtils:::simBasicMolInfo(tmpdir, return.tab=TRUE, barcode=barcode)
 
-    ref.original <- output$original[output$original$sample==i,]        
-    ref.swapped <- output$swapped[output$swapped$sample==i,]
-    combined <- rbind(ref.original, ref.swapped)
-    combined <- combined[combined$gene<ngenes,]
+    combined <- output$original
+    combined <- combined[combined$gene<=ngenes,]
 
-    current <- read10xMolInfo(output$files[i], barcode.length=barcode)
+    current <- read10xMolInfo(output$files, barcode.length=barcode)
     expect_identical(length(current$genes), ngenes)
     expect_identical(as.integer(current$data$umi), combined$umi)
-    expect_identical(as.integer(current$data$gene), combined$gene+1L)
+    expect_identical(as.integer(current$data$gene), combined$gene)
     expect_identical(as.integer(current$data$reads), combined$reads)
     expect_identical(as.integer(current$data$gem_group), rep(1L, nrow(combined)))
 
@@ -49,9 +46,9 @@ test_that("Extraction of molecule information fields works correctly", {
     expect_true(all(lengths(lapply(by.cell.id, unique))==1L))
 
     # Checking that using too little barcode length underestimates the number of cells.
-    current2 <- read10xMolInfo(output$files[i], barcode.length=barcode - 1L)
+    current2 <- read10xMolInfo(output$files, barcode.length=barcode - 1L)
     expect_true(length(unique(current2$data$cell)) < length(unique(current$data$cell)))
-    current3 <- read10xMolInfo(output$files[i], barcode.length=barcode + 1L)
+    current3 <- read10xMolInfo(output$files, barcode.length=barcode + 1L)
     expect_true(length(unique(current3$data$cell)) == length(unique(current$data$cell)))
 })
 
@@ -111,13 +108,13 @@ test_that("read10xMolInfo responds correctly to the CellRanger version", {
     expect_true("barcode_idx" %in% rhdf5::h5ls(output)$name)
     restored2 <-read10xMolInfo(output)
 
-    expect_identical(restored2$data$library, rep(1L, nrow(restored2$data)))
+    expect_type(restored2$data$library, "integer")
     restored2$data$library <- NULL
     expect_identical(restored$data, restored2$data)
 
     # Pulling out the library information as JSON.
     full.plus <- read10xMolInfo(output, extract.library.info=TRUE)
-    expect_identical(length(full.plus$library.info), 1L)
+    expect_identical(length(full.plus$library.info), 3L)
 })
 
 set.seed(907)
@@ -140,22 +137,7 @@ test_that("read10xMolInfo works with silly inputs containing no molecules", {
 
 set.seed(908)
 test_that("Molecule information extraction by library works correctly", {
-    out.path <- DropletUtils:::sim10xMolInfo(tmpdir, barcode=barcode, nsamples=1, version="3")
-
-    # Mocking up multiple libraries.
-    current <- read10xMolInfo(out.path, keep.unmapped=TRUE)
-    permuted <- sample(3, nrow(current$data), replace=TRUE)
-    rhdf5::h5write(permuted - 1L, out.path, "library_idx")
-
-    rhdf5::h5delete(out.path, "library_info")
-    rhdf5::h5write(as.character(jsonlite::toJSON(list(
-         list(library_id=0, library_type="A", gem_group=1),
-         list(library_id=1, library_type="B", gem_group=2),
-         list(library_id=2, library_type="C", gem_group=3)
-     ), auto_unbox=TRUE)), out.path, "library_info")
-
-    feat.types <- sample(LETTERS[1:3], length(current$genes), replace=TRUE)
-    rhdf5::h5write(feat.types, out.path, "features/feature_type")
+    out.path <- DropletUtils:::simBasicMolInfo(tmpdir, barcode=barcode, version="3")
 
     # Naive extraction.
     ref <- read10xMolInfo(out.path, get.library=FALSE)
@@ -188,16 +170,18 @@ test_that("Molecule information extraction by library works correctly", {
 
     # Works with subsetting.
     out <- DropletUtils:::.extract_mol_info(out.path, use.library=2, subset.library.features=TRUE)
-#    sub <- ref$data[ref$data$library == 2 & feat.types[ref$data$gene] %in% "B",]
-#    sub$library <- NULL
-#    expect_identical(out$data, sub)
-    expect_identical(out$genes, ref$genes[feat.types=="B"])
+    sub <- ref$data[ref$data$library == 2,]
+    sub$gene <- match(sub$gene, which(ref$feature.type=="B"))
+    sub$library <- NULL
+    expect_identical(out$data, sub)
+    expect_identical(out$genes, ref$genes[ref$feature.type=="B"])
 
     out <- DropletUtils:::.extract_mol_info(out.path, use.library="C", subset.library.features=TRUE)
-#    sub <- ref$data[ref$data$library == 3,]
-#    sub$library <- NULL
-#    expect_identical(out$data, sub)
-    expect_identical(out$genes, ref$genes[feat.types=="C"])
+    sub <- ref$data[ref$data$library == 3,]
+    sub$gene <- match(sub$gene, which(ref$feature.type=="C"))
+    sub$library <- NULL
+    expect_identical(out$data, sub)
+    expect_identical(out$genes, ref$genes[ref$feature.type=="C"])
 
     # Preserves library information if requested.
     out <- DropletUtils:::.extract_mol_info(out.path, use.library="A", get.library=TRUE, extract.library.info=TRUE)

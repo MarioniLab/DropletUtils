@@ -3,12 +3,11 @@
 
 library(Matrix)
 set.seed(501)
+barcode <- 4L
 
 test_that("downsampling from the reads yields correct results", {
-    barcode <- 4L
-    tmpdir <- tempfile()
-    dir.create(tmpdir)
-    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.length=barcode) 
+    tmpfile <- tempfile(fileext=".h5")
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, ngenes=100, barcode.length=barcode) 
    
     # Creating the full matrix, and checking that it's the same when no downsampling is requested.
     collated <- read10xMolInfo(out.paths, barcode)
@@ -29,22 +28,28 @@ test_that("downsampling from the reads yields correct results", {
         expect_true(all(out <= full.tab))
         expect_false(all(out==full.tab))
     }
+})
+
+test_that("downsampling from the reads yields correct results", {
+    tmpfile <- tempfile(fileext=".h5")
 
     # Making it easier to check the totals, by making all UMIs have a read count of 1.
-    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.len=barcode, ave.read=0) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, ngenes=100, barcode.len=barcode, ave.read=0) 
     full.tab <- downsampleReads(out.paths, barcode, prop=1)
-    expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.555)), round(0.555*sum(full.tab))) # Again, avoiding rounding differences.
+
+    # Setting an odd fraction to avoid rounding differences between OS's.
+    expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.555)), round(0.555*sum(full.tab))) 
     expect_equal(sum(downsampleReads(out.paths, barcode, prop=0.111)), round(0.111*sum(full.tab)))
     expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.555, bycol=TRUE)), round(0.555*colSums(full.tab)))
     expect_equal(colSums(downsampleReads(out.paths, barcode, prop=0.111, bycol=TRUE)), round(0.111*colSums(full.tab)))
 
     # Checking behaviour on silly inputs where there are no reads, or no genes.
     ngenes <- 20L
-    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, nmolecules=0, ngenes=ngenes, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, nmolecules=0, ngenes=ngenes, barcode.length=barcode) 
     out <- downsampleReads(out.paths, barcode, prop=0.5)
     expect_identical(dim(out), c(ngenes, 0L))
 
-    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, nmolecules=0, ngenes=0, barcode.length=barcode) 
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, nmolecules=0, ngenes=0, barcode.length=barcode) 
     out <- downsampleReads(out.paths, barcode, prop=0.5)
     expect_identical(dim(out), c(0L, 0L))
 })
@@ -57,9 +62,9 @@ test_that("downsampling from the reads compares correctly to downsampleMatrix", 
     ncells <- 200
     nmolecules <- sum(gene.count)*ncells
 
-    tmpdir <- tempfile()
-    dir.create(tmpdir)
-    out.file <- file.path(tmpdir, "out.h5")
+    tmpfile <- tempfile()
+    dir.create(tmpfile)
+    out.file <- file.path(tmpfile, "out.h5")
 
     library(rhdf5)
     h5 <- h5createFile(out.file)
@@ -87,10 +92,8 @@ test_that("downsampling from the reads compares correctly to downsampleMatrix", 
 })
 
 test_that("downsampling from the reads works correctly with feature subsets", {
-    barcode <- 4L
-    tmpdir <- tempfile()
-    dir.create(tmpdir)
-    out.paths <- DropletUtils:::simBasicMolInfo(tmpdir, ngenes=100, barcode.length=barcode) 
+    tmpfile <- tempfile(fileext=".h5")
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, ngenes=100, barcode.length=barcode) 
 
     # Full matrix is correctly extracted without any downsampling.
     collated <- read10xMolInfo(out.paths, barcode)
@@ -108,4 +111,19 @@ test_that("downsampling from the reads works correctly with feature subsets", {
     expect_identical(rownames(out), rownames(out2))
     expect_true(all(out >= out2))
     expect_true(sum(out) >= sum(out2))
+})
+
+test_that("downsampling from the reads works correctly with library subsets", {
+    tmpfile <- tempfile(fileext=".h5")
+    out.paths <- DropletUtils:::simBasicMolInfo(tmpfile, ngenes=100, barcode.length=barcode, version="3")
+
+    set.seed(100)
+    out2 <- downsampleReads(out.paths, barcode, prop=0.1, use.library="A")
+
+    info <- read10xMolInfo(tmpfile)
+    expect_identical(rownames(out2), info$genes[info$feature.type=="A"])
+
+    set.seed(100)
+    ref <- downsampleReads(out.paths, barcode, prop=0.1, features=rownames(out2))
+    expect_identical(out2, ref)
 })
