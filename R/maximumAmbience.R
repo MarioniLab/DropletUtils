@@ -91,11 +91,12 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
     args <- list(threshold=threshold, dispersion=dispersion, num.points=num.points, num.iter=num.iter, mode=mode)
 
     if (is.null(dim(y))) {
-        y <- cbind(y) 
+        y <- cbind(y)
+        colnames(y) <- NULL
     }
 
     collated <- vector("list", ncol(y))
-    names(collated) <- colnames(collated)
+    names(collated) <- colnames(y)
 
     for (i in seq_along(collated)) {
         if (is.null(dim(ambient))) {
@@ -122,6 +123,10 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
         FUN <- function(y, mu) {
             pnbinom(y, mu=mu, size=1/dispersion)
         }
+    }
+
+    if (!identical(names(y), names(ambient))) {
+        warning("'y' and 'ambient' do not have the same feature names")
     }
 
     # Removing all-zero genes in the ambient profile.
