@@ -9,6 +9,8 @@
 
 \item Added matrix support for \code{y=} and \code{ambient=} in \code{maximumAmbience()}.
 
+\item Added \code{controlAmbience()} for easy estimation of ambient contamination with control features.
+
 \item Report library index and feature type in output of \code{read10xMolInfo()}.
 
 \item Support subsetting by library index/type in functions that use the molecule information file,

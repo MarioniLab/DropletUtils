@@ -56,7 +56,10 @@ controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "pr
          y <- cbind(y)
     }
     if (is.null(dim(ambient))) {
-        ambient <- matrix(ambient, nrow(y), ncol(y))
+        ambient <- matrix(ambient, nrow(y), ncol(y), dimnames=list(names(ambient), NULL))
+    }
+    if (!identical(rownames(y), rownames(ambient))) {
+        warning("'y' and 'ambient' do not have the same row names")
     }
 
     y.con <- colSums(y[features,,drop=FALSE])
@@ -67,7 +70,7 @@ controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "pr
     if (mode=="scale") {
         scaling
     } else {
-        scaled.ambient <- t(t(ambient) * y.con/amb.con)
+        scaled.ambient <- t(t(ambient) * scaling)
         if (mode=="profile") {
             scaled.ambient
         } else {
