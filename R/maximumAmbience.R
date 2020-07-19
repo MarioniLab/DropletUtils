@@ -166,6 +166,7 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
         proportion={
             prop <- pmin(1, scale * original.ambient/original.y)
             prop[original.y==0] <- NaN
+            names(prop) <- names(original.ambient)
             prop
         }
     )
