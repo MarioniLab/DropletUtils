@@ -1,26 +1,28 @@
 #' Maximum ambient contribution
 #'
-#' Estimate the maximum contribution of the ambient solution to a particular expression profile.
+#' Compute the maximum contribution of the ambient solution to a particular expression profile.
 #'
 #' @param y A numeric count matrix where each row represents a gene and each column represents an expression profile
 #' (usually aggregated across multiple droplets in a sample).
-#' @param ambient A numeric vector of length equal to \code{y},
+#' This can also be a vector, in which case it is converted into a one-column matrix.
+#' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each gene in the ambient solution.
-#' Alternatively, a matrix where each column contains a specific ambient profile for the corresponding column of \code{y}.
+#' Alternatively, a matrix where each row corresponds to a row of \code{y}
+#' and each column contains a specific ambient profile for the corresponding column of \code{y}.
 #' @param threshold Numeric scalar specifying the p-value threshold to use, see Details.
 #' @param dispersion Numeric scalar specifying the dispersion to use in the negative binomial model.
 #' Defaults to zero, i.e., a Poisson model.
 #' @param num.points Integer scalar specifying the number of points to use for the grid search.
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
-#' @param mode String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.
+#' @param mode String indicating the output to return - the scaling factor, the ambient profile or the proportion of each gene's counts in \code{y} that is attributable to ambient contamination.
 #' 
 #' @return 
 #' If \code{mode="scale"},
-#' a numeric vector is returned quantifying the \dQuote{contribution} of the ambient solution to each column of \code{y}.
-#' Scaling columns of \code{ambient} by this vector yields the expected ambient profile for each column of \code{y},
+#' a numeric vector is returned quantifying the maximum \dQuote{contribution} of the ambient solution to each column of \code{y}.
+#' Scaling columns of \code{ambient} by this vector yields the maximum ambient profile for each column of \code{y},
 #' which can also be obtained by setting \code{mode="profile"}.
 #'
-#' If \code{mode="proportion"}, a numeric matrix is returned containing the expected proportion of counts in \code{y} that are attributed to ambient contamination.
+#' If \code{mode="proportion"}, a numeric matrix is returned containing the maximum proportion of counts in \code{y} that are attributable to ambient contamination.
 #' This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
 #'
 #' @details
@@ -79,6 +81,7 @@
 #' @seealso 
 #' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
 #'
+#' \code{\link{controlAmbience}}, for a more accurate estimate when control features are available.
 #' @export
 #' @importFrom stats p.adjust ppois pnbinom
 maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, 
@@ -160,14 +163,23 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
 
     scale <- (lower+upper)/2
 
-    switch(mode,
-        scale=scale,
-        profile=scale * original.ambient,
-        proportion={
-            prop <- pmin(1, scale * original.ambient/original.y)
-            prop[original.y==0] <- NaN
+    if (mode=="scale") {
+        scale
+    } else {
+        profile <- scale * original.ambient
+        if (mode=="profile") {
+            profile
+        } else {
+            prop <- .clean_amb_props(profile, original.y)
             names(prop) <- names(original.ambient)
             prop
         }
-    )
+    }
+}
+
+.clean_amb_props <- function(s, y) {
+    p <- s/y
+    p[p > 1] <- 1
+    p[y == 0] <- NaN # for fairness's sake.
+    p
 }

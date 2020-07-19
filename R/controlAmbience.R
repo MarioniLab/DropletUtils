@@ -1,0 +1,77 @@
+#' Ambient contribution from controls
+#'
+#' Estimate the contribution of the ambient solution to a particular expression profile,
+#' based on the abundance of control features that should not be expressed in the latter.
+#'
+#' @inheritParams maximumAmbience
+#' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
+#'
+#' @details
+#' Control features should not be genuinely expressed in the biological system of \code{y}.
+#' This is most commonly determined \emph{a priori} from the biological context,
+#' based on the presence of genes that are not consistent with cell type identity.
+#' A common example is the expression of hemoglobins or immunoglobulins in cell types 
+#' that are not erythrocytes or B cells (or their precursors), respectively.
+#'
+#' Other sources of control features can be derived from the experimental system.
+#' For example, if spike-ins were introduced into the solution prior to cell capture,
+#' these would serve as a gold standard for ambient contamination in \code{y}.
+#' For single-nuclei sequencing, mitochondrial transcripts can serve a similar role 
+#' under the assumption that all high-quality libraries are stripped nuclei.
+#'
+#' @return 
+#' If \code{mode="scale"},
+#' a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.
+#' Scaling columns of \code{ambient} by this vector yields the estimated ambient profile for each column of \code{y},
+#' which can also be obtained by setting \code{mode="profile"}.
+#'
+#' If \code{mode="proportion"}, a numeric matrix is returned containing the estimated proportion of counts in \code{y} that are attributable to ambient contamination.
+#' This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
+#'
+#' @author Aaron Lun
+#'
+#' @examples
+#' # Making up some data.
+#' ambient <- c(runif(900, 0, 0.1), runif(100))
+#' y <- rpois(1000, ambient * 50)
+#' y <- y + c(integer(100), rpois(900, 5)) # actual biology, but first 100 genes silent.
+#'
+#' # Using the first 100 genes as a control:
+#' scaling <- controlAmbience(y, ambient, features=1:100)
+#' scaling
+#'
+#' # Estimating the control contribution to 'y' by 'ambient'.
+#' contribution <- controlAmbience(y, ambient, features=1:100, mode="profile")
+#' DataFrame(ambient=drop(contribution), total=y)
+#'
+#' @seealso 
+#' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
+#'
+#' \code{\link{maximumAmbience}}, when control features are not available.
+#'
+#' @export
+#' @importFrom Matrix colSums t
+controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
+    if (is.null(dim(y))) {
+         y <- cbind(y)
+    }
+    if (is.null(dim(ambient))) {
+        ambient <- matrix(ambient, nrow(y), ncol(y))
+    }
+
+    y.con <- colSums(y[features,,drop=FALSE])
+    amb.con <- colSums(ambient[features,,drop=FALSE])
+    scaling <- y.con/amb.con
+
+    mode <- match.arg(mode)
+    if (mode=="scale") {
+        scaling
+    } else {
+        scaled.ambient <- t(t(ambient) * y.con/amb.con)
+        if (mode=="profile") {
+            scaled.ambient
+        } else {
+            .clean_amb_props(scaled.ambient, y)
+        }
+    }
+}

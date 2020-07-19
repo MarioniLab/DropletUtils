@@ -16,11 +16,13 @@ maximumAmbience(
 }
 \arguments{
 \item{y}{A numeric count matrix where each row represents a gene and each column represents an expression profile
-(usually aggregated across multiple droplets in a sample).}
+(usually aggregated across multiple droplets in a sample).
+This can also be a vector, in which case it is converted into a one-column matrix.}
 
-\item{ambient}{A numeric vector of length equal to \code{y},
+\item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.
-Alternatively, a matrix where each column contains a specific ambient profile for the corresponding column of \code{y}.}
+Alternatively, a matrix where each row corresponds to a row of \code{y}
+and each column contains a specific ambient profile for the corresponding column of \code{y}.}
 
 \item{threshold}{Numeric scalar specifying the p-value threshold to use, see Details.}
 
@@ -31,19 +33,19 @@ Defaults to zero, i.e., a Poisson model.}
 
 \item{num.iter}{Integer scalar specifying the number of iterations to use for the grid search.}
 
-\item{mode}{String indicating the output to return - the scaling factor, the maximum ambient profile or the maximum proportion of each gene's counts in \code{y} that is attributable to ambient contamination.}
+\item{mode}{String indicating the output to return - the scaling factor, the ambient profile or the proportion of each gene's counts in \code{y} that is attributable to ambient contamination.}
 }
 \value{
 If \code{mode="scale"},
-a numeric vector is returned quantifying the \dQuote{contribution} of the ambient solution to each column of \code{y}.
-Scaling columns of \code{ambient} by this vector yields the expected ambient profile for each column of \code{y},
+a numeric vector is returned quantifying the maximum \dQuote{contribution} of the ambient solution to each column of \code{y}.
+Scaling columns of \code{ambient} by this vector yields the maximum ambient profile for each column of \code{y},
 which can also be obtained by setting \code{mode="profile"}.
 
-If \code{mode="proportion"}, a numeric matrix is returned containing the expected proportion of counts in \code{y} that are attributed to ambient contamination.
+If \code{mode="proportion"}, a numeric matrix is returned containing the maximum proportion of counts in \code{y} that are attributable to ambient contamination.
 This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
 }
 \description{
-Estimate the maximum contribution of the ambient solution to a particular expression profile.
+Compute the maximum contribution of the ambient solution to a particular expression profile.
 }
 \details{
 On occasion, it is useful to estimate the maximum possible contribution of the ambient solution to a count profile.
@@ -100,6 +102,8 @@ DataFrame(ambient=drop(contribution), total=y)
 \code{\link{emptyDrops}}, which uses the ambient profile to call cells.
 
 \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
+
+\code{\link{controlAmbience}}, for a more accurate estimate when control features are available.
 }
 \author{
 Aaron Lun
