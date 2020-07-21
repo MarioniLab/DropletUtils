@@ -7,6 +7,7 @@
 #' Columns represent barcoded droplets, rows represent genes.
 #' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
 #' at or below which all barcodes are assumed to correspond to empty droplets.
+#' @param by.rank An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{estimateAmbience}} for more details.
 #' @param niters An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.
 #' @param test.ambient A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.
 #' @param ignore A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).
@@ -114,7 +115,7 @@
 #' 
 #' \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
 #' 
-#' The metadata of the output DataFrame will contains the ambient profile in \code{ambient}, the estimated/specified value of \code{alpha}, the specified value of \code{lower} and the number of iterations in \code{niters}.
+#' The metadata of the output DataFrame will contains the ambient profile in \code{ambient}, the estimated/specified value of \code{alpha}, the specified value of \code{lower} (possibly altered by \code{use.rank}) and the number of iterations in \code{niters}.
 #' For \code{emptyDrops}, the metadata will also contain the retention threshold in \code{retain}.
 #' 
 #' @author
@@ -163,21 +164,23 @@
 #' @export
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
-#' @importFrom Matrix rowSums colSums
+#' @importFrom Matrix colSums
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, BPPARAM=SerialParam()) 
+    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
 {
     m <- .rounded_to_integer(m, round)
-    astats <- .compute_ambient_stats(m, lower=lower)
+    totals <- .intColSums(m)
+    lower <- .get_lower(totals, lower, by.rank=by.rank)
+
+    astats <- .compute_ambient_stats(m, totals, lower=lower)
     m <- astats$m
-    umi.sum <- astats$umi.sum
     ambient <- astats$ambient
     ambient.prop <- astats$ambient.prop
 
     # Estimating the alpha from the discarded ambient droplets, if desired.
     if (is.null(alpha)) {
         ambient.m <- astats$ambient.m
-        ambient.totals <- umi.sum[ambient]
+        ambient.totals <- totals[ambient]
         alpha <- .estimate_alpha(ambient.m, ambient.prop, ambient.totals) 
     }
 
@@ -186,13 +189,13 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     if (!test.ambient) {
         keep <- !ambient
     } else {
-        keep <- umi.sum > 0L
+        keep <- totals > 0L
     }
     if (!is.null(ignore)) { 
-        keep <- keep & umi.sum > ignore
+        keep <- keep & totals > ignore
     }
     obs.m <- m[,keep,drop=FALSE]
-    obs.totals <- umi.sum[keep]
+    obs.totals <- totals[keep]
 
     # Calculating the log-multinomial probability for each cell.
     obs.P <- .compute_multinom_prob_data(obs.m, ambient.prop, alpha=alpha)
@@ -213,7 +216,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     all.lr[keep] <- obs.P + rest.P 
     all.lim[keep] <- limited
 
-    output <- DataFrame(Total=umi.sum, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
+    output <- DataFrame(Total=totals, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
     metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
     output
 }

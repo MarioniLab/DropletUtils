@@ -4,7 +4,13 @@
 \alias{estimateAmbience}
 \title{Estimate the ambient profile}
 \usage{
-estimateAmbience(m, lower = 100, round = TRUE, good.turing = TRUE)
+estimateAmbience(
+  m,
+  lower = 100,
+  by.rank = NULL,
+  round = TRUE,
+  good.turing = TRUE
+)
 }
 \arguments{
 \item{m}{A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
@@ -13,6 +19,8 @@ Columns represent barcoded droplets, rows represent genes.}
 
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
 at or below which all barcodes are assumed to correspond to empty droplets.}
+
+\item{by.rank}{An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.}
 
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.}
 
@@ -37,6 +45,10 @@ If such values are present, \code{m} is first \code{\link{round}}ed to the neare
 This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
 Rounding is performed by default as discrete count values are necessary for the Good-Turing algorithm, but if \code{m} is known to be discrete, setting \code{round=FALSE} can provide a small efficiency improvement.
 
+Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
+}
+\section{Behavior at zero counts}{
+
 Good-Turing returns zero probabilities for zero counts if none of the summed counts are equal to 1.
 This is technically correct but not helpful, so we protect against this by adding a single \dQuote{pseudo-feature} with a count of 1 to the profile.
 The modified profile is used to calculate a Good-Turing estimate of observing any feature that has zero counts, which is then divided to get the per-feature probability. 
@@ -45,9 +57,20 @@ We scale down all the other probabilities to make space for this new pseudo-prob
 Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero.
 This ensures that the estimation is not affected by the presence/absence of non-expressed genes in different annotations.
 In any case, such genes are likely to be completely irrelevant to downstream steps and can be safely ignored.
-
-Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
 }
+
+\section{Finding the assumed empty droplets}{
+
+The default approach is to assume that all barcodes with total counts less than or equal to \code{lower} are empty.
+This is generally effective but may not be adequate for datasets with unusually low or high sequencing depth, such that all or none of the barcodes are detected as empty respectively.
+For example, there is no obvious choice for \code{lower} in CITE-seq data given that the coverage can be highly variable. 
+
+In such cases, an alternative approach can be used by passing an integer to the \code{by.rank} argument.
+This specifies the number of barcodes with the highest total counts to ignore; the remaining barcodes are assumed to be ambient.
+The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a certain number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
+By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
+}
+
 \examples{
 # Mocking up some data:
 set.seed(0)

@@ -18,6 +18,12 @@ test_that("estimateAmbience works correctly", {
     out2 <- estimateAmbience(my.counts2)
     expect_identical(unname(out), out2)
 
+    # Performs correctly with the rank-based method.
+    out.r <- estimateAmbience(my.counts, by.rank=1000)
+    expect_false(identical(out, out.r))
+    out.r2 <- estimateAmbience(my.counts, by.rank=1000, good.turing=FALSE)
+    expect_identical(out.r2, rowSums(my.counts[,rank(-colSums(my.counts), ties.method="first") > 1000]))
+
     # Deals with zeroes properly.
     my.counts3 <- rbind(0,0,0,my.counts)
     out3 <- estimateAmbience(my.counts3)
@@ -326,6 +332,19 @@ test_that("emptyDrops automatically rounds non-integer values", {
     set.seed(7002)
     ref <- emptyDrops(round(my.counts))
     expect_identical(out,ref)
+})
+
+set.seed(80001)
+test_that("emptyDrops works with by.rank=TRUE", {
+    my.counts <- DropletUtils:::simCounts() 
+
+    set.seed(999)
+    out <- emptyDrops(my.counts, by.rank=1000)
+    expect_false(metadata(out)$lower==100)
+
+    set.seed(999)
+    ref <- emptyDrops(my.counts, lower=metadata(out)$lower, by.rank=NULL)
+    expect_identical(out, ref)
 })
 
 test_that("emptyDrops fails when you don't give it low counts", {

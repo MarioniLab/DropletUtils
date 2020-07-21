@@ -13,6 +13,7 @@ testEmptyDrops(
   ignore = NULL,
   alpha = NULL,
   round = TRUE,
+  by.rank = NULL,
   BPPARAM = SerialParam()
 )
 
@@ -43,6 +44,8 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.}
 
+\item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{estimateAmbience}} for more details.}
+
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 
 \item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
@@ -62,7 +65,7 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \code{emptyDrops} will return a DataFrame like \code{testEmptyDrops}, with an additional \code{FDR} field.
 
-The metadata of the output DataFrame will contains the ambient profile in \code{ambient}, the estimated/specified value of \code{alpha}, the specified value of \code{lower} and the number of iterations in \code{niters}.
+The metadata of the output DataFrame will contains the ambient profile in \code{ambient}, the estimated/specified value of \code{alpha}, the specified value of \code{lower} (possibly altered by \code{use.rank}) and the number of iterations in \code{niters}.
 For \code{emptyDrops}, the metadata will also contain the retention threshold in \code{retain}.
 }
 \description{

@@ -15,6 +15,9 @@
 
 \item Support subsetting by library index/type in functions that use the molecule information file,
 such as \code{swappedDrops()} and \code{chimericDrops()}.
+
+\item Added \code{by.rank=} option to \code{estimateAmbience()} and \code{emptyDrops()},
+for estimation of the ambient profile by excluding barcodes with the largest totals.
 }}
 
 \section{Version 1.8.0}{\itemize{
