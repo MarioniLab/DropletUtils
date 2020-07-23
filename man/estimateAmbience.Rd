@@ -67,7 +67,7 @@ For example, there is no obvious choice for \code{lower} in CITE-seq data given 
 
 In such cases, an alternative approach can be used by passing an integer to the \code{by.rank} argument.
 This specifies the number of barcodes with the highest total counts to ignore; the remaining barcodes are assumed to be ambient.
-The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a certain number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
+The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
 By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
 }
 

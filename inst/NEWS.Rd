@@ -18,6 +18,10 @@ such as \code{swappedDrops()} and \code{chimericDrops()}.
 
 \item Added \code{by.rank=} option to \code{estimateAmbience()} and \code{emptyDrops()},
 for estimation of the ambient profile by excluding barcodes with the largest totals.
+
+\item Added \code{exclude.from=} option to \code{barcodeRanks()},
+to avoid problems with instability at low ranks for knee/inflection calculations
+(contributed by Stefano Mangiola).
 }}
 
 \section{Version 1.8.0}{\itemize{
