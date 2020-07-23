@@ -110,7 +110,11 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=100, df=20,
     left.edge <- edge.out["left"]
     right.edge <- edge.out["right"]
 
-    # We restrict to this region, thereby simplifying the shape of the curve.
+    # As an aside: taking the right edge to get the total for the inflection point.
+    # We use the numerical derivative as the spline is optimized for the knee.
+    inflection <- 10^(y[right.edge])
+
+    # We restrict curve fitting to this region, thereby simplifying the shape of the curve.
     # This allows us to get a decent fit with low df for stable differentiation.
     if (is.null(fit.bounds)) {
         new.keep <- left.edge:right.edge
@@ -120,20 +124,22 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=100, df=20,
 
     # Smoothing to avoid error multiplication upon differentiation.
     # Minimizing the signed curvature and returning the total for the knee point.
-    fit <- smooth.spline(x[new.keep], y[new.keep], df=df, ...)
-    d1 <- predict(fit, deriv=1)$y
-    d2 <- predict(fit, deriv=2)$y
-    curvature <- d2/(1 + d1^2)^1.5
-    knee <- 10^(y[which.min(curvature)])
+    fitted.vals <- rep(NA_real_, length(keep))
 
-    # Taking the right edge to get the total for the inflection point.
-    # We use the numerical derivative as the spline is optimized for the knee.
-    inflection <- 10^(y[right.edge])
+    if (length(new.keep) >= 4) {
+        fit <- smooth.spline(x[new.keep], y[new.keep], df=df, ...)
+        fitted.vals[keep][new.keep] <- 10^fitted(fit)
+
+        d1 <- predict(fit, deriv=1)$y
+        d2 <- predict(fit, deriv=2)$y
+        curvature <- d2/(1 + d1^2)^1.5
+        knee <- 10^(y[which.min(curvature)])
+    } else {
+        # Sane fallback upon overly aggressive filtering by 'exclude.from', 'lower'.
+        knee <- 10^(y[new.keep[1]]) 
+    }
 
     # Returning a whole stack of useful stats.
-    fitted.vals <- rep(NA_real_, length(keep))
-    fitted.vals[keep][new.keep] <- 10^fitted(fit)
-
     out <- DataFrame(
         rank=.reorder(run.rank, stuff$lengths, o), 
         total=.reorder(run.totals, stuff$lengths, o),

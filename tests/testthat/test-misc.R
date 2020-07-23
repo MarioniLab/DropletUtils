@@ -74,6 +74,9 @@ test_that("barcodeRanks' excluder works correctly", {
 
     brout2 <- barcodeRanks(my.counts, exclude.from=200)
     expect_false(identical(ref, brout2))
+
+    brout3 <- barcodeRanks(my.counts, exclude.from=Inf)
+    expect_false(identical(ref, brout2))
 })
 
 test_that("defaultDrops runs to completion", {
