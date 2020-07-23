@@ -2,7 +2,7 @@
 #' @importFrom stats smooth.spline predict fitted
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=ncol(m)/2, ...) 
+barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=100, ...) 
 # Returning statistics to construct a barcode-rank plot. Also calculates
 # the knee and inflection points for further use.
 #
