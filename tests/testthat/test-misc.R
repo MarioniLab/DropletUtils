@@ -39,6 +39,43 @@ test_that("barcodeRanks runs to completion", {
     expect_error(barcodeRanks(my.counts[0,]), "insufficient")
 })
 
+test_that("barcodeRanks' excluder works correctly", {
+    brout <- barcodeRanks(my.counts)
+    keep <- brout$total >= 100 & !duplicated(brout$total)
+    x <- log10(brout$rank[keep])
+    y <- log10(brout$total[keep])
+
+    o <- order(x)
+    x <- x[o]
+    y <- y[o]
+
+    # Compares correctly to a reference.
+    edge.out <- DropletUtils:::.find_curve_bounds(x=x, y=y, exclude.from=100) 
+    ref.out <- DropletUtils:::.find_curve_bounds(x=tail(x, -100), y=tail(y, -100), exclude.from=0) 
+    expect_identical(edge.out, ref.out+100)
+
+    edge.outx <- DropletUtils:::.find_curve_bounds(x=x, y=y, exclude.from=200) 
+    ref.outx <- DropletUtils:::.find_curve_bounds(x=tail(x, -200), y=tail(y, -200), exclude.from=0) 
+    expect_false(identical(edge.outx, ref.outx+200))
+
+    # Proper edge behavior.
+    edge.out2 <- DropletUtils:::.find_curve_bounds(x=x, y=y, exclude.from=0) 
+    expect_identical(edge.out[2], edge.out2[2])
+    expect_false(identical(edge.out[1], edge.out2[1]))
+
+    edge.out3 <- DropletUtils:::.find_curve_bounds(x=x, y=y, exclude.from=Inf)
+    expect_identical(unname(edge.out3[1]), length(y)-1)
+    expect_identical(unname(edge.out3[2]), length(y)-1)
+
+    # Works properly when put together. 
+    ref <- barcodeRanks(my.counts)
+    brout <- barcodeRanks(my.counts, exclude.from=100)
+    expect_identical(ref, brout)
+
+    brout2 <- barcodeRanks(my.counts, exclude.from=200)
+    expect_false(identical(ref, brout2))
+})
+
 test_that("defaultDrops runs to completion", {
     out <- defaultDrops(my.counts)
    

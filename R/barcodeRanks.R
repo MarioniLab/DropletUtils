@@ -87,15 +87,10 @@
 #' \code{\link{emptyDrops}}, where this function is used.
 #' @export
 #' @importFrom stats smooth.spline predict fitted
+#' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=100, ...) 
-# Returning statistics to construct a barcode-rank plot. Also calculates
-# the knee and inflection points for further use.
-#
-# written by Aaron Lun
-# created 22 December 2017    
-{
+barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=100, df=20, ...) {
     totals <- unname(colSums(m))
     o <- order(totals, decreasing=TRUE)
 
@@ -111,12 +106,9 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=100,
     x <- log10(run.rank[keep])
     
     # Numerical differentiation to identify bounds for spline fitting.
-    # The upper/lower bounds are defined at the plateau and inflection, respectively.
-    d1n <- diff(y)/diff(x)
-    
-    # Using the argument exclude.from, the right edge is calculated on the right 50% (by default) of d1n to avoid error for semi-pathologic datasets
-    right.edge <- exclude.from + which.min(tail(d1n, length(d1n)-exclude.from))
-    left.edge <- which.max(d1n[exclude.from:right.edge])
+    edge.out <- .find_curve_bounds(x=x, y=y, exclude.from=exclude.from) 
+    left.edge <- edge.out["left"]
+    right.edge <- edge.out["right"]
 
     # We restrict to this region, thereby simplifying the shape of the curve.
     # This allows us to get a decent fit with low df for stable differentiation.
@@ -158,3 +150,17 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=100,
     return(out)
 }
 
+.find_curve_bounds <- function(x, y, exclude.from) 
+# The upper/lower bounds are defined at the plateau and inflection, respectively.
+# Some exclusion of the LHS points avoids problems with discreteness.
+{
+    d1n <- diff(y)/diff(x)
+
+    skip <- min(length(d1n) - 1, sum(x <= log10(exclude.from)))
+    d1n <- tail(d1n, length(d1n) - skip)
+
+    right.edge <- which.min(d1n)
+    left.edge <- which.max(d1n[seq_len(right.edge)])
+
+    c(left=left.edge, right=right.edge) + skip
+}
