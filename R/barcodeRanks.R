@@ -26,7 +26,9 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...)
     # Numerical differentiation to identify bounds for spline fitting.
     # The upper/lower bounds are defined at the plateau and inflection, respectively.
     d1n <- diff(y)/diff(x)
-    right.edge <- which.min(d1n)
+    
+    # The right edge is calculated on the right 50% of d1n to avoid error for semi-pathologic datasets
+    right.edge <- which.min(d1n[(length(d1n)/2):length(d1n)])
     left.edge <- which.max(d1n[seq_len(right.edge)])
 
     # We restrict to this region, thereby simplifying the shape of the curve.
