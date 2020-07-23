@@ -28,7 +28,7 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=ncol
     d1n <- diff(y)/diff(x)
     
     # Using the argument exclude.from, the right edge is calculated on the right 50% (by default) of d1n to avoid error for semi-pathologic datasets
-    right.edge <- which.min(d1n[exclude.from:ncol(m)])
+    right.edge <- exclude.from + which.min(tail(d1n, length(d1n)-exclude.from))
     left.edge <- which.max(d1n[seq_len(right.edge)])
 
     # We restrict to this region, thereby simplifying the shape of the curve.
