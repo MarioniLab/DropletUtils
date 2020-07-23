@@ -1,3 +1,90 @@
+#' Calculate barcode ranks
+#'
+#' Compute barcode rank statistics and identify the knee and inflection points on the total count curve.
+#' 
+#' @param m A numeric matrix-like object where columns represent barcoded droplets and rows represent genes.
+#' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
+#' at or below which all barcodes are assumed to correspond to empty droplets.
+#' @param fit.bounds A numeric vector of length 2, specifying the lower and upper bounds on the total UMI count
+#' from which to obtain a section of the curve for spline fitting.
+#' @param exclude.from An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
+#' Ignored if \code{fit.bounds} is specified.
+#' @param df,... Further arguments to pass to \code{\link{smooth.spline}}.
+#' 
+#' @details
+#' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode
+#' where the highest ranks have the largest totals.
+#' This is equivalent to a transposed empirical cumulative density plot with log-transformed axes, 
+#' which focuses on the barcodes with the largest counts.
+#' To help create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
+#' Barcodes with the same total count receive the same average rank to avoid problems with discrete runs of the same total.
+#' 
+#' The function will also identify the inflection and knee points on the curve for downstream use, 
+#' Both of these points correspond to a sharp transition between two components of the total count distribution, 
+#' presumably reflecting the difference between empty droplets with little RNA and cell-containing droplets with much more RNA.
+#' \itemize{
+#' \item The inflection point is computed as the point on the rank/total curve where the first derivative is minimized.
+#' The derivative is computed directly from all points on the curve with total counts greater than \code{lower}.
+#' This avoids issues with erratic behaviour of the curve at lower totals.
+#' \item The knee point is defined as the point on the curve where the signed curvature is minimized.
+#' This requires calculation of the second derivative, which is much more sensitive to noise in the curve.
+#' To overcome this, a smooth spline is fitted to the log-total counts against the log-rank using \code{\link{smooth.spline}}.
+#' Derivatives are then calculated from the fitted spline using \code{\link{predict}}.
+#' }
+#'
+#' @section Details on curve fitting:
+#' We supply a relatively low default setting of \code{df} to avoid overfitting the spline, 
+#' as this results in unstability in the higher derivatives (and thus the curvature).
+#' \code{df} and other arguments to \code{\link{smooth.spline}} can be tuned 
+#' if the estimated knee point is not at an appropriate location.
+#' We also restrict the fit to lie within the bounds defined by \code{fit.bounds} to focus on the region containing the knee point.
+#' This allows us to obtain an accurate fit with low \code{df} rather than attempting to model the entire curve.
+#' 
+#' If \code{fit.bounds} is not specified, the lower bound is automatically set to the inflection point
+#' as this should lie below the knee point on typical curves.
+#' The upper bound is set to the point at which the first derivative is closest to zero, 
+#' i.e., the \dQuote{plateau} region before the knee point.
+#' The first \code{exclude.from} barcodes with the highest totals are ignored in this process 
+#' to avoid spuriously large numerical derivatives from unstable parts of the curve with low point density.
+#'
+#' Note that only points with total counts above \code{lower} will be considered for curve fitting,
+#' regardless of how \code{fit.bounds} is defined.
+#' 
+#' @return
+#' A \linkS4class{DataFrame} where each row corresponds to a column of \code{m}, and containing the following fields:
+#' \describe{
+#' \item{\code{rank}:}{Numeric, the rank of each barcode (averaged across ties).}
+#' \item{\code{total}:}{Numeric, the total counts for each barcode.}
+#' \item{\code{fitted}:}{Numeric, the fitted value from the spline for each barcode.
+#' This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.}
+#' }
+#' 
+#' The metadata contains \code{knee}, a numeric scalar containing the total count at the knee point;
+#' and \code{inflection}, a numeric scalar containing the total count at the inflection point.
+#' 
+#' @author
+#' Aaron Lun
+#' 
+#' @examples
+#' # Mocking up some data: 
+#' set.seed(2000)
+#' my.counts <- DropletUtils:::simCounts()
+#' 
+#' # Computing barcode rank statistics:
+#' br.out <- barcodeRanks(my.counts)
+#' names(br.out)
+#' 
+#' # Making a plot.
+#' plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
+#' o <- order(br.out$rank)
+#' lines(br.out$rank[o], br.out$fitted[o], col="red")
+#' abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
+#' abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
+#' legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
+#'     legend=c("knee", "inflection"))
+#' 
+#' @seealso
+#' \code{\link{emptyDrops}}, where this function is used.
 #' @export
 #' @importFrom stats smooth.spline predict fitted
 #' @importFrom Matrix colSums
