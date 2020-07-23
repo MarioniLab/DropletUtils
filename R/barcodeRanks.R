@@ -2,7 +2,7 @@
 #' @importFrom stats smooth.spline predict fitted
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...) 
+barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, exclude.from=100, ...) 
 # Returning statistics to construct a barcode-rank plot. Also calculates
 # the knee and inflection points for further use.
 #
@@ -26,8 +26,10 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, df=20, ...)
     # Numerical differentiation to identify bounds for spline fitting.
     # The upper/lower bounds are defined at the plateau and inflection, respectively.
     d1n <- diff(y)/diff(x)
-    right.edge <- which.min(d1n)
-    left.edge <- which.max(d1n[seq_len(right.edge)])
+    
+    # Using the argument exclude.from, the right edge is calculated on the right 50% (by default) of d1n to avoid error for semi-pathologic datasets
+    right.edge <- exclude.from + which.min(tail(d1n, length(d1n)-exclude.from))
+    left.edge <- which.max(d1n[exclude.from:right.edge])
 
     # We restrict to this region, thereby simplifying the shape of the curve.
     # This allows us to get a decent fit with low df for stable differentiation.
