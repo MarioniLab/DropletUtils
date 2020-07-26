@@ -69,8 +69,8 @@ test_that("barcodeRanks' excluder works correctly", {
 
     # Works properly when put together. 
     ref <- barcodeRanks(my.counts)
-    brout <- barcodeRanks(my.counts, exclude.from=100)
-    expect_identical(ref, brout)
+    brout <- barcodeRanks(my.counts, exclude.from=0)
+    expect_false(identical(ref, brout))
 
     brout2 <- barcodeRanks(my.counts, exclude.from=200)
     expect_false(identical(ref, brout2))

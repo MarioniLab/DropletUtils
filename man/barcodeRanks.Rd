@@ -8,7 +8,7 @@ barcodeRanks(
   m,
   lower = 100,
   fit.bounds = NULL,
-  exclude.from = 100,
+  exclude.from = 50,
   df = 20,
   ...
 )

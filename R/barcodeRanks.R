@@ -90,7 +90,7 @@
 #' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=100, df=20, ...) {
+barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ...) {
     totals <- unname(colSums(m))
     o <- order(totals, decreasing=TRUE)
 
