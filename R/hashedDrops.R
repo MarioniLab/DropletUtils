@@ -173,6 +173,7 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
             chosen <- .get_lower_dist(log1p(current), p=min.prop)
             ambient[i] <- mean(current[chosen])
         }
+        names(ambient) <- rownames(x)
     }
 
     discard <- ambient == 0
