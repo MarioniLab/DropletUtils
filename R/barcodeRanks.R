@@ -133,7 +133,7 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, 
         d1 <- predict(fit, deriv=1)$y
         d2 <- predict(fit, deriv=2)$y
         curvature <- d2/(1 + d1^2)^1.5
-        knee <- 10^(y[which.min(curvature)])
+        knee <- 10^(y[new.keep][which.min(curvature)])
     } else {
         # Sane fallback upon overly aggressive filtering by 'exclude.from', 'lower'.
         knee <- 10^(y[new.keep[1]]) 
