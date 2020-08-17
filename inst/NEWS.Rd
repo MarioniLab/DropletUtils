@@ -22,6 +22,9 @@ for estimation of the ambient profile by excluding barcodes with the largest tot
 \item Added \code{exclude.from=} option to \code{barcodeRanks()},
 to avoid problems with instability at low ranks for knee/inflection calculations
 (contributed by Stefano Mangiola).
+
+\item Minor bugfix in \code{barcodeRanks()} calculation of the knee point.
+Note that this affects the default choice of \code{retain=} in \code{emptyDrops()}.
 }}
 
 \section{Version 1.8.0}{\itemize{
