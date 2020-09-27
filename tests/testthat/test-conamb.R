@@ -9,6 +9,8 @@ y2 <- y + rpois(1000, 5) # adding some actual biology.
 
 test_that("controlAmbience function works with a variety of inputs", {
     ref <- controlAmbience(y, ambient, 1:100)
+    expect_equal(unname(ref), sum(y[1:100])/sum(ambient[1:100]))
+
     out <- controlAmbience(cbind(y), ambient, 1:100)
     expect_identical(ref, out)
     expect_identical(length(ref), 1L)
@@ -22,6 +24,16 @@ test_that("controlAmbience function works with a variety of inputs", {
     out2x <- controlAmbience(cbind(y, y2), cbind(ambient, ambient+1), 1:100)
     expect_identical(ref, out2x[1])
     expect_equivalent(ref2x, out2x[2])
+})
+
+test_that("controlAmbience function works with gene sets", {
+    ref <- controlAmbience(y, ambient, list(1:100, 200:300))
+    expect_equal(unname(ref), 
+        min(
+            sum(y[1:100])/sum(ambient[1:100]),
+            sum(y[200:300])/sum(ambient[200:300])
+        )
+    )
 })
 
 test_that("controlAmbience function works with a variety of outputs", {

@@ -5,19 +5,22 @@
 #'
 #' @inheritParams maximumAmbience
 #' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
+#' 
+#' Alternatively, a list of vectors specifying mutually exclusive sets of features.
 #'
 #' @details
-#' Control features should not be genuinely expressed in the biological system of \code{y}.
-#' This is most commonly determined \emph{a priori} from the biological context,
-#' based on the presence of genes that are not consistent with cell type identity.
-#' A common example is the expression of hemoglobins or immunoglobulins in cell types 
-#' that are not erythrocytes or B cells (or their precursors), respectively.
-#'
-#' Other sources of control features can be derived from the experimental system.
+#' Control features should be those that cannot be expressed and thus fully attributable to ambient contamination.
+#' This is most commonly determined \emph{a priori} from the biological context and experimental system.
 #' For example, if spike-ins were introduced into the solution prior to cell capture,
 #' these would serve as a gold standard for ambient contamination in \code{y}.
 #' For single-nuclei sequencing, mitochondrial transcripts can serve a similar role 
 #' under the assumption that all high-quality libraries are stripped nuclei.
+#'
+#' If \code{features} is a list, it is expected to contain multiple sets of mutually exclusive features.
+#' These features need not be controls but each cell should only express features in one set (or no sets).
+#' The expression of multiple sets can thus be attributed to ambient contamination.
+#' For this mode, an archetypal pairing is that of hemoglobins with immunoglobulins (Young and Behjati, 2018), 
+#' which should not be co-expressed in any (known) cell type.
 #'
 #' @return 
 #' If \code{mode="scale"},
@@ -49,8 +52,14 @@
 #'
 #' \code{\link{maximumAmbience}}, when control features are not available.
 #'
+#' @references
+#' Young MD and Behjati S (2018).
+#' SoupX removes ambient RNA contamination from droplet based single-cell RNA sequencing data.
+#' \emph{biorXiv}.
+#'
 #' @export
-#' @importFrom Matrix colSums t
+#' @importFrom Matrix t
+#' @importFrom scuttle sumCountsAcrossFeatures
 controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
     if (is.null(dim(y))) {
          y <- cbind(y)
@@ -62,9 +71,13 @@ controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "pr
         warning("'y' and 'ambient' do not have the same row names")
     }
 
-    y.con <- colSums(y[features,,drop=FALSE])
-    amb.con <- colSums(ambient[features,,drop=FALSE])
-    scaling <- y.con/amb.con
+    if (!is.list(features)) {
+        features <- list(features)
+    } 
+    sum.y <- sumCountsAcrossFeatures(y, features)
+    sum.a <- sumCountsAcrossFeatures(ambient, features)
+    props <- sum.y/sum.a
+    scaling <- apply(props, 2, min)
 
     mode <- match.arg(mode)
     if (mode=="scale") {
