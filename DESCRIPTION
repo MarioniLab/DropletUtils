@@ -1,6 +1,6 @@
 Package: DropletUtils
-Version: 1.9.11
-Date: 2020-09-07
+Version: 1.9.12
+Date: 2020-09-27
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
     person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
