@@ -11,6 +11,8 @@
 
 \item Added \code{controlAmbience()} for easy estimation of ambient contamination with control features.
 
+\item Added \code{removeAmbience()} function to remove the ambient solution from a count matrix, mostly for aesthetics.
+
 \item Report library index and feature type in output of \code{read10xMolInfo()}.
 
 \item Support subsetting by library index/type in functions that use the molecule information file,
