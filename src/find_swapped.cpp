@@ -46,7 +46,7 @@ struct molecule {
  */
 
 //[[Rcpp::export(rng=false)]]
-Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, int diagnostics) {
+Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, bool diagnostics) {
     auto Cells=process_list<Rcpp::StringVector>(cells);
     auto Genes=process_list<Rcpp::IntegerVector>(genes);
     auto Umis=process_list<Rcpp::IntegerVector>(umis);

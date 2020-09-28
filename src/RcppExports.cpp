@@ -55,7 +55,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // find_swapped
-Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, int diagnostics);
+Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcpp::List reads, double minfrac, bool diagnostics);
 RcppExport SEXP _DropletUtils_find_swapped(SEXP cellsSEXP, SEXP genesSEXP, SEXP umisSEXP, SEXP readsSEXP, SEXP minfracSEXP, SEXP diagnosticsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -64,7 +64,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::List >::type umis(umisSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type reads(readsSEXP);
     Rcpp::traits::input_parameter< double >::type minfrac(minfracSEXP);
-    Rcpp::traits::input_parameter< int >::type diagnostics(diagnosticsSEXP);
+    Rcpp::traits::input_parameter< bool >::type diagnostics(diagnosticsSEXP);
     rcpp_result_gen = Rcpp::wrap(find_swapped(cells, genes, umis, reads, minfrac, diagnostics));
     return rcpp_result_gen;
 END_RCPP

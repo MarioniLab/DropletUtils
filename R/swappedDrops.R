@@ -20,7 +20,7 @@
 #' @param min.frac A numeric scalar specifying the minimum fraction of reads required for a swapped molecule to be assigned to a sample.
 #' @param get.swapped A logical scalar indicating whether the UMI counts corresponding to swapped molecules should be returned.
 #' @param get.diagnostics A logical scalar indicating whether to return the number of reads for each molecule in each sample.
-#' @param hdf5.out A logical scalar indicating whether the diagnotic matrix should be returned as a \linkS4class{HDF5Matrix}.
+#' @param hdf5.out Deprecated and ignored.
 #' 
 #' @details
 #' Barcode swapping on the Illumina sequencer occurs when multiplexed samples undergo PCR re-amplification on the flow cell by excess primer with different barcodes.
@@ -136,15 +136,14 @@ swappedDrops <- function(samples, barcode.length=NULL, use.library=NULL, ...) {
 
 #' @export
 #' @rdname swappedDrops
-removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0.8,
-    get.swapped=FALSE, get.diagnostics=FALSE, hdf5.out=TRUE)
+removeSwappedDrops <- function(cells, umis, genes, nreads, ref.genes, min.frac=0.8, get.swapped=FALSE, 
+    get.diagnostics=FALSE, hdf5.out=FALSE) 
 # Core function to swappedDrops(), split off to accommodate non-HDF5 inputs.
 # 
 # written by Aaron Lun
 # created 17 July 2018
 {
-    diag.code <- ifelse(get.diagnostics, 1L + as.integer(hdf5.out), 0L)
-    swap.out <- find_swapped(cells, genes, umis, nreads, min.frac, diag.code)
+    swap.out <- find_swapped(cells, genes, umis, nreads, min.frac, get.diagnostics)
     unswapped <- swap.out[[1]]
 
     nsamples <- length(cells)

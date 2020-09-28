@@ -16,7 +16,7 @@ removeSwappedDrops(
   min.frac = 0.8,
   get.swapped = FALSE,
   get.diagnostics = FALSE,
-  hdf5.out = TRUE
+  hdf5.out = FALSE
 )
 }
 \arguments{
@@ -50,7 +50,7 @@ Each index should refer to an element of \code{ref.genes}.}
 
 \item{get.diagnostics}{A logical scalar indicating whether to return the number of reads for each molecule in each sample.}
 
-\item{hdf5.out}{A logical scalar indicating whether the diagnotic matrix should be returned as a \linkS4class{HDF5Matrix}.}
+\item{hdf5.out}{Deprecated and ignored.}
 }
 \value{
 A list is returned with the \code{cleaned} entry, itself a list of sparse matrices.
