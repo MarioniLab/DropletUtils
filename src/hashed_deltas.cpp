@@ -1,17 +1,16 @@
 #include "Rcpp.h"
-#include "beachmat/numeric_matrix.h"
-#include "beachmat/integer_matrix.h"
+#include "beachmat3/beachmat.h"
 
 #include <stdexcept>
 #include <algorithm>
 #include <vector>
 
-template <typename V, class MAT>
-Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count) {
-    auto M=beachmat::create_matrix<MAT>(mat);
-    const int NR=M->get_nrow();
-    const int NC=M->get_ncol();
-    if (prop.size()!=NR) {
+// [[Rcpp::export(rng=false)]]
+Rcpp::List hashed_deltas(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count) {
+    auto M = beachmat::read_lin_block(mat);
+    const int NR = M->get_nrow();
+    const int NC = M->get_ncol();
+    if (prop.size() != NR) {
         throw std::runtime_error("'length(prop)' should be the same as 'nrow(mat)'");
     }
 
@@ -20,13 +19,13 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
 
     Rcpp::IntegerVector output_best(NC), output_second(NC);
     Rcpp::NumericVector output_fc(NC), output_fc2(NC);
-    V tmp(NR);
+    std::vector<double> tmp(NR);
     std::vector<std::pair<double, int> > collected(NR);
 
     for (int i=0; i<NC; ++i) {
-        M->get_col(i, tmp.begin());
+        auto ptr = M->get_col(i, tmp.data());
         for (int j=0; j<NR; ++j) {
-            collected[j].first=tmp[j]/prop[j];
+            collected[j].first=ptr[j]/prop[j];
             collected[j].second=j;
         }
 
@@ -64,7 +63,7 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
         const double PSEUDO=std::max(pseudo_count, scaling * mean_prop); 
 
         for (auto& x : collected) {
-            x.first = tmp[x.second] - scaling * prop[x.second];
+            x.first = ptr[x.second] - scaling * prop[x.second];
             x.first = std::max(x.first, 0.0) + PSEUDO;
         }
 
@@ -100,15 +99,4 @@ Rcpp::List hashed_deltas_internal(Rcpp::RObject mat, Rcpp::NumericVector prop, d
         Rcpp::Named("FC")=output_fc,
         Rcpp::Named("FC2")=output_fc2
     );
-}
-
-// [[Rcpp::export(rng=false)]]
-Rcpp::List hashed_deltas(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count) 
-{
-    int rtype=beachmat::find_sexp_type(mat);
-    if (rtype==INTSXP) {
-        return hashed_deltas_internal<Rcpp::IntegerVector, beachmat::integer_matrix>(mat, prop, pseudo_count);
-    } else {
-        return hashed_deltas_internal<Rcpp::NumericVector, beachmat::numeric_matrix>(mat, prop, pseudo_count);
-    }
 }

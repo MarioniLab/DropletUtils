@@ -1,10 +1,10 @@
 #include "Rcpp.h"
-
-#include "beachmat/numeric_matrix.h"
+#include "beachmat3/beachmat.h"
 #include "utils.h"
 
 #include <stdexcept>
 #include <vector>
+#include <deque>
 #include <algorithm>
 
 template<class V>
@@ -108,7 +108,6 @@ Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcp
 
     // Iterating across runs of the same UMI/gene/cell combination.
     auto ostart=ordering.begin(), oend=ordering.begin();
-    size_t nunique=0;
 
     while (ostart!=ordering.end()) {
         int max_nread=Reads[ostart->sample][ostart->index];
@@ -131,9 +130,6 @@ Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcp
         if (double(max_nread)/total_nreads >= minfrac) {
             notswapped[best_mol->sample][best_mol->index]=1;
         }
-        if (diagnostics) {
-            ++nunique;
-        }
         ostart=oend;
     }
 
@@ -148,11 +144,7 @@ Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcp
 
     // Storing diagnostic information about each unique combination.
     if (diagnostics) {
-        Rcpp::IntegerVector indices(nsamples);
-        Rcpp::NumericVector values(nsamples);
-        auto diag_out=beachmat::create_numeric_output(nunique, nsamples, 
-            diagnostics==1 ? beachmat::output_param("dgCMatrix", "Matrix") :
-                beachmat::output_param("HDF5Matrix", "HDF5Array"));
+        std::deque<std::pair<std::pair<int, int>, double> > storage;
 
         auto ostart=ordering.begin(), oend=ordering.begin();
         size_t counter=0;
@@ -164,18 +156,16 @@ Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcp
                 if (nnzero >= nsamples) {
                     throw std::runtime_error("multiple instances of the same combination observed in a single sample");
                 }
-                indices[nnzero]=oend->sample;
-                values[nnzero]=Reads[oend->sample][oend->index];
+                storage.push_back(std::make_pair(std::make_pair(oend->sample, counter), Reads[oend->sample][oend->index]));
                 ++oend;
-                ++nnzero;
             }
 
-            diag_out->set_row_indexed(counter, nnzero, indices.begin(), values.begin());
             ostart=oend;
             ++counter;
         }
         
-        output[1]=diag_out->yield();
+        std::sort(storage.begin(), storage.end());
+        output[1]=beachmat::as_gCMatrix<Rcpp::NumericVector>(counter, nsamples, storage);
     }
 
     return output;

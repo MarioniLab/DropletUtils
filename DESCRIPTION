@@ -23,10 +23,10 @@ Imports:
     edgeR,
     R.utils,
     dqrng,
+    beachmat,
     scuttle
 Suggests: 
     testthat,
-    beachmat,
     knitr,
     BiocStyle,
     rmarkdown,

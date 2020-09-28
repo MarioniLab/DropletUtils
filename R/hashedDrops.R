@@ -160,6 +160,7 @@
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
+#' @importFrom beachmat colBlockApply
 hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
     doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2)
 { 
@@ -180,9 +181,11 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
     x <- x[!discard,,drop=FALSE]
     ambient <- ambient[!discard]
 
-    output <- hashed_deltas(x, ambient, pseudo.count)
-    lfc <- log2(output$FC)
-    lfc2 <- log2(output$FC2)
+    output <- colBlockApply(x, FUN=hashed_deltas, prop=ambient, pseudo_count=pseudo.count)
+    lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
+    lfc2 <- log2(unlist(lapply(output, "[[", i="FC2"), use.names=FALSE))
+    best.sample <- unlist(lapply(output, "[[", i="Best"), use.names=FALSE)
+    second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
 
     if (!doublet.mixture) {
         # Using outlier detection to prune out doublets.
@@ -208,8 +211,8 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
     output <- DataFrame(
         row.names=cell.names,
         Total=totals,
-        Best=output$Best+1L,
-        Second=output$Second+1L,
+        Best=best.sample + 1L,
+        Second=second.sample + 1L,
         LogFC=lfc,
         LogFC2=lfc2,
         Doublet=is.doublet,
