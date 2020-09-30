@@ -102,15 +102,15 @@ removeAmbience <- function(y, ambient, groups, features=NULL, ...,
 #' @importFrom methods is
 #' @importFrom stats pnbinom qnbinom
 #' @importFrom edgeR q2qnbinom
-#' @importFrom DelayedArray makeNindexFromArrayViewport write_block
+#' @importFrom DelayedArray makeNindexFromArrayViewport write_block currentViewport
 .remap_quantiles <- function(block, matches, old.means, new.means, size.factors, group.sf, dispersion, sink) {
-    vp <- attr(block, "from_grid")[[attr(block, "block_id")]]
+    vp <- currentViewport()
     idx <- makeNindexFromArrayViewport(vp, expand.RangeNSBS = TRUE)
-
     if (!is.null(idx[[2]])) {
         matches <- matches[idx[[2]]]
         size.factors <- size.factors[idx[[2]]]
     }
+
     old.means <- old.means[, matches, drop=FALSE]
     new.means <- new.means[, matches, drop=FALSE]
     rescale <- size.factors / group.sf[matches]
