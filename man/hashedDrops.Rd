@@ -103,8 +103,10 @@ We estimate the level of ambient contamination in each barcode by scaling \code{
 We then subtract the scaled ambient proportions from the HTO count profile to remove the effect of contamination.
 Abundances that would otherwise be negative are set to zero.
 
-For experiments with 3-4 HTOs, we assume that higher-order multiplets are negligible and define the scaling factor as the third-largest ratio between the HTO counts and \code{ambient}.
-For experiments with only 2 HTOs, doublet detection is not possible as the second-most abundant HTO is always used to estimate the ambient contamination.
+The scaling factor for each cell is defined by computing ratios between the HTO counts and \code{ambient}, and taking the median across all HTOs.
+However, this strict definition is only used when there are at least 5 HTOs being considered.
+For experiments with 3-4 HTOs, we assume that higher-order multiplets are negligible and define the scaling factor as the third-largest ratio.
+For experiments with only 2 HTOs, the second-most abundant HTO is always used to estimate the ambient contamination.
 }
 
 \section{Getting the ambient proportions}{
@@ -149,6 +151,17 @@ If \code{x} contains columns for both empty and non-empty droplets,
 it is straightforward to simply run \code{\link{emptyDrops}} on the HTO count matrix to identify the latter.
 Note that some fiddling with the \code{lower=} argument may be required,
 depending on the sequencing depth of the HTO libraries.
+}
+
+\section{Handling 2 or fewer samples}{
+
+If \code{x} has no more than two rows, \code{Doublet}, \code{LogFC2} and \code{doublet.threshold} are set to \code{NA}.
+Strictly speaking, doublet detection is not possible as the second HTO is always used to estimate the ambient scaling and thus \code{LogFC2} is always zero.
+However, \code{Confident} calls are still available in the output of this function so assignment to the individual samples can still be performed.
+In this scenario, the non-confident assignments are probably also doublets, though this cannot be said with much certainty.
+
+If \code{x} has no more than one row, \code{Confident}, \code{LogFC} and \code{confident.threshold} are set to \code{NA}.
+Obviously, if there is only one HTO, the identity of the assigned sample is a foregone conclusion.
 }
 
 \examples{

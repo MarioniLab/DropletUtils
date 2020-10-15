@@ -75,8 +75,10 @@
 #' We then subtract the scaled ambient proportions from the HTO count profile to remove the effect of contamination.
 #' Abundances that would otherwise be negative are set to zero.
 #'
-#' For experiments with 3-4 HTOs, we assume that higher-order multiplets are negligible and define the scaling factor as the third-largest ratio between the HTO counts and \code{ambient}.
-#' For experiments with only 2 HTOs, doublet detection is not possible as the second-most abundant HTO is always used to estimate the ambient contamination.
+#' The scaling factor for each cell is defined by computing ratios between the HTO counts and \code{ambient}, and taking the median across all HTOs.
+#' However, this strict definition is only used when there are at least 5 HTOs being considered.
+#' For experiments with 3-4 HTOs, we assume that higher-order multiplets are negligible and define the scaling factor as the third-largest ratio.
+#' For experiments with only 2 HTOs, the second-most abundant HTO is always used to estimate the ambient contamination.
 #' 
 #' @section Getting the ambient proportions:
 #' Ideally, \code{ambient} would be obtained from libraries that do not correspond to cell-containing droplets.
@@ -115,6 +117,15 @@
 #' it is straightforward to simply run \code{\link{emptyDrops}} on the HTO count matrix to identify the latter.
 #' Note that some fiddling with the \code{lower=} argument may be required,
 #' depending on the sequencing depth of the HTO libraries.
+#'
+#' @section Handling 2 or fewer samples:
+#' If \code{x} has no more than two rows, \code{Doublet}, \code{LogFC2} and \code{doublet.threshold} are set to \code{NA}.
+#' Strictly speaking, doublet detection is not possible as the second HTO is always used to estimate the ambient scaling and thus \code{LogFC2} is always zero.
+#' However, \code{Confident} calls are still available in the output of this function so assignment to the individual samples can still be performed.
+#' In this scenario, the non-confident assignments are probably also doublets, though this cannot be said with much certainty.
+#' 
+#' If \code{x} has no more than one row, \code{Confident}, \code{LogFC} and \code{confident.threshold} are set to \code{NA}.
+#' Obviously, if there is only one HTO, the identity of the assigned sample is a foregone conclusion.
 #'
 #' @author Aaron Lun
 #' @examples
@@ -187,26 +198,40 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
     best.sample <- unlist(lapply(output, "[[", i="Best"), use.names=FALSE)
     second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
 
-    if (!doublet.mixture) {
-        # Using outlier detection to prune out doublets.
-        med2 <- median(lfc2)
-        mad2 <- mad(lfc2, center=med2)
-        upper.threshold <- med2 + doublet.nmads * mad2
-        upper.threshold <- max(upper.threshold, doublet.min)
-        is.doublet <- lfc2 > upper.threshold 
+    if (nrow(x) > 2L) {
+        if (!doublet.mixture) {
+            # Using outlier detection to prune out doublets.
+            med2 <- median(lfc2)
+            mad2 <- mad(lfc2, center=med2)
+            upper.threshold <- med2 + doublet.nmads * mad2
+            upper.threshold <- max(upper.threshold, doublet.min)
+            is.doublet <- lfc2 > upper.threshold 
+        } else {
+            is.doublet <- !.get_lower_dist(lfc2, p=0.05)
+            upper.threshold <- max(lfc2[!is.doublet])
+        }
     } else {
-        is.doublet <- !.get_lower_dist(lfc2, p=0.05)
-        upper.threshold <- max(lfc2[!is.doublet])
+        is.doublet <- logical(ncol(x))
+        upper.threshold <- NA_real_
     }
 
     # Using outlier detection to identify confident singlets.
-    lfc.singlet <- lfc[!is.doublet]
-    med.singlet <- median(lfc.singlet)
-    mad.singlet <- mad(lfc.singlet, center=med.singlet)
+    if (nrow(x) > 1L) {
+        lfc.singlet <- lfc[!is.doublet]
+        med.singlet <- median(lfc.singlet)
+        mad.singlet <- mad(lfc.singlet, center=med.singlet)
 
-    lower.threshold <- med.singlet - confident.nmads * mad.singlet
-    lower.threshold <- max(lower.threshold, confident.min)
-    confident.singlet <- lfc > lower.threshold & !is.doublet
+        lower.threshold <- med.singlet - confident.nmads * mad.singlet
+        lower.threshold <- max(lower.threshold, confident.min)
+        confident.singlet <- lfc > lower.threshold & !is.doublet
+    } else {
+        confident.singlet <- rep(NA, ncol(x))
+        lower.threshold <- NA_real_
+    }
+
+    if (nrow(x) <= 2L) {
+        is.doublet <- rep(NA, ncol(x))
+    }
 
     output <- DataFrame(
         row.names=cell.names,

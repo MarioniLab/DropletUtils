@@ -141,3 +141,17 @@ test_that("hashedDrops works as expected", {
     expect_equal(out$Second[1:ndoub], next.sample[1:ndoub])
     expect_true(min(out$LogFC2[1:ndoub]) > max(out$LogFC2[-(1:ndoub)]))
 })
+
+test_that("hashedDrops handles low number of tags gracefully", {
+    out <- hashedDrops(y[1:2,])
+    expect_true(all(!is.na(out$LogFC)))
+    expect_true(all(!is.na(out$Confident)))
+    expect_true(all(is.na(out$LogFC2)))
+    expect_true(all(is.na(out$Doublet)))
+
+    out <- hashedDrops(y[1,,drop=FALSE])
+    expect_true(all(is.na(out$LogFC)))
+    expect_true(all(is.na(out$Confident)))
+    expect_true(all(is.na(out$LogFC2)))
+    expect_true(all(is.na(out$Doublet)))
+})
