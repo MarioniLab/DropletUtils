@@ -27,6 +27,8 @@ to avoid problems with instability at low ranks for knee/inflection calculations
 
 \item Minor bugfix in \code{barcodeRanks()} calculation of the knee point.
 Note that this affects the default choice of \code{retain=} in \code{emptyDrops()}.
+
+\item Split off HTO ambience inferences into a separate \code{inferAmbience()} function.
 }}
 
 \section{Version 1.8.0}{\itemize{
