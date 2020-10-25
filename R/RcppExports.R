@@ -29,8 +29,8 @@ group_cells <- function(cells, gems) {
     .Call('_DropletUtils_group_cells', PACKAGE = 'DropletUtils', cells, gems)
 }
 
-hashed_deltas <- function(mat, prop, pseudo_count) {
-    .Call('_DropletUtils_hashed_deltas', PACKAGE = 'DropletUtils', mat, prop, pseudo_count)
+hashed_deltas <- function(mat, prop, pseudo_count, n_expected) {
+    .Call('_DropletUtils_hashed_deltas', PACKAGE = 'DropletUtils', mat, prop, pseudo_count, n_expected)
 }
 
 montecarlo_pval <- function(totalval, totallen, prob, ambient, iterations, alpha, seeds, streams) {

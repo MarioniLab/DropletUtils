@@ -54,10 +54,10 @@ test_that("hashed_deltas works as expected", {
     # Cycling across pseudo.
     for (PSEUDO in c(1, 3, 5)) {
         p <- runif(nhto)
-        output <- DropletUtils:::hashed_deltas(y, p, pseudo=PSEUDO)
+        output <- DropletUtils:::hashed_deltas(y, p, pseudo=PSEUDO, n_expected=1)
         ref <- REF(y, p, PSEUDO)
 
-        expect_identical(output$Best, ref$Best-1L)
+        expect_identical(drop(output$Best), ref$Best-1L)
         expect_identical(output$Second, ref$Second-1L)
         expect_equal(output$FC, ref$FC)
         expect_equal(output$FC2, ref$FC2)
@@ -69,10 +69,10 @@ test_that("hashed_deltas works as expected", {
         q <- runif(N)
         pseudo <- 1
 
-        output <- DropletUtils:::hashed_deltas(z, q, pseudo=pseudo)
+        output <- DropletUtils:::hashed_deltas(z, q, pseudo=pseudo, n_expected=1)
         ref <- REF(z, q, pseudo)
 
-        expect_identical(output$Best, ref$Best-1L)
+        expect_identical(drop(output$Best), ref$Best-1L)
         expect_identical(output$Second, ref$Second-1L)
         expect_equal(output$FC, ref$FC)
         expect_equal(output$FC2, ref$FC2)
@@ -82,17 +82,17 @@ test_that("hashed_deltas works as expected", {
 test_that("hashed_deltas falls back when there are very few samples", {
     p <- runif(2)
     pseudo <- 2
-    output <- DropletUtils:::hashed_deltas(y[1:2,], p, pseudo=pseudo)
+    output <- DropletUtils:::hashed_deltas(y[1:2,], p, pseudo=pseudo, n_expected=1)
 
     ref <- REF(y[1:2,], p, pseudo)
-    expect_equal(output$Best + 1, ref$Best)
+    expect_equal(drop(output$Best) + 1, ref$Best)
     expect_equal(output$FC, ref$FC)
 
     expect_true(all(is.na(output$Second)))
     expect_true(all(is.na(output$FC2)))
 
     # Works with just 1 sample.
-    output <- DropletUtils:::hashed_deltas(y[1,,drop=FALSE], p[1], pseudo=pseudo)
+    output <- DropletUtils:::hashed_deltas(y[1,,drop=FALSE], p[1], pseudo=pseudo, n_expected=1)
 
     expect_true(all(output$Best==0))
     expect_true(all(is.na(output$FC)))
@@ -100,7 +100,7 @@ test_that("hashed_deltas falls back when there are very few samples", {
     expect_true(all(is.na(output$FC2)))
 
     # Works with, believe it or not, no samples!
-    output <- DropletUtils:::hashed_deltas(y[0,,drop=FALSE], p[0], pseudo=pseudo)
+    output <- DropletUtils:::hashed_deltas(y[0,,drop=FALSE], p[0], pseudo=pseudo, n_expected=1)
 
     expect_true(all(is.na(output$Best)))
     expect_true(all(is.na(output$FC)))
@@ -155,3 +155,91 @@ test_that("hashedDrops handles low number of tags gracefully", {
     expect_true(all(is.na(out$LogFC2)))
     expect_true(all(is.na(out$Doublet)))
 })
+
+test_that("hashedDrops works correctly with combinatorial barcodes", {
+    mat <- matrix(5, 10, 9)
+    mat[c(1, 2, 3), 1] <- sample(c(50, 60, 70))
+    mat[c(2, 4, 7), 2] <- sample(c(80, 50, 75))
+    mat[c(3, 8, 9), 3] <- sample(c(80, 50, 75))
+    mat[c(5, 6), 4] <- c(100, 80)
+    mat[c(3, 8), 5] <- c(90, 50)
+    mat[7, 6] <- 100
+    mat[9, 7] <- 90
+    mat[c(1, 3, 5, 7), 8] <- 100
+
+    out <- hashedDrops(mat, combinations=rbind(1:3, c(2,4,7)), ambient=rep(1, nrow(mat)))
+
+    expect_identical(out$Best, c(1:2, rep(NA_integer_, ncol(mat)-2)))
+    expect_identical(out$LogFC, rep(c(log2(50/5), 0), c(3, ncol(mat)-3)))
+
+    expect_null(out$Second)
+
+    expect_true(out$Doublet[8])
+    expect_true(all(!out$Doublet[-8]))
+    expect_identical(out$LogFC2[8], log2(100/5))
+    expect_true(all(out$LogFC2[-8]==0))
+    
+    expect_true(all(out$Confident[1:3]))
+    expect_true(all(!out$Confident[-(1:3)]))
+
+    # Same results with unsorted barcodes.
+    out2 <- hashedDrops(mat, combinations=rbind(3:1, c(7,2,4)), ambient=rep(1, nrow(mat)))
+    expect_identical(out, out2)
+})
+
+test_that("edge cases are handled correctly with combinatorial barcodes", {
+    # Doublet statistics nullified with insufficient HTOs.
+    mat <- matrix(10, 4, 1)
+    mat[2:4,1] <- 100
+
+    out <- hashedDrops(mat, combinations=rbind(4:2), ambient=rep(1, nrow(mat)))
+    expect_identical(out$LogFC, log2(100/10))
+    expect_identical(out$Best, 1L)
+    expect_identical(out$LogFC2, NA_real_)
+    expect_identical(out$Doublet, NA)
+
+    # Doublet statistics come back online with just enough HTOs.
+    mat <- matrix(10, 5, 1)
+    mat[2:4,1] <- 100
+
+    out <- hashedDrops(mat, combinations=rbind(4:2), ambient=rep(1, nrow(mat)))
+    expect_identical(out$LogFC, log2(100/10))
+    expect_identical(out$Best, 1L)
+    expect_identical(out$LogFC2, 0)
+    expect_true(!is.na(out$Doublet))
+
+    # What is used to compute the ambient profile?
+    library(DropletUtils)
+    mat <- cbind(1:20) * 10
+    ambient <- 1 + 1:20/1000
+
+    .compute_expected_lfc <- function(SCALING, PSEUDO) {
+        log2((180 - SCALING * 1.018  + PSEUDO)/
+            (170 - SCALING * 1.017 + PSEUDO))
+    }
+
+    for (counter in 17:14) { # Using the last one...
+        keep <- 20:counter
+        out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep])
+        SCALING <- mat[counter]/ambient[counter]
+        PSEUDO <- mean(ambient[keep]) * SCALING
+        expect_identical(out$LogFC, .compute_expected_lfc(SCALING, PSEUDO))
+    }
+
+    for (counter in 13:9) { # Using the first past the 2*n_expected...
+        keep <- 20:counter
+        out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep])
+        SCALING <- mat[14]/ambient[14]
+        PSEUDO <- mean(ambient[keep]) * SCALING
+        expect_identical(out$LogFC, .compute_expected_lfc(SCALING, PSEUDO))
+    }
+
+    for (counter in 8:1) { # an actual median for the rest.
+        keep <- 20:counter
+        out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep])
+        SCALING <- median(mat[keep]/ambient[keep])
+        PSEUDO <- mean(ambient[keep]) * SCALING
+        expect_identical(out$LogFC, .compute_expected_lfc(SCALING, PSEUDO))
+    }
+})
+

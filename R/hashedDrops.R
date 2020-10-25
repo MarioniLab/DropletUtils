@@ -1,6 +1,6 @@
 #' Demultiplex cell hashing data
 #'
-#' Demultiplex cell barcodes into their samples of origin based on the most significant hash tag oligo (HTO).
+#' Demultiplex cell barcodes into their samples of origin based on the most abundant hash tag oligo (HTO).
 #' Also identify potential doublets based on the presence of multiple significant HTOs.
 #'
 #' Note that this function is still experimental; feedback is welcome.
@@ -17,6 +17,8 @@
 #' @param doublet.mixture Logical scalar indicating whether to use a 2-component mixture model to identify doublets.
 #' @param confident.nmads A numeric scalar specifying the number of MADs to use to identify confidently assigned singlets.
 #' @param confident.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.
+#' @param combinations An integer matrix specifying valid \emph{combinations} of HTOs.
+#' Each row corresponds to a single sample and specifies the indices of rows in \code{x} corresponding to the HTOs used to label that sample.
 #'
 #' @return
 #' A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -32,6 +34,9 @@
 #' In addition, the metadata contains \code{ambient}, a numeric vector containing the (estimate of the) ambient profile;
 #' \code{doublet.threshold}, the threshold applied to \code{LogFC2} to identify doublets;
 #' and \code{confident.threshold}, the threshold applied to non-doublet \code{LogFC} values to identify confident singlets.
+#'
+#' If \code{combinations} is specified, \code{Best} instead specifies the sample (i.e., row index of \code{combinations}).
+#' The interpretation of \code{LogFC} and \code{LogFC2} are slightly different, and \code{Second} is not reported - see details.
 #'
 #' @details
 #' The idea behind cell hashing is that cells from the same sample are stained with reagent conjugated with a single HTO.
@@ -117,6 +122,30 @@
 #' If \code{x} has no more than one row, \code{Confident}, \code{LogFC} and \code{confident.threshold} are set to \code{NA}.
 #' Obviously, if there is only one HTO, the identity of the assigned sample is a foregone conclusion.
 #'
+#' @section Resolving combinatorial hashes:
+#' In some applications, samples are labelled with a combination of HTOs to enable achieve greater multiplexing throughput.
+#' This is accommodated by passing \code{combinations} to specify the valid HTO combinations that were used for sample labelling.
+#' Each row of \code{combinations} corresponds to a sample and should contain non-duplicated row indices of \code{x} corresponding to the HTOs used in that sample.
+#'
+#' The calculation for the single-HTO case is then generalized for HTO combinations.
+#' The most important differences are that:
+#' \itemize{
+#' \item The reported \code{LogFC} is now the log-fold change between the \eqn{n}th most abundant HTO and the \eqn{n+1}th HTO,
+#' where \eqn{n} is the number of HTOs in a valid combination. 
+#' This captures the drop-off in abundance beyond the expected number of HTOs.
+#' \item The reported \code{LogFC2} is now the log-fold change of the \eqn{n+1}th HTO over the ambient solution.
+#' This captures the high abundance of the more-than-expected number of HTOs when doublets are present.
+#' \item \code{Best} no longer refers to the row index of \code{x}, but instead to the row index of \code{combinations}.
+#' This may contain \code{NA} values if a particular combination of HTOs is observed but not present in the expected set.
+#' \item \code{Second} is no longer reported as we cannot conveniently determine the identity of the second sample.
+#' }
+#'
+#' We also generalize the edge-case behavior when there are not enough HTOs to support doublet detection. 
+#' Consider that an inter-sample doublet may result in either \eqn{n + 1} to \eqn{2n} abundant HTOs.
+#' Estimation of the scaling factor will attempt to avoid using the top \eqn{2n} ratios.
+#' If \code{nrow(x)} is equal to or less than \eqn{n + 1}, doublet statistics will not be reported at all, 
+#' i.e., \code{Doublet} and \code{LogFC2} are set to \code{NA}.
+#'
 #' @author Aaron Lun
 #' @examples
 #' # Mocking up an example dataset with 10 HTOs and 10% doublets.
@@ -134,18 +163,17 @@
 #' # Computing hashing statistics.
 #' stats <- hashedDrops(y)
 #'
-#' # Doublets show up in the top-left,
-#' # singlets in the bottom right.
+#' # Doublets show up in the top-left, singlets in the bottom right.
 #' plot(stats$LogFC, stats$LogFC2)
 #'
-#' # Most cells should be singlets with low NMAD.
+#' # Most cells should be singlets with low second log-fold changes.
 #' hist(stats$LogFC2, breaks=50)
 #'
-#' # Identify confident singlets or doublets at the given NMAD threshold.
+#' # Identify confident singlets or doublets at the given threshold.
 #' summary(stats$Confident)
 #' summary(stats$Doublet)
 #' 
-#' # Chcecking against the known truth, in this case
+#' # Checking against the known truth, in this case
 #' # 'Best' contains the putative sample of origin.
 #' table(stats$Best, true.sample) 
 #'
@@ -163,7 +191,7 @@
 #' @importFrom stats median mad
 #' @importFrom beachmat colBlockApply
 hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
-    doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2)
+    doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2, combinations=NULL)
 { 
     totals <- colSums(x)
     cell.names <- colnames(x)
@@ -175,14 +203,22 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
     discard <- ambient == 0
     x <- x[!discard,,drop=FALSE]
     ambient <- ambient[!discard]
+    
+    if (is.null(combinations)) {
+        n.expected <- 1L
+    } else {
+        n.expected <- ncol(combinations)
+    }
 
-    output <- colBlockApply(x, FUN=hashed_deltas, prop=ambient, pseudo_count=pseudo.count)
+    output <- colBlockApply(x, FUN=hashed_deltas, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
+
     lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
     lfc2 <- log2(unlist(lapply(output, "[[", i="FC2"), use.names=FALSE))
-    best.sample <- unlist(lapply(output, "[[", i="Best"), use.names=FALSE)
+    best.sample <- do.call(cbind, lapply(output, "[[", i="Best"))
     second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
 
-    if (nrow(x) > 2L) {
+    no.lfc2 <- all(is.na(lfc2))
+    if (!no.lfc2) {
         if (!doublet.mixture) {
             # Using outlier detection to prune out doublets.
             med2 <- median(lfc2)
@@ -195,12 +231,13 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
             upper.threshold <- max(lfc2[!is.doublet])
         }
     } else {
+        # To keep the next step happy; we will flip it back to all-NA's soon enough.
         is.doublet <- logical(ncol(x))
         upper.threshold <- NA_real_
     }
 
     # Using outlier detection to identify confident singlets.
-    if (nrow(x) > 1L) {
+    if (!all(is.na(lfc))) {
         lfc.singlet <- lfc[!is.doublet]
         med.singlet <- median(lfc.singlet)
         mad.singlet <- mad(lfc.singlet, center=med.singlet)
@@ -213,21 +250,38 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
         lower.threshold <- NA_real_
     }
 
-    if (nrow(x) <= 2L) {
+    if (no.lfc2) {
         is.doublet <- rep(NA, ncol(x))
+    }
+
+    # Translating from indices to combinations, if requested.
+    best.sample <- best.sample + 1L
+    second.sample <- second.sample + 1L
+
+    if (is.null(combinations)) {
+        best.sample <- drop(best.sample)
+    } else {
+        best.sample <- t(best.sample)
+        combinations <- t(apply(combinations, 1, sort))
+        colnames(combinations) <- colnames(best.sample) <- seq_len(n.expected)
+        best.sample <- match(DataFrame(best.sample), DataFrame(combinations))
     }
 
     output <- DataFrame(
         row.names=cell.names,
         Total=totals,
-        Best=best.sample + 1L,
-        Second=second.sample + 1L,
+        Best=best.sample,
+        Second=second.sample,
         LogFC=lfc,
         LogFC2=lfc2,
         Doublet=is.doublet,
         Confident=confident.singlet
     )
-    
+   
+    if (!is.null(combinations)) {
+        output$Second <- NULL
+    }
+
     metadata(output) <- list(
         ambient=ambient,
         confident.threshold=lower.threshold,

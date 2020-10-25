@@ -29,6 +29,8 @@ to avoid problems with instability at low ranks for knee/inflection calculations
 Note that this affects the default choice of \code{retain=} in \code{emptyDrops()}.
 
 \item Split off HTO ambience inferences into a separate \code{inferAmbience()} function.
+
+\item Added support for combinatorial barcodes in \code{hashedDrops()}.
 }}
 
 \section{Version 1.8.0}{\itemize{
