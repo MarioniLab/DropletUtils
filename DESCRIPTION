@@ -1,5 +1,5 @@
 Package: DropletUtils
-Version: 1.9.16
+Version: 1.10.0
 Date: 2020-10-24
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
