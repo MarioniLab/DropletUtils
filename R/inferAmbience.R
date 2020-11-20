@@ -56,8 +56,16 @@ inferAmbience <- function(x, min.prop=0.05) {
 #' @importFrom stats kmeans quantile
 .get_lower_dist <- function(x, p)
 # Effectively using Lloyd's algorithm as a special case of mixture models,
-# to (i) avoid dependencies and (ii) avoid problems with non-normal data.
+# to (i) avoid code dependencies and (ii) avoid problems with non-normal data.
 {
-    out <- kmeans(x, centers=quantile(x, c(p, 1-p)))
-    out$cluster == which.min(out$centers)
+    q <- quantile(x, c(p, 1-p))
+    if (q[1]==q[2]) {
+        # kmeans() fails in this case, so we just set everything less than or
+        # equal to q[2] as the 'lower'. This should really only happen when 
+        # almost all counts are zero, at which point this may as well be zero.
+        x <= q[2]
+    } else {
+        out <- kmeans(x, centers=q)
+        out$cluster == which.min(out$centers)
+    }
 }
