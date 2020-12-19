@@ -17,6 +17,7 @@
 #' @param version String specifying the version of the 10X format to read data from.
 #' @param genome String specifying the genome if \code{type="HDF5"} and \code{version='2'}.
 #' @param compressed Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.
 #' 
 #' @return A \linkS4class{SingleCellExperiment} object containing count data for each gene (row) and cell (column) across all \code{samples}.
 #' \itemize{
@@ -118,37 +119,32 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
 #' @importFrom SingleCellExperiment SingleCellExperiment
+#' @importFrom BiocParallel SerialParam bplapply
 read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE, 
     type=c("auto", "sparse", "HDF5", "prefix"), version=c("auto", "2", "3"), 
-    genome=NULL, compressed=NULL)
+    genome=NULL, compressed=NULL, BPPARAM=SerialParam())
 {
-    nsets <- length(samples)
-    full_data <- vector("list", nsets)
-    gene_info_list <- vector("list", nsets)
-    cell_info_list <- vector("list", nsets)
-
     type <- match.arg(type)
     version <- match.arg(version)
     if (is.null(sample.names)) {
         sample.names <- samples
     }
 
+    load.out <- bplapply(samples, FUN=.tenx_loader, type=type, version=version, 
+        genome=genome, compressed=compressed, BPPARAM=BPPARAM)
+
+    nsets <- length(samples)
+    full_data <- vector("list", nsets)
+    gene_info_list <- vector("list", nsets)
+    cell_info_list <- vector("list", nsets)
+
     for (i in seq_len(nsets)) { 
-        run <- samples[i]
-        cur.type <- .type_chooser(run, type)
-
-        if (cur.type=="sparse") {
-            info <- .read_from_sparse(run, version=version, compressed=compressed)
-        } else if (cur.type=="prefix") {
-            info <- .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed)
-        } else {
-            info <- .read_from_hdf5(run, genome=genome, version=version)
-        }
-
-        full_data[[i]] <- info$mat
-        gene_info_list[[i]] <- info$gene.info
-        cell.names <- info$cell.names
-        cell_info_list[[i]] <- DataFrame(Sample = rep(sample.names[i], length(cell.names)), 
+        current <- load.out[[i]]
+        full_data[[i]] <- current$mat
+        gene_info_list[[i]] <- current$gene.info
+        cell.names <- current$cell.names
+        cell_info_list[[i]] <- DataFrame(
+            Sample = rep(sample.names[i], length(cell.names)), 
             Barcode = cell.names, row.names=NULL)
     }
 
@@ -175,6 +171,17 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
     }
 
     SingleCellExperiment(list(counts = full_data), rowData = gene_info, colData = cell_info, metadata=list(Samples=samples))
+}
+
+.tenx_loader <- function(run, type, version, genome, compressed) {
+    cur.type <- .type_chooser(run, type)
+    if (cur.type=="sparse") {
+        .read_from_sparse(run, version=version, compressed=compressed)
+    } else if (cur.type=="prefix") {
+        .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed)
+    } else {
+        .read_from_hdf5(run, genome=genome, version=version)
+    }
 }
 
 #' @importFrom methods as
