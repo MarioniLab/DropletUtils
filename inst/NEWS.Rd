@@ -2,6 +2,10 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.12.0}{\itemize{
+\item Support parallelized loading of multiple samples in \code{read10xCounts()}.
+}}
+
 \section{Version 1.10.0}{\itemize{
 \item Migrated \code{downsampleMatrix()} to \pkg{scuttle} with a re-export.
 
