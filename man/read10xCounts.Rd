@@ -11,7 +11,8 @@ read10xCounts(
   type = c("auto", "sparse", "HDF5", "prefix"),
   version = c("auto", "2", "3"),
   genome = NULL,
-  compressed = NULL
+  compressed = NULL,
+  BPPARAM = SerialParam()
 )
 }
 \arguments{
@@ -36,6 +37,8 @@ If \code{NULL}, the file paths in \code{samples} are used directly.}
 \item{genome}{String specifying the genome if \code{type="HDF5"} and \code{version='2'}.}
 
 \item{compressed}{Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.}
+
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.}
 }
 \value{
 A \linkS4class{SingleCellExperiment} object containing count data for each gene (row) and cell (column) across all \code{samples}.
