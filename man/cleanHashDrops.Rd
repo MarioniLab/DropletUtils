@@ -62,9 +62,11 @@ df
 
 }
 \seealso{
-\code{\link{inferAmbience}}, to infer the ambient concentrations from \code{x}.
+\code{\link{inferAmbience}}, to infer the ambient profile.
 
-\code{\link{isOutlier}}, to identify the outliers.
+\code{\link{ambientContribSparse}}, to estimate the ambient scaling for each droplet.
+
+\code{\link{isOutlier}}, to identify the outliers in a distribution of values.
 }
 \author{
 Aaron Lun

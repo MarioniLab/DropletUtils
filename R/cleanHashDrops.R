@@ -51,9 +51,11 @@
 #' df
 #'
 #' @seealso
-#' \code{\link{inferAmbience}}, to infer the ambient concentrations from \code{x}.
+#' \code{\link{inferAmbience}}, to infer the ambient profile.
+#' 
+#' \code{\link{ambientContribSparse}}, to estimate the ambient scaling for each droplet.
 #'
-#' \code{\link{isOutlier}}, to identify the outliers.
+#' \code{\link{isOutlier}}, to identify the outliers in a distribution of values.
 #'
 #' @export
 #' @importFrom S4Vectors DataFrame
@@ -63,8 +65,7 @@ cleanHashDrops <- function(x, ambient=NULL, controls=NULL, ...) {
         ambient <- inferAmbience(x)
     }
 
-    # TODO: write a proper *Ambience-family function.
-    scale <- medianSizeFactors(x, ref=ambient)
+    scale <- ambientContribSparse(x, ambient=ambient)
     non.zero <- scale > 0
     fail <- isOutlier(scale, type="higher", log=TRUE, subset=non.zero, ...)
 

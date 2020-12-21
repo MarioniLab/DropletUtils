@@ -18,6 +18,7 @@ Imports:
     SummarizedExperiment,
     BiocParallel,
     DelayedArray,
+    DelayedMatrixStats,
     HDF5Array,
     rhdf5,
     edgeR,
