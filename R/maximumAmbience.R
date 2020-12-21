@@ -19,8 +19,10 @@
 #' @return 
 #' If \code{mode="scale"},
 #' a numeric vector is returned quantifying the maximum \dQuote{contribution} of the ambient solution to each column of \code{y}.
-#' Scaling columns of \code{ambient} by this vector yields the maximum ambient profile for each column of \code{y},
-#' which can also be obtained by setting \code{mode="profile"}.
+#' Scaling \code{ambient} by each entry yields the maximum ambient profile for the corresponding column of \code{y}.
+#'
+#' If \code{mode="profile"}, a numeric matrix is returned containing the maximum ambient profile for each column of \code{y}.
+#' This is computed by scaling as described above; if \code{ambient} is a matrix, each column is scaled by the corresponding entry of the scaling vector.
 #'
 #' If \code{mode="proportion"}, a numeric matrix is returned containing the maximum proportion of counts in \code{y} that are attributable to ambient contamination.
 #' This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
@@ -89,37 +91,49 @@
 #' \code{\link{controlAmbience}}, for a more accurate estimate when control features are available.
 #' @export
 #' @importFrom stats p.adjust ppois pnbinom
+#' @importFrom BiocParallel SerialParam
 maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, 
-    num.points=100, num.iter=5, mode=c("scale", "profile", "proportion")) 
+    num.points=100, num.iter=5, prop.expressed=NULL, 
+    mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam()) 
 {
     mode <- match.arg(mode)
-    args <- list(threshold=threshold, dispersion=dispersion, num.points=num.points, num.iter=num.iter, mode=mode)
 
     if (is.null(dim(y))) {
         y <- cbind(y)
         colnames(y) <- NULL
     }
 
-    collated <- vector("list", ncol(y))
-    names(collated) <- colnames(y)
+    scaling <- colBlockApply(y, BPPARAM=BPPARAM, .maximum_ambience_loop, ambient=ambient, 
+        threshold=threshold, dispersion=dispersion, num.points=num.points, num.iter=num.iter)
+    scaling <- unlist(scaling)
 
-    for (i in seq_along(collated)) {
+    .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
+}
+
+#' @importFrom DelayedArray currentViewport makeNindexFromArrayViewport
+.maximum_ambience_loop <- function(y, ambient, ...) {
+    vp <- currentViewport()
+    yidx <- makeNindexFromArrayViewport(vp, expand.RangeNSBS=TRUE)[[2]]
+    output <- numeric(ncol(y))
+
+    for (i in seq_along(output)) {
         if (is.null(dim(ambient))) {
             A <- ambient
         } else {
-            A <- ambient[,i]
+            if (is.null(yidx)) {
+                idx <- i
+            } else {
+                idx <- yidx[i]
+            }
+            A <- ambient[,idx]
         }
-        collated[[i]] <- do.call(.maximum_ambience, c(list(y=y[,i], ambient=A), args))
+        output[i] <- .maximum_ambience(y=y[,i], ambient=A, ...)
     }
 
-    if (mode=="scale") {
-        unlist(collated)
-    } else {
-        do.call(cbind, collated)
-    }
+    output
 }
 
-.maximum_ambience <- function(y, ambient, threshold, dispersion, num.points, num.iter, mode) {
+.maximum_ambience <- function(y, ambient, threshold, dispersion, num.points, num.iter) {
     if (dispersion==0) {
         FUN <- function(y, mu) {
             ppois(y, lambda=mu)
@@ -135,9 +149,6 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
     }
 
     # Removing all-zero genes in the ambient profile.
-    original.y <- y 
-    original.ambient <- ambient
-    
     strip <- ambient==0
     y <- y[!strip]
     ambient <- ambient[!strip]
@@ -171,25 +182,28 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
         iter <- iter+1L
     }
 
-    scale <- (lower+upper)/2
-
-    if (mode=="scale") {
-        scale
-    } else {
-        profile <- scale * original.ambient
-        if (mode=="profile") {
-            profile
-        } else {
-            prop <- .clean_amb_props(profile, original.y)
-            names(prop) <- names(original.ambient)
-            prop
-        }
-    }
+    (lower+upper)/2
 }
 
-.clean_amb_props <- function(s, y) {
-    p <- s/y
-    p[p > 1] <- 1
-    p[y == 0] <- NaN # for fairness's sake.
-    p
+.report_ambient_profile <- function(scaling, ambient, y, mode) {
+    if (mode=="scale") {
+        names(scaling) <- colnames(y)
+        scaling
+    } else {
+        if (is.null(dim(ambient))) {
+            scaled.ambient <- outer(ambient, scaling)
+        } else {
+            scaled.ambient <- t(t(ambient) * scaling)
+        }
+        dimnames(scaled.ambient) <- dimnames(y)
+
+        if (mode=="profile") {
+            scaled.ambient
+        } else {
+            p <- scaled.ambient/y
+            p[p > 1] <- 1
+            p[y == 0] <- NaN # for fairness's sake.
+            p
+        }
+    }
 }

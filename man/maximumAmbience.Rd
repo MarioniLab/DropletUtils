@@ -11,7 +11,9 @@ maximumAmbience(
   dispersion = 0,
   num.points = 100,
   num.iter = 5,
-  mode = c("scale", "profile", "proportion")
+  prop.expressed = NULL,
+  mode = c("scale", "profile", "proportion"),
+  BPPARAM = SerialParam()
 )
 }
 \arguments{
@@ -38,8 +40,10 @@ Defaults to zero, i.e., a Poisson model.}
 \value{
 If \code{mode="scale"},
 a numeric vector is returned quantifying the maximum \dQuote{contribution} of the ambient solution to each column of \code{y}.
-Scaling columns of \code{ambient} by this vector yields the maximum ambient profile for each column of \code{y},
-which can also be obtained by setting \code{mode="profile"}.
+Scaling \code{ambient} by each entry yields the maximum ambient profile for the corresponding column of \code{y}.
+
+If \code{mode="profile"}, a numeric matrix is returned containing the maximum ambient profile for each column of \code{y}.
+This is computed by scaling as described above; if \code{ambient} is a matrix, each column is scaled by the corresponding entry of the scaling vector.
 
 If \code{mode="proportion"}, a numeric matrix is returned containing the maximum proportion of counts in \code{y} that are attributable to ambient contamination.
 This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.

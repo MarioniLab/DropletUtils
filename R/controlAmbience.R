@@ -79,15 +79,5 @@ controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "pr
     props <- sum.y/sum.a
     scaling <- apply(props, 2, min)
 
-    mode <- match.arg(mode)
-    if (mode=="scale") {
-        scaling
-    } else {
-        scaled.ambient <- t(t(ambient) * scaling)
-        if (mode=="profile") {
-            scaled.ambient
-        } else {
-            .clean_amb_props(scaled.ambient, y)
-        }
-    }
+    .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
 }
