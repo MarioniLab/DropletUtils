@@ -4,7 +4,7 @@
 #'
 #' @param y A numeric count matrix where each row represents a gene and each column represents an expression profile.
 #' The profile usually contains aggregated counts for multiple droplets in a sample, e.g., for a cluster of cells.
-#' This can also be a vector, in which case it is converted into a one-column matrix.
+#' \code{y} can also be a vector, in which case it is converted into a one-column matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each gene in the ambient solution.
 #' Alternatively, a matrix where each row corresponds to a row of \code{y}
@@ -14,7 +14,7 @@
 #' Defaults to zero, i.e., a Poisson model.
 #' @param num.points Integer scalar specifying the number of points to use for the grid search.
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
-#' @param mode String indicating the output to return - the scaling factor, the ambient profile or the proportion of each gene's counts in \code{y} that is attributable to ambient contamination.
+#' @param mode String indicating the output to return, see Value.
 #' 
 #' @return 
 #' If \code{mode="scale"},

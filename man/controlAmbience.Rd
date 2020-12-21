@@ -14,7 +14,7 @@ controlAmbience(
 \arguments{
 \item{y}{A numeric count matrix where each row represents a gene and each column represents an expression profile.
 The profile usually contains aggregated counts for multiple droplets in a sample, e.g., for a cluster of cells.
-This can also be a vector, in which case it is converted into a one-column matrix.}
+\code{y} can also be a vector, in which case it is converted into a one-column matrix.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.
@@ -25,7 +25,7 @@ and each column contains a specific ambient profile for the corresponding column
 
 Alternatively, a list of vectors specifying mutually exclusive sets of features.}
 
-\item{mode}{String indicating the output to return - the scaling factor, the ambient profile or the proportion of each gene's counts in \code{y} that is attributable to ambient contamination.}
+\item{mode}{String indicating the output to return, see Value.}
 }
 \value{
 If \code{mode="scale"},
