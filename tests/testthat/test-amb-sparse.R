@@ -8,7 +8,7 @@ y <- rpois(1000, ambient * 50)
 y2 <- y + rpois(1000, 5) # adding some actual biology.
 
 test_that("ambientContribSparse works correctly", {
-    out <- ambientContribSparse(cbind(y), ambient=ambient, prop=0.5)
+    out <- ambientContribSparse(y, ambient=ambient, prop=0.5)
     expect_identical(unname(out), median(y/ambient))
 
     out <- ambientContribSparse(cbind(y, y2), ambient=ambient, prop=0.5)

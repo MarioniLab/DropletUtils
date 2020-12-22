@@ -2,12 +2,15 @@
 #'
 #' Estimate the contribution of the ambient solution to each droplet by assuming that no more than a certain percentage of features are actually present/expressed in the cell.
 #'
-#' @param y A numeric matrix-like object containing counts, where each row represents a feature (usually a HTO) and each column represents a droplet or a group of droplets.
+#' @param y A numeric matrix-like object containing counts.
+#' Each row represents a feature, usually a HTO.
+#' Each column can represent a droplet or group of droplets.
+#'
+#' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each feature in the ambient solution.
 #' @param prop Numeric scalar specifying the maximum proportion of features that are expected to be present for any cell.
-#' @param mode String indicating the output to return, see Value.
-#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
+#' @inheritParams ambientContribMaximum
 #' 
 #' @return
 #' If \code{mode="scale"}, a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.
@@ -51,6 +54,10 @@
 ambientContribSparse <- function(y, ambient, prop=0.5, 
     mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam())
 {
+    if (is.null(dim(y))) {
+        y <- cbind(y)
+    }
+
     old <- getAutoBPPARAM()
     setAutoBPPARAM(BPPARAM)
     on.exit(setAutoBPPARAM(old))

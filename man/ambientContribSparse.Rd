@@ -13,7 +13,11 @@ ambientContribSparse(
 )
 }
 \arguments{
-\item{y}{A numeric matrix-like object containing counts, where each row represents a feature (usually a HTO) and each column represents a droplet or a group of droplets.}
+\item{y}{A numeric matrix-like object containing counts.
+Each row represents a feature, usually a HTO.
+Each column can represent a droplet or group of droplets.
+
+Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each feature in the ambient solution.}
