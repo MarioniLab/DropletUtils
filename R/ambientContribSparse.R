@@ -2,12 +2,12 @@
 #'
 #' Estimate the contribution of the ambient solution to each droplet by assuming that no more than a certain percentage of features are actually present/expressed in the cell.
 #'
-#' @param y A numeric matrix-like object containing counts, where each row represents a feature (usually a HTO) and each column corresponds to a droplet.
+#' @param y A numeric matrix-like object containing counts, where each row represents a feature (usually a HTO) and each column represents a droplet or a group of droplets.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each feature in the ambient solution.
-#' Defaults to \code{\link{inferAmbience}(y)}, under the assumption that \code{y} contains a HTO count matrix.
 #' @param prop Numeric scalar specifying the maximum proportion of features that are expected to be present for any cell.
 #' @param mode String indicating the output to return, see Value.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
 #' 
 #' @return
 #' If \code{mode="scale"}, a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.
@@ -27,14 +27,12 @@
 #' For gene expression, the sparsity assumption is less justifiable.
 #' Each cell could feasibly express a majority of the transcriptome (once we ignore constitutively silent features in the annotation, like pseudogenes).
 #' The sparsity of gene expression data also yields less precise scale estimates, reducing their utility in downstream applications.
-#' See \code{\link{controlAmbience}} or \code{\link{maximumAmbience}} instead.
-#' 
+#' See \code{\link{ambientContribControl}} or \code{\link{ambientContribMaximum}} instead, which operate from different assumptions.
+#'
 #' @author Aaron Lun
 #'
 #' @seealso
-#' \code{\link{inferAmbience}}, to estimate \code{ambient} if not provided.
-#'
-#' \code{\link{controlAmbience}} and \code{\link{maximumAmbience}}, to estimate the ambient proportions from some different assumptions.
+#' \code{\link{ambientProfileBimodal}}, to estimate the ambient profile for use in \code{ambient}.
 #'
 #' \code{\link{cleanHashDrops}}, where this function is used to estimate ambient scaling factors.
 #' 
@@ -50,16 +48,12 @@
 #' @importFrom DelayedMatrixStats colQuantiles
 #' @importFrom DelayedArray DelayedArray getAutoBPPARAM setAutoBPPARAM
 #' @importFrom BiocParallel SerialParam
-ambientContribSparse <- function(y, ambient=NULL, prop=0.5, 
+ambientContribSparse <- function(y, ambient, prop=0.5, 
     mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam())
 {
     old <- getAutoBPPARAM()
     setAutoBPPARAM(BPPARAM)
     on.exit(setAutoBPPARAM(old))
-
-    if (is.null(ambient)) {
-        ambient <- inferAmbience(y)
-    }
 
     ambient[ambient==0] <- NA_real_ # trigger the formation of NAs.
     scaling <- colQuantiles(DelayedArray(y/ambient), na.rm=TRUE, probs=1-prop)

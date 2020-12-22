@@ -1,9 +1,9 @@
-#' Maximum ambient contribution
+#' Ambient contribution by maximum scaling
 #'
-#' Compute the maximum contribution of the ambient solution to an expression profile for a group of droplets.
+#' Compute the maximum contribution of the ambient solution to an expression profile for a group of droplets,
+#' by scaling the ambient profile and testing for significant deviations in the count profile.
 #'
-#' @param y A numeric count matrix where each row represents a gene and each column represents an expression profile.
-#' The profile usually contains aggregated counts for multiple droplets in a sample, e.g., for a cluster of cells.
+#' @param y A numeric count matrix where each row represents a gene and each column represents a cluster of cells (see Caveats).
 #' \code{y} can also be a vector, in which case it is converted into a one-column matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each gene in the ambient solution.
@@ -15,6 +15,8 @@
 #' @param num.points Integer scalar specifying the number of points to use for the grid search.
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
 #' @param mode String indicating the output to return, see Value.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
+#' @param ... Arguments to pass to \code{ambientContribMaximum}.
 #' 
 #' @return 
 #' If \code{mode="scale"},
@@ -50,6 +52,8 @@
 #' \code{num.points} and \code{num.iter} control the resolution of the grid search,
 #' and generally do not need to be changed.
 #'
+#' \code{maximumAmbience} is soft-deprecated; use \code{ambientContribMaximum} instead.
+#'
 #' @section Caveats:
 #' The above algorithm is rather \emph{ad hoc} and offers little in the way of theoretical guarantees.
 #' The p-value is used as a score rather than providing any meaningful error control.
@@ -58,6 +62,7 @@
 #' Our abuse of the p-value machinery means that the reported scaling often exceeds the actual contribution, especially at low counts where the reduced power fails to penalize overly large scaling factors.
 #' Hence, the function works best when \code{y} contains aggregated counts for one or more groups of droplets with the same expected expression profile, e.g., clusters of related cells.
 #' Higher counts provide more power to detect deviations, hopefully leading to a more accurate estimate of the scaling factor.
+#' (On a practical note, this function is rather slow so it is more feasible to calculate on cluster-level profiles rather than per cell.)
 #' 
 #' Note that this function returns the \emph{maximum possible} contribution of the ambient solution to \code{y}, not the actual contribution.
 #' In the most extreme case, if the ambient profile is similar to the expectation of \code{y} (e.g., due to sequencing a relatively homogeneous cell population), the maximum possible contribution of the ambient solution would be 100\% of \code{y}, and subtraction would yield an empty count vector!
@@ -65,9 +70,9 @@
 #' @author Aaron Lun
 #'
 #' @seealso
-#' \code{\link{estimateAmbience}}, to estimate the ambient profile.
+#' \code{\link{ambientProfileEmpty}} and \code{\link{ambientProfileBimodal}}, to estimate the ambient profile.
 #'
-#' \code{\link{controlAmbience}}, for another method for estimating the ambient contribution.
+#' \code{\link{ambientContribSparse}} and \code{\link{ambientContribControl}}, for other methods to estimate the ambient contribution.
 #'
 #' \code{\link{emptyDrops}}, which uses the ambient profile to call cells.
 #'
@@ -78,23 +83,23 @@
 #' y[1:100] <- y[1:100] + rpois(100, 20) # actual biology.
 #'
 #' # Estimating the maximum possible scaling factor:
-#' scaling <- maximumAmbience(y, ambient)
+#' scaling <- ambientContribMaximum(y, ambient)
 #' scaling
 #'
 #' # Estimating the maximum contribution to 'y' by 'ambient'.
-#' contribution <- maximumAmbience(y, ambient, mode="profile")
+#' contribution <- ambientContribMaximum(y, ambient, mode="profile")
 #' DataFrame(ambient=drop(contribution), total=y)
 #' 
 #' @seealso 
-#' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
+#' \code{\link{ambientProfileEmpty}} or \code{\link{ambientProfileBimodal}}, to obtain an estimate to use in \code{ambient}.
 #'
-#' \code{\link{controlAmbience}}, for a more accurate estimate when control features are available.
+#' \code{\link{ambientContribControl}} or \code{\link{ambientContribSparse}}, for other methods of estimating the contribution.
+#'
 #' @export
 #' @importFrom stats p.adjust ppois pnbinom
 #' @importFrom BiocParallel SerialParam
-maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0, 
-    num.points=100, num.iter=5, prop.expressed=NULL, 
-    mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam()) 
+ambientContribMaximum <- function(y, ambient, threshold=0.1, dispersion=0, 
+    num.points=100, num.iter=5, mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam()) 
 {
     mode <- match.arg(mode)
 
@@ -206,4 +211,10 @@ maximumAmbience <- function(y, ambient, threshold=0.1, dispersion=0,
             p
         }
     }
+}
+
+#' @export
+#' @rdname ambientContribMaximum
+maximumAmbience <- function(...) {
+    ambientContribMaximum(...)
 }

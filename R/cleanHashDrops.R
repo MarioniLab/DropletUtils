@@ -4,7 +4,7 @@
 #'
 #' @param x A numeric matrix-like object containing counts for each HTO (row) in each cell (column).
 #' @param ambient A numeric vector of length equal to \code{nrow(x)}, containing the relative concentration of each HTO in the ambient solution.
-#' Defaults to \code{\link{inferAmbience}(x)} if not explicitly provided.
+#' Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.
 #' @param controls A vector specifying the rows of \code{x} corresponding to control tags.
 #' @param ... Further arguments to pass to \code{\link{isOutlier}}.
 #' 
@@ -51,7 +51,7 @@
 #' df
 #'
 #' @seealso
-#' \code{\link{inferAmbience}}, to infer the ambient profile.
+#' \code{\link{ambientProfileBimodal}}, to infer the ambient profile.
 #' 
 #' \code{\link{ambientContribSparse}}, to estimate the ambient scaling for each droplet.
 #'
@@ -62,7 +62,7 @@
 #' @importFrom scuttle medianSizeFactors isOutlier
 cleanHashDrops <- function(x, ambient=NULL, controls=NULL, ...) {
     if (!is.null(ambient)) {
-        ambient <- inferAmbience(x)
+        ambient <- ambientProfileBimodal(x)
     }
 
     scale <- ambientContribSparse(x, ambient=ambient)

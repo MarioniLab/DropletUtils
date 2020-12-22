@@ -1,10 +1,13 @@
-#' Estimate the ambient profile
+#' Estimate the ambient profile from empty droplets
 #'
-#' Estimate the transcript proportions in the ambient solution using the Good-Turing method.
+#' Estimate the transcript proportions in the ambient solution from an unfiltered count matrix,
+#' assuming that low-count barcodes correspond to \dQuote{known empty} droplets.
+#' Zeroes are filled in using the Good-Turing method.
 #'
 #' @inheritParams emptyDrops
 #' @param by.rank An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
 #' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
+#' @param ... Arguments to pass to \code{ambientProfileEmpty}.
 #'
 #' @details
 #' This function obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
@@ -17,6 +20,8 @@
 #' Rounding is performed by default as discrete count values are necessary for the Good-Turing algorithm, but if \code{m} is known to be discrete, setting \code{round=FALSE} can provide a small efficiency improvement.
 #' 
 #' Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
+#'
+#' \code{estimateAmbience} is soft-deprecated; use \code{ambientProfileEmpty} instead.
 #'
 #' @section Behavior at zero counts:
 #' Good-Turing returns zero probabilities for zero counts if none of the summed counts are equal to 1.
@@ -38,8 +43,6 @@
 #' The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
 #' By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
 #'
-#' 
-#'
 #' @return
 #' A numeric vector of length equal to \code{nrow(m)},
 #' containing the estimated proportion of each transcript in the ambient solution.
@@ -52,15 +55,17 @@
 #' set.seed(0)
 #' my.counts <- DropletUtils:::simCounts()
 #' 
-#' ambience <- estimateAmbience(my.counts)
+#' ambience <- ambientProfileEmpty(my.counts)
 #' head(ambience)
 #'
 #' @seealso
 #' \code{\link{emptyDrops}} and \code{\link{hashedDrops}}, where the ambient profile estimates are used for testing.
 #'
+#' \code{\link{ambientContribMaximum}} and related functions, to estimate the contribution of ambient contamination in each library.
+#'
 #' @export
 #' @importFrom Matrix rowSums colSums
-estimateAmbience <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE) {
+ambientProfileEmpty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE) {
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
@@ -76,6 +81,12 @@ estimateAmbience <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing
     }
 
     output
+}
+
+#' @export
+#' @rdname ambientProfileEmpty
+estimateAmbience <- function(...) {
+    ambientProfileEmpty(...)
 }
 
 .intColSums <- function(m) {

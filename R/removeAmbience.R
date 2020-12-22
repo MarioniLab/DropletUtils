@@ -9,8 +9,8 @@
 #' @param groups A vector of length equal to \code{ncol(y)}, specifying the assigned group for each cell.
 #' This can also be a \linkS4class{DataFrame}, see \code{?\link{sumCountsAcrossCells}}.
 #' @param features A vector of control features or a list of mutually exclusive feature sets, 
-#' see \code{?\link{controlAmbience}} for more details.
-#' @param ... Further arguments to pass to \code{\link{maximumAmbience}}.
+#' see \code{?\link{ambientContribControl}} for more details.
+#' @param ... Further arguments to pass to \code{\link{ambientContribMaximum}}.
 #' @param dispersion Numeric scalar specifying the dispersion to use in the quantile-quantile mapping.
 #' @param size.factors Numeric scalar specifying the size factors for each column of \code{y},
 #' defaults to library size-derived size factors.
@@ -25,7 +25,7 @@
 #' @details
 #' This function will aggregate counts from each group of related cells into an average profile.
 #' For each group, we estimate the contribution of the ambient profile and subtract it from the average.
-#' By default, this is done with \code{\link{maximumAmbience}}, but if enough is known about the biological system, users can specify \code{feaures} to use \code{\link{controlAmbience}} instead.
+#' By default, this is done with \code{\link{ambientContribMaximum}}, but if enough is known about the biological system, users can specify \code{feaures} to use \code{\link{ambientContribControl}} instead.
 #'
 #' We then perform quantile-quantile mapping of counts in \code{y} from the old to new averages.
 #' This approach preserves the mean-variance relationship and improves the precision of estimate of the ambient contribution, but relies on a sensible grouping of similar cells, e.g., unsupervised clusters or cell type annotations.
@@ -46,7 +46,7 @@
 #' summary(rowMeans(removed[101:1000,]))
 #'
 #' @seealso
-#' \code{\link{maximumAmbience}} and \code{\link{controlAmbience}}, to estimate the ambient contribution.
+#' \code{\link{ambientContribMaximum}} and \code{\link{ambientContribControl}}, to estimate the ambient contribution.
 #'
 #' \code{\link{estimateAmbience}}, to estimate the ambient profile.
 #'
@@ -68,9 +68,9 @@ removeAmbience <- function(y, ambient, groups, features=NULL, ...,
     group.sf <- assay(sf.summed)[1,]
 
     if (is.null(features)) {
-        profile <- maximumAmbience(old.means, ambient=ambient, ..., mode="profile")
+        profile <- ambientContribMaximum(old.means, ambient=ambient, ..., mode="profile")
     } else {
-        profile <- controlAmbience(old.means, ambient=ambient, features=features, mode="profile")
+        profile <- ambientContribControl(old.means, ambient=ambient, features=features, mode="profile")
     }
     new.means <- old.means - profile
     new.means[new.means < 0] <- 0

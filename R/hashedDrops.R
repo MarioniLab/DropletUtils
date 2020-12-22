@@ -10,7 +10,7 @@
 #' Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.
 #' @param ambient A numeric vector of length equal to \code{nrow(x)},
 #' specifying the relative abundance of each HTO in the ambient solution - see Details.
-#' @param min.prop Numeric scalar to be used to infer the ambient profile when \code{ambient=NULL}, see \code{\link{inferAmbience}}.
+#' @param min.prop Numeric scalar to be used to infer the ambient profile when \code{ambient=NULL}, see \code{\link{ambientProfileBimodal}}.
 #' @param pseudo.count A numeric scalar specifying the minimum pseudo-count when computing log-fold changes.
 #' @param doublet.nmads A numeric scalar specifying the number of median absolute deviations (MADs) to use to identify doublets.
 #' @param doublet.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify doublets.
@@ -88,7 +88,7 @@
 #' For example, we could get this information from the \code{\link{metadata}} of the \code{\link{emptyDrops}} output,
 #' had we run \code{\link{emptyDrops}} on the HTO count matrix (see below).
 #' Unfortunately, in some cases (e.g., public data), counts are provided for only the cell-containing barcodes.
-#' If \code{ambient=NULL}, the profile is inferred from \code{x} using \code{\link{inferAmbience}}.
+#' If \code{ambient=NULL}, the profile is inferred from \code{x} using \code{\link{ambientProfileBimodal}}.
 #'
 #' @section Computing the log-fold changes:
 #' After subtraction of the ambient noise but before calculation of the log-fold changes,
@@ -197,7 +197,7 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
     cell.names <- colnames(x)
 
     if (is.null(ambient)) {
-        ambient <- inferAmbience(x, min.prop)
+        ambient <- ambientProfileBimodal(x, min.prop)
     }
 
     discard <- ambient == 0
