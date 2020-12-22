@@ -7,7 +7,7 @@
 #' Columns represent barcoded droplets, rows represent genes.
 #' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
 #' at or below which all barcodes are assumed to correspond to empty droplets.
-#' @param by.rank An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{estimateAmbience}} for more details.
+#' @param by.rank An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.
 #' @param niters An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.
 #' @param test.ambient A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.
 #' @param ignore A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).
@@ -15,11 +15,11 @@
 #' @param BPPARAM A BiocParallelParam object indicating whether parallelization should be used to compute p-values.
 #' @param retain A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
-#' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.
+#' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
 #' @param ... Further arguments to pass to \code{testEmptyDrops}.
 #' 
 #' @section Details about \code{testEmptyDrops}:
-#' The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{estimateAmbience}} for details).
+#' The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{ambientProfileEmpty}} for details).
 #' This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 #' Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 #' The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
@@ -156,9 +156,7 @@
 #'
 #' \code{\link{defaultDrops}}, for an implementation of the cell-calling method used by CellRanger version 2.
 #'
-#' \code{\link{estimateAmbience}}, for more details on estimation of the ambient profile.
-#'
-#' \code{\link{maximumAmbience}}, for estimating the maximum possible contribution of the ambient solution to a count profile.
+#' \code{\link{ambientProfileEmpty}}, for more details on estimation of the ambient profile.
 #' 
 #' @name emptyDrops
 #' @export

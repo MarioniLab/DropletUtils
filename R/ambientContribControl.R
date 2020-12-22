@@ -3,10 +3,16 @@
 #' Estimate the contribution of the ambient solution to a particular expression profile,
 #' based on the abundance of control features that should not be expressed in the latter.
 #'
-#' @inheritParams maximumAmbience
+#' @param y A numeric matrix-like object containing counts.
+#' Each row represents a feature, e.g., a gene or a HTO.
+#' Each column can represent a droplet or group of droplets.
+#'
+#' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
 #' 
 #' Alternatively, a list of vectors specifying mutually exclusive sets of features.
+#' @inheritParams ambientContribMaximum
+#' @param ... Arguments to pass to \code{ambientContribControl}.
 #'
 #' @details
 #' Control features should be those that cannot be expressed and thus fully attributable to ambient contamination.
@@ -22,11 +28,15 @@
 #' For this mode, an archetypal pairing is that of hemoglobins with immunoglobulins (Young and Behjati, 2018), 
 #' which should not be co-expressed in any (known) cell type.
 #'
+#' \code{controlAmbience} is soft-deprecated; use \code{ambientContribControl} instead.
+#'
 #' @return 
 #' If \code{mode="scale"},
 #' a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.
-#' Scaling columns of \code{ambient} by this vector yields the estimated ambient profile for each column of \code{y},
-#' which can also be obtained by setting \code{mode="profile"}.
+#' Scaling \code{ambient} by each entry yields the maximum ambient profile for the corresponding column of \code{y}.
+#'
+#' If \code{mode="profile"}, a numeric matrix is returned containing the estimated ambient profile for each column of \code{y}.
+#' This is computed by scaling as described above; if \code{ambient} is a matrix, each column is scaled by the corresponding entry of the scaling vector.
 #'
 #' If \code{mode="proportion"}, a numeric matrix is returned containing the estimated proportion of counts in \code{y} that are attributable to ambient contamination.
 #' This is computed by simply dividing the output of \code{mode="profile"} by \code{y} and capping all values at 1.
@@ -40,17 +50,17 @@
 #' y <- y + c(integer(100), rpois(900, 5)) # actual biology, but first 100 genes silent.
 #'
 #' # Using the first 100 genes as a control:
-#' scaling <- controlAmbience(y, ambient, features=1:100)
+#' scaling <- ambientContribControl(y, ambient, features=1:100)
 #' scaling
 #'
 #' # Estimating the control contribution to 'y' by 'ambient'.
-#' contribution <- controlAmbience(y, ambient, features=1:100, mode="profile")
+#' contribution <- ambientContribControl(y, ambient, features=1:100, mode="profile")
 #' DataFrame(ambient=drop(contribution), total=y)
 #'
 #' @seealso 
-#' \code{\link{estimateAmbience}}, to obtain an estimate to use in \code{ambient}.
+#' \code{\link{ambientProfileEmpty}} or \code{\link{ambientProfileBimodal}}, to obtain a profile estimate to use in \code{ambient}.
 #'
-#' \code{\link{maximumAmbience}}, when control features are not available.
+#' \code{\link{ambientContribMaximum}} or \code{\link{ambientContribSparse}}, for other methods of estimating contribution when control features are not available.
 #'
 #' @references
 #' Young MD and Behjati S (2018).
@@ -60,34 +70,37 @@
 #' @export
 #' @importFrom Matrix t
 #' @importFrom scuttle sumCountsAcrossFeatures
-controlAmbience <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
+#' @importFrom DelayedMatrixStats colMins
+ambientContribControl <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
     if (is.null(dim(y))) {
          y <- cbind(y)
-    }
-    if (is.null(dim(ambient))) {
-        ambient <- matrix(ambient, nrow(y), ncol(y), dimnames=list(names(ambient), NULL))
-    }
-    if (!identical(rownames(y), rownames(ambient))) {
-        warning("'y' and 'ambient' do not have the same row names")
     }
 
     if (!is.list(features)) {
         features <- list(features)
     } 
     sum.y <- sumCountsAcrossFeatures(y, features)
-    sum.a <- sumCountsAcrossFeatures(ambient, features)
-    props <- sum.y/sum.a
-    scaling <- apply(props, 2, min)
 
-    mode <- match.arg(mode)
-    if (mode=="scale") {
-        scaling
-    } else {
-        scaled.ambient <- t(t(ambient) * scaling)
-        if (mode=="profile") {
-            scaled.ambient
-        } else {
-            .clean_amb_props(scaled.ambient, y)
+    if (is.null(dim(ambient))) {
+        if (!identical(rownames(y), names(ambient))) {
+            warning("'rownames(y)' and 'names(ambient)' are not the same")
         }
+        sum.a <- sumCountsAcrossFeatures(cbind(ambient), features)
+        sum.a <- drop(sum.a)
+    } else {
+        if (!identical(rownames(y), rownames(ambient))) {
+            warning("'y' and 'ambient' do not have the same row names")
+        }
+        sum.a <- sumCountsAcrossFeatures(ambient, features)
     }
+
+    props <- sum.y/sum.a
+    scaling <- colMins(props)
+    .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
+}
+
+#' @export
+#' @rdname ambientContribControl
+controlAmbience <- function(...) {
+    ambientContribControl(...)
 }

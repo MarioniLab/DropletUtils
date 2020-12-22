@@ -1,5 +1,5 @@
 # This tests the maximum ambience function.
-# library(testthat); library(DropletUtils); source("test-maxamb.R")
+# library(testthat); library(DropletUtils); source("setup.R"); source("test-maxamb.R")
 
 # Making up some data.
 set.seed(1100000)
@@ -27,8 +27,21 @@ test_that("maximumAmbience function handles matrix ambience", {
     expect_identical(unname(stuff[2]), maximumAmbience(y2, ambient2))
 
     stuff <- maximumAmbience(cbind(y, y2), cbind(ambient, ambient2), mode="profile")
-    expect_identical(unname(stuff[,1,drop=FALSE]), maximumAmbience(y, ambient, mode="profile"))
-    expect_identical(unname(stuff[,2,drop=FALSE]), maximumAmbience(y2, ambient2, mode="profile"))
+    expect_identical(unname(stuff[,1,drop=FALSE]), unname(maximumAmbience(y, ambient, mode="profile")))
+    expect_identical(unname(stuff[,2,drop=FALSE]), unname(maximumAmbience(y2, ambient2, mode="profile")))
+})
+
+test_that("maximumAmbience works correctly in parallel", {
+    combined <- cbind(y, y2)
+    ref <- maximumAmbience(y, ambient)
+    scaling <- maximumAmbience(y, ambient, BPPARAM=safeBPPARAM)
+    expect_identical(ref, scaling)
+
+    ambient2 <- c(runif(900, 0, 0.1), runif(100))
+    amb.mat <- cbind(ambient, ambient2)
+    ref <- maximumAmbience(combined, amb.mat)
+    scaling <- maximumAmbience(combined, amb.mat, BPPARAM=safeBPPARAM)
+    expect_identical(ref, scaling)
 })
 
 test_that("maximumAmbience function handles dispersion and threshold changes", {

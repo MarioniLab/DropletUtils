@@ -1,9 +1,15 @@
-\name{DropletUtilsnews}
+\name{DropletUtilsNews}
 \title{DropletUtils News}
 \encoding{UTF-8}
 
 \section{Version 1.12.0}{\itemize{
-\item Support parallelized loading of multiple samples in \code{read10xCounts()}.
+\item Added \code{BPPARAM=} to \code{read10xCounts()} for parallelized reading of multiple samples.
+
+\item Gave all the \code{*Ambience()} functions better names, and soft-deprecated the current versions.
+
+\item Added \code{ambientContribSparse()} to estimate the ambient contribution under sparsity assumptions.
+
+\item Added \code{cleanHashDrops()} to remove undesirable barcodes from HTO count matrices.
 }}
 
 \section{Version 1.10.0}{\itemize{

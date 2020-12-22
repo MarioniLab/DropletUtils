@@ -42,9 +42,9 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{alpha}{A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.}
 
-\item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{estimateAmbience}}) and the multinomial simulations.}
+\item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.}
 
-\item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{estimateAmbience}} for more details.}
+\item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.}
 
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 
@@ -73,7 +73,7 @@ Distinguish between droplets containing cells and ambient RNA in a droplet-based
 }
 \section{Details about \code{testEmptyDrops}}{
 
-The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{estimateAmbience}} for details).
+The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{ambientProfileEmpty}} for details).
 This assumes that a cell-containing droplet would generally have higher total counts than empty droplets containing RNA from the ambient pool.
 Counts for the low-count barcodes are pooled together, and an estimate of the proportion vector for the ambient pool is calculated using \code{\link{goodTuringProportions}}.
 The count vector for each barcode above \code{lower} is then tested for a significant deviation from these proportions.
@@ -203,9 +203,7 @@ Permutation P-values should never be zero: calculating exact P-values when permu
 
 \code{\link{defaultDrops}}, for an implementation of the cell-calling method used by CellRanger version 2.
 
-\code{\link{estimateAmbience}}, for more details on estimation of the ambient profile.
-
-\code{\link{maximumAmbience}}, for estimating the maximum possible contribution of the ambient solution to a count profile.
+\code{\link{ambientProfileEmpty}}, for more details on estimation of the ambient profile.
 }
 \author{
 Aaron Lun

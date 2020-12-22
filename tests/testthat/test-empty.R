@@ -1,5 +1,5 @@
 # This tests that the C++ code for emptyDrops does what it says it does.
-# library(DropletUtils); library(testthat); source("test-empty.R")
+# library(DropletUtils); library(testthat); source("setup.R"); source("test-empty.R")
 
 test_that("estimateAmbience works correctly", {
     # Mocking up some counts.
@@ -167,10 +167,8 @@ test_that("p-value calculations are correct without alpha", {
     stats <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, iter=N)
     UNICHECKER(stats/N)
 
-    # Same result for multiple cores (set BPPARAM first as MulticoreParam redefines the seed!)
-    BPPARAM <- if (.Platform$OS.type=="windows") BiocParallel::SerialParam() else BiocParallel::MulticoreParam(3)
     set.seed(100)
-    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N) 
+    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=safeBPPARAM, iter=N) 
     expect_identical(stats, stats2)
 
     # Different result for different seeds.
@@ -180,9 +178,9 @@ test_that("p-value calculations are correct without alpha", {
     UNICHECKER(stats3/N)
 
     # Worker splitting behaves for near-zero or no jobs.
-    almost_none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=1L) 
+    almost_none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=safeBPPARAM, iter=1L) 
     expect_true(all(almost_none %in% 0:1))
-    none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=0L) 
+    none <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=safeBPPARAM, iter=0L) 
     expect_identical(none, integer(length(totals)))
 })
 
@@ -216,9 +214,8 @@ test_that("p-value calculations are correct with alpha", {
     UNICHECKER(stats/N)
 
     # Same result for multiple cores (set BPPARAM first as it redefines the seed!)
-    BPPARAM <- if (.Platform$OS.type=="windows") BiocParallel::SerialParam() else BiocParallel::MulticoreParam(3)
     set.seed(100)
-    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=BPPARAM, iter=N, alpha=10) 
+    stats2 <- DropletUtils:::.permute_counter(totals, probs, ambient.prof, BPPARAM=safeBPPARAM, iter=N, alpha=10) 
     expect_identical(stats, stats2)
 
     # Different result for different seeds.

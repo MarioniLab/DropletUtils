@@ -1,20 +1,22 @@
-#' Infer the ambient profile
+#' Ambient profile from bimodality
 #'
-#' Infer the ambient profile from a filtered HTO count matrix containing only counts for cells.
+#' Estimate the concentrations of tags in the ambient solution from a filtered HTO count matrix containing only counts for cells,
+#' by assuming that each HTO has a bimodal abundance distribution with ambient and high-expressing components.
 #'
 #' @param x A numeric matrix-like object containing counts for each HTO (row) and cell (column).
 #' @param min.prop Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.
+#' @param ... Arguments to pass to \code{ambientProfileBimodal}.
 #' 
 #' @return A numeric vector of length equal to \code{nrow(x)}, containing the estimated ambient proportions for each HTO.
 #'
 #' @details
 #' In some cases, we want to know the ambient profile but we only have the HTO count matrix for the cell-containing libraries.
 #' This can be useful in functions such as \code{\link{hashedDrops}} or as a reference profile in \code{\link{medianSizeFactors}}.
-#' However, as we only have the cell-containing libraries, we cannot use \code{\link{estimateAmbience}}.
+#' However, as we only have the cell-containing libraries, we cannot use \code{\link{ambientProfileEmpty}}.
 #' 
-#' This function allows us to obtain the ambient profile under the assumption that each HTO only labels a minority of the cells.
-#' Specifically, it will fit a two-component mixture model to each HTO's count distribution.
-#' All barcodes assigned to the lower component are considered to have background counts for that HTO,
+#' This function estimates the ambient profile by assuming that each HTO only labels a minority of the cells.
+#' Under this assumption, each HTO's log-count distribution has a bimodal distribution where the lower mode represents ambient contamination.
+#' We fit a two-component mixture model and identify all barcodes assigned to the lower component;
 #' and the mean of those counts is used as an estimate of the ambient contribution.
 #'
 #' The initialization of the mixture model is controlled by \code{min.prop}, 
@@ -22,10 +24,14 @@
 #' This means that each sample is expected to contribute somewhere between \code{[min.prop, 1-min.prop]} barcodes.
 #' Larger values improve convergence but require stronger assumptions about the relative proportions of multiplexed samples.
 #'
+#' \code{inferAmbience} is soft-deprecated; use \code{ambientProfileBimodal} instead.
+#'
 #' @seealso
 #' \code{\link{hashedDrops}}, where this function is used in the absence of an ambient profile.
 #'
-#' \code{\link{estimateAmbience}}, which should be used when the raw matrix (prior to filtering for cells) is available.
+#' \code{\link{ambientProfileEmpty}}, which should be used when the raw matrix (prior to filtering for cells) is available.
+#'
+#' \code{\link{ambientContribSparse}} and related functions, to estimate the contribution of ambient contamination in each library.
 #'
 #' @author Aaron Lun
 #' 
@@ -37,10 +43,10 @@
 #' )
 #'
 #' # Should be close to 1, 2, 3
-#' inferAmbience(x)
+#' ambientProfileBimodal(x)
 #'
 #' @export
-inferAmbience <- function(x, min.prop=0.05) {
+ambientProfileBimodal <- function(x, min.prop=0.05) {
     ambient <- numeric(nrow(x))
     names(ambient) <- rownames(x)
 
@@ -51,6 +57,12 @@ inferAmbience <- function(x, min.prop=0.05) {
     }
 
     ambient
+}
+
+#' @export
+#' @rdname ambientProfileBimodal
+inferAmbience <- function(...) {
+    ambientProfileBimodal(...)
 }
 
 #' @importFrom stats kmeans quantile
