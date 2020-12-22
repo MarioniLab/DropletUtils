@@ -15,8 +15,11 @@ ambientContribControl(
 controlAmbience(...)
 }
 \arguments{
-\item{y}{A numeric matrix-like object containing counts, where each row represents a gene and each column corresponds to a droplet or a group of droplets.
-\code{y} can also be a vector, in which case it is converted into a one-column matrix.}
+\item{y}{A numeric matrix-like object containing counts.
+Each row represents a feature, e.g., a gene or a HTO.
+Each column can represent a droplet or group of droplets.
+
+Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.

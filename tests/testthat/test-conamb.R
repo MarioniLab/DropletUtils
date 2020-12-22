@@ -27,11 +27,21 @@ test_that("controlAmbience function works with a variety of inputs", {
 })
 
 test_that("controlAmbience function works with gene sets", {
-    ref <- controlAmbience(y, ambient, list(1:100, 200:300))
+    sets <- list(1:100, 200:300)
+    ref <- controlAmbience(y, ambient, sets)
     expect_equal(unname(ref), 
         min(
             sum(y[1:100])/sum(ambient[1:100]),
             sum(y[200:300])/sum(ambient[200:300])
+        )
+    )
+
+    # Same with matrices.
+    ref <- controlAmbience(cbind(y, y2), cbind(ambient, ambient+1), sets)
+    expect_equal(unname(ref), 
+        c(
+            unname(controlAmbience(y, ambient, sets)),
+            unname(controlAmbience(y2, ambient+1, sets))
         )
     )
 })
@@ -53,7 +63,8 @@ test_that("controlAmbience function works with a variety of outputs", {
 
 test_that("controlAmbience respects names", {
     names(y2) <- seq_along(y2)
-    expect_warning(controlAmbience(y2, ambient, 1:100, mode="profile"), "do not have the same row names")
+    expect_warning(controlAmbience(y2, ambient, 1:100, mode="profile"), "are not the same")
+    expect_warning(controlAmbience(cbind(y2), cbind(ambient), 1:100, mode="profile"), "do not have the same row names")
 
     names(ambient) <- seq_along(y2)
     prop <- controlAmbience(y2, ambient, 1:100, mode="profile")

@@ -3,8 +3,11 @@
 #' Estimate the contribution of the ambient solution to a particular expression profile,
 #' based on the abundance of control features that should not be expressed in the latter.
 #'
-#' @param y A numeric matrix-like object containing counts, where each row represents a gene and each column corresponds to a droplet or a group of droplets.
-#' \code{y} can also be a vector, in which case it is converted into a one-column matrix.
+#' @param y A numeric matrix-like object containing counts.
+#' Each row represents a feature, e.g., a gene or a HTO.
+#' Each column can represent a droplet or group of droplets.
+#'
+#' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
 #' 
 #' Alternatively, a list of vectors specifying mutually exclusive sets of features.
@@ -67,25 +70,32 @@
 #' @export
 #' @importFrom Matrix t
 #' @importFrom scuttle sumCountsAcrossFeatures
+#' @importFrom DelayedMatrixStats colMins
 ambientContribControl <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
     if (is.null(dim(y))) {
          y <- cbind(y)
-    }
-    if (is.null(dim(ambient))) {
-        ambient <- matrix(ambient, nrow(y), ncol(y), dimnames=list(names(ambient), NULL))
-    }
-    if (!identical(rownames(y), rownames(ambient))) {
-        warning("'y' and 'ambient' do not have the same row names")
     }
 
     if (!is.list(features)) {
         features <- list(features)
     } 
     sum.y <- sumCountsAcrossFeatures(y, features)
-    sum.a <- sumCountsAcrossFeatures(ambient, features)
-    props <- sum.y/sum.a
-    scaling <- apply(props, 2, min)
 
+    if (is.null(dim(ambient))) {
+        if (!identical(rownames(y), names(ambient))) {
+            warning("'rownames(y)' and 'names(ambient)' are not the same")
+        }
+        sum.a <- sumCountsAcrossFeatures(cbind(ambient), features)
+        sum.a <- drop(sum.a)
+    } else {
+        if (!identical(rownames(y), rownames(ambient))) {
+            warning("'y' and 'ambient' do not have the same row names")
+        }
+        sum.a <- sumCountsAcrossFeatures(ambient, features)
+    }
+
+    props <- sum.y/sum.a
+    scaling <- colMins(props)
     .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
 }
 
