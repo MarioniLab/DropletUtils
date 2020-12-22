@@ -7,6 +7,9 @@
 #' Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.
 #' @param controls A vector specifying the rows of \code{x} corresponding to control tags.
 #' @param ... Further arguments to pass to \code{\link{isOutlier}}.
+#' @param contrib.method String specifying how the ambient contribution should be computed.
+#' @param sparse.prop Numeric scalar specifying the maximum proportion of HTOs that should be present per cell.
+#' Passed to \code{\link{ambientContribSparse}} if \code{contrib.method="sparse"}
 #' 
 #' @author Aaron Lun
 #'
@@ -16,6 +19,7 @@
 #' \item \code{zero.ambient}, a logical field indicating whether each cell has zero ambient contamination.
 #' \item \code{high.ambient}, a logical field indicating whether each cell has unusually high levels of ambient contamination.
 #' }
+#' The \code{\link{metadata}} of the DataFrame contains \code{ambient}, a numeric vector containing the ambient profile used to estimate \code{ambient.scale}.
 #'
 #' If \code{controls} is supplied, the DataFrame also contains:
 #' \itemize{
@@ -28,14 +32,18 @@
 #' @details
 #' We remove cells for which there is no detectable ambient contamination, i.e., \code{ambient.scale} is zero.
 #' We expect non-zero counts for most tags due to the deeply sequenced nature of HTO data.
-#' If 50\% or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
+#' If \code{sparse.prop} or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
 #'
 #' We also remove cells for which the ambient contamination is unusually high, defined with \code{\link{isOutlier}} on the log-transformed \code{ambient.scale}.
 #' These correspond to droplets that are contaminated by antibody conjugates, which cause all tags to have large counts.
-#' The assumption here is that fewer than 50\% of tags geniunely have non-zero abundance in each cell.
+#' The assumption here is that fewer than \code{sparse.prop} tags geniunely have non-zero abundance in each cell.
 #' 
-#' Finally, if \code{controls} is specified, we remove cells with unusually low coverage of the controls, as defined with \code{\link{isOutlier}} on the log-sum count across control features.
+#' Finally, if \code{controls} is specified, we remove cells with unusually low or no coverage of the controls.
+#' This is defined with \code{\link{isOutlier}} on the log-sum count across control features.
 #' Low control coverage is assumed to represent a failure of library preparation. 
+#' 
+#' By default, we use \code{\link{ambientContribSparse}} to estimate the ambient scaling.
+#' If \code{contrib.method="control"} and \code{controls} is specified, we estimate the scaling with \code{\link{ambientContribControl}} instead.
 #' 
 #' @examples
 #' x <- rbind(
@@ -60,22 +68,25 @@
 #' @export
 #' @importFrom S4Vectors DataFrame
 #' @importFrom scuttle medianSizeFactors isOutlier
-cleanHashDrops <- function(x, ambient=NULL, controls=NULL, ...) {
-    if (!is.null(ambient)) {
+cleanHashDrops <- function(x, ambient=NULL, controls=NULL, ..., contrib.method=c("sparse", "control"), sparse.prop=0.5) {
+    if (is.null(ambient)) {
         ambient <- ambientProfileBimodal(x)
     }
 
-    scale <- ambientContribSparse(x, ambient=ambient)
-    non.zero <- scale > 0
-    fail <- isOutlier(scale, type="higher", log=TRUE, subset=non.zero, ...)
+    contrib.method <- match.arg(contrib.method)
+    if (contrib.method=="sparse" || is.null(controls)) {
+        scale <- ambientContribSparse(x, ambient=ambient, prop=sparse.prop)
+    } else {
+        scale <- ambientContribControl(x, ambient=ambient, features=controls)
+    }
 
     df <- DataFrame(
         ambient.scale=scale,
-        zero.ambient=!non.zero, 
-        high.ambient=fail,
+        zero.ambient=scale==0,
+        high.ambient=isOutlier(scale, type="higher", log=TRUE, ...),
         row.names=colnames(x)
     )
-    discard <- !non.zero | fail
+    discard <- df$zero.ambient | df$high.ambient
 
     if (!is.null(controls)) {
         df$sum.controls <- colSums(x[controls,,drop=FALSE])
@@ -84,5 +95,6 @@ cleanHashDrops <- function(x, ambient=NULL, controls=NULL, ...) {
     }
 
     df$discard <- discard
+    metadata(df)$ambient <- ambient
     df
 }

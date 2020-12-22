@@ -4,7 +4,14 @@
 \alias{cleanHashDrops}
 \title{Clean a HTO dataset}
 \usage{
-cleanHashDrops(x, ambient = NULL, controls = NULL, ...)
+cleanHashDrops(
+  x,
+  ambient = NULL,
+  controls = NULL,
+  ...,
+  contrib.method = c("sparse", "control"),
+  sparse.prop = 0.5
+)
 }
 \arguments{
 \item{x}{A numeric matrix-like object containing counts for each HTO (row) in each cell (column).}
@@ -15,6 +22,11 @@ Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.}
 \item{controls}{A vector specifying the rows of \code{x} corresponding to control tags.}
 
 \item{...}{Further arguments to pass to \code{\link{isOutlier}}.}
+
+\item{contrib.method}{String specifying how the ambient contribution should be computed.}
+
+\item{sparse.prop}{Numeric scalar specifying the maximum proportion of HTOs that should be present per cell.
+Passed to \code{\link{ambientContribSparse}} if \code{contrib.method="sparse"}}
 }
 \value{
 A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -23,6 +35,7 @@ A \linkS4class{DataFrame} with one row per column of \code{x}, containing the fo
 \item \code{zero.ambient}, a logical field indicating whether each cell has zero ambient contamination.
 \item \code{high.ambient}, a logical field indicating whether each cell has unusually high levels of ambient contamination.
 }
+The \code{\link{metadata}} of the DataFrame contains \code{ambient}, a numeric vector containing the ambient profile used to estimate \code{ambient.scale}.
 
 If \code{controls} is supplied, the DataFrame also contains:
 \itemize{
@@ -38,14 +51,18 @@ Clean a HTO-containing count matrix where each column corresponds to a cell-cont
 \details{
 We remove cells for which there is no detectable ambient contamination, i.e., \code{ambient.scale} is zero.
 We expect non-zero counts for most tags due to the deeply sequenced nature of HTO data.
-If 50\% or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
+If \code{sparse.prop} or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
 
 We also remove cells for which the ambient contamination is unusually high, defined with \code{\link{isOutlier}} on the log-transformed \code{ambient.scale}.
 These correspond to droplets that are contaminated by antibody conjugates, which cause all tags to have large counts.
-The assumption here is that fewer than 50\% of tags geniunely have non-zero abundance in each cell.
+The assumption here is that fewer than \code{sparse.prop} tags geniunely have non-zero abundance in each cell.
 
-Finally, if \code{controls} is specified, we remove cells with unusually low coverage of the controls, as defined with \code{\link{isOutlier}} on the log-sum count across control features.
-Low control coverage is assumed to represent a failure of library preparation.
+Finally, if \code{controls} is specified, we remove cells with unusually low or no coverage of the controls.
+This is defined with \code{\link{isOutlier}} on the log-sum count across control features.
+Low control coverage is assumed to represent a failure of library preparation. 
+
+By default, we use \code{\link{ambientContribSparse}} to estimate the ambient scaling.
+If \code{contrib.method="control"} and \code{controls} is specified, we estimate the scaling with \code{\link{ambientContribControl}} instead.
 }
 \examples{
 x <- rbind(
