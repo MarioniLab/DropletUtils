@@ -4,7 +4,7 @@
 #' based on the abundance of control features that should not be expressed in the latter.
 #'
 #' @param y A numeric matrix-like object containing counts.
-#' Each row represents a feature, e.g., a gene or a HTO.
+#' Each row represents a feature, e.g., a gene or a conjugated tag.
 #' Each column can represent a droplet or group of droplets.
 #'
 #' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.

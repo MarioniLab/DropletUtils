@@ -1,14 +1,14 @@
-#' Clean a HTO dataset
+#' Clean a tag-based dataset
 #'
-#' Clean a HTO-containing count matrix where each column corresponds to a cell-containing barcode.
+#' Clean a count matrix where each row is a tag and each column corresponds to a cell-containing barcode.
 #'
-#' @param x A numeric matrix-like object containing counts for each HTO (row) in each cell (column).
-#' @param ambient A numeric vector of length equal to \code{nrow(x)}, containing the relative concentration of each HTO in the ambient solution.
+#' @param x A numeric matrix-like object containing counts for each tag (row) in each cell (column).
+#' @param ambient A numeric vector of length equal to \code{nrow(x)}, containing the relative concentration of each tag in the ambient solution.
 #' Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.
 #' @param controls A vector specifying the rows of \code{x} corresponding to control tags.
 #' @param ... Further arguments to pass to \code{\link{isOutlier}}.
 #' @param contrib.method String specifying how the ambient contribution should be computed.
-#' @param sparse.prop Numeric scalar specifying the maximum proportion of HTOs that should be present per cell.
+#' @param sparse.prop Numeric scalar specifying the maximum proportion of tags that should be present per cell.
 #' Passed to \code{\link{ambientContribSparse}} if \code{contrib.method="sparse"}
 #' 
 #' @author Aaron Lun
@@ -31,7 +31,7 @@
 #'
 #' @details
 #' We remove cells for which there is no detectable ambient contamination, i.e., \code{ambient.scale} is zero.
-#' We expect non-zero counts for most tags due to the deeply sequenced nature of HTO data.
+#' We expect non-zero counts for most tags due to the deeply sequenced nature of tag-based data.
 #' If \code{sparse.prop} or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
 #'
 #' We also remove cells for which the ambient contamination is unusually high, defined with \code{\link{isOutlier}} on the log-transformed \code{ambient.scale}.
@@ -44,7 +44,12 @@
 #' 
 #' By default, we use \code{\link{ambientContribSparse}} to estimate the ambient scaling.
 #' If \code{contrib.method="control"} and \code{controls} is specified, we estimate the scaling with \code{\link{ambientContribControl}} instead.
-#' 
+#'
+#' % In principle, it would be better to filter on the ratio of \code{ambient.scale} as a fraction of \code{colSums(x)}.
+#' % This would better distinguish between antibody conjugates and droplets that just happen to be deeply sequenced,
+#' % as the latter would have a low percentage of counts attributable to ambient contamination.
+#' % In practice, this would also remove real cells that have none of the tags, which may actually be biologically interesting.
+#'
 #' @examples
 #' x <- rbind(
 #'     rpois(1000, rep(c(100, 10), c(100, 900))),

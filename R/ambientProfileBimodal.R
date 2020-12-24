@@ -1,21 +1,22 @@
 #' Ambient profile from bimodality
 #'
-#' Estimate the concentrations of tags in the ambient solution from a filtered HTO count matrix containing only counts for cells,
-#' by assuming that each HTO has a bimodal abundance distribution with ambient and high-expressing components.
+#' Estimate the concentration of each feature in the ambient solution from a filtered count matrix containing only counts for cells,
+#' by assuming that each feature has a bimodal abundance distribution with ambient and high-expressing components.
 #'
-#' @param x A numeric matrix-like object containing counts for each HTO (row) and cell (column).
+#' @param x A numeric matrix-like object containing counts for each feature (row) and cell (column).
 #' @param min.prop Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.
 #' @param ... Arguments to pass to \code{ambientProfileBimodal}.
 #' 
-#' @return A numeric vector of length equal to \code{nrow(x)}, containing the estimated ambient proportions for each HTO.
+#' @return A numeric vector of length equal to \code{nrow(x)}, containing the estimated ambient proportions for each feature.
 #'
 #' @details
-#' In some cases, we want to know the ambient profile but we only have the HTO count matrix for the cell-containing libraries.
+#' In some cases, we want to know the ambient profile but we only have the count matrix for the cell-containing libraries.
 #' This can be useful in functions such as \code{\link{hashedDrops}} or as a reference profile in \code{\link{medianSizeFactors}}.
 #' However, as we only have the cell-containing libraries, we cannot use \code{\link{ambientProfileEmpty}}.
 #' 
-#' This function estimates the ambient profile by assuming that each HTO only labels a minority of the cells.
-#' Under this assumption, each HTO's log-count distribution has a bimodal distribution where the lower mode represents ambient contamination.
+#' This function estimates the ambient profile by assuming that each feature only labels a minority of the cells.
+#' Under this assumption, each feature's log-count distribution has a bimodal distribution where the lower mode represents ambient contamination.
+#' This is generally reasonable for tag-based applications like cell hashing or CITE-seq where data is usually binary, i.e., the marker is either present or not.
 #' We fit a two-component mixture model and identify all barcodes assigned to the lower component;
 #' and the mean of those counts is used as an estimate of the ambient contribution.
 #'

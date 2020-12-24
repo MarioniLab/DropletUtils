@@ -14,7 +14,7 @@ ambientContribSparse(
 }
 \arguments{
 \item{y}{A numeric matrix-like object containing counts.
-Each row represents a feature, usually a HTO.
+Each row represents a feature, usually a conjugated tag.
 Each column can represent a droplet or group of droplets.
 
 Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.}
@@ -43,7 +43,7 @@ Estimate the contribution of the ambient solution to each droplet by assuming th
 }
 \details{
 The assumption here is that of sparsity, i.e., no more than \code{prop * nrow(y)} features should be actually present in each cell with a non-zero number of molecules.
-This is generally reasonable for HTO data where we would expect only one tag (for hashing applications) or a minority of tags (for more general surface markers).
+This is reasonable for most tag-based applications where we would expect only 1-2 tags (for cell hashing) or a minority of tags (for general CITE-seq) to be present per cell.
 Thus, counts for all other features must be driven by ambient contamination, allowing us to estimate a scaling factor for each cell based on the ratio to the ambient profile.
 
 For gene expression, the sparsity assumption is less justifiable.
