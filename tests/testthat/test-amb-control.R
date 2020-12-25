@@ -1,5 +1,5 @@
 # This tests the control ambience function.
-# library(testthat); library(DropletUtils); source("test-conamb.R")
+# library(testthat); library(DropletUtils); source("test-amb-control.R")
 
 # Making up some data.
 set.seed(1100000)
@@ -44,6 +44,18 @@ test_that("controlAmbience function works with gene sets", {
             unname(controlAmbience(y2, ambient+1, sets))
         )
     )
+
+    # Works for more than one gene set.
+    sets <- list(1:100, 200:300, 400:500)
+    ref <- controlAmbience(y, ambient, sets)
+    expect_equal(unname(ref), 
+        median(
+            c(sum(y[1:100])/sum(ambient[1:100]),
+            sum(y[200:300])/sum(ambient[200:300]),
+            sum(y[400:500])/sum(ambient[400:500]))
+        )
+    )
+
 })
 
 test_that("controlAmbience function works with a variety of outputs", {

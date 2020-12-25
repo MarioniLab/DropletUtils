@@ -95,7 +95,19 @@ ambientContribControl <- function(y, ambient, features, mode=c("scale", "profile
     }
 
     props <- sum.y/sum.a
-    scaling <- colMins(props)
+    if (nrow(props) == 1) {
+        scaling <- drop(props)
+    } else if (nrow(props) == 2) {
+        # Special-cased for modest improvement to efficiency in the common
+        # case of having two mutually exclusive sets.
+        scaling <- colMins(props)
+    } else {
+        # Only one of these sets can be expressed, so the second-largest 
+        # ratio must be attributable to ambient contamination (plus a
+        # little bias from the ranking itself). 
+        scaling <- apply(props, 2, function(x) sort(x, decreasing=TRUE)[2])
+    }
+
     .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
 }
 
