@@ -9,7 +9,7 @@
 
 \item Added \code{ambientContribSparse()} to estimate the ambient contribution under sparsity assumptions.
 
-\item Added \code{cleanHashDrops()} to remove undesirable barcodes from HTO count matrices.
+\item Added \code{cleanTagCounts()} to remove undesirable barcodes from tag count matrices.
 }}
 
 \section{Version 1.10.0}{\itemize{

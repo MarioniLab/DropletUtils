@@ -37,7 +37,7 @@
 #' @seealso
 #' \code{\link{ambientProfileBimodal}}, to estimate the ambient profile for use in \code{ambient}.
 #'
-#' \code{\link{cleanHashDrops}}, where this function is used to estimate ambient scaling factors.
+#' \code{\link{cleanTagCounts}}, where this function is used to estimate ambient scaling factors.
 #' 
 #' @examples
 #' amb <- 1:10

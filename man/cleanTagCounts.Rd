@@ -62,7 +62,7 @@ This represents the amount of ambient contamination - see \code{?\link{ambientCo
 and cells with unusually high values are assumed to be affected by protein aggregates.
 High outliers are again identified and removed based on the log-ambient scale.
 
-If \code{controls} is missing and \code{exclusive} is specified, the ambient scaling factor is computed by \code{\link{ambientContribControls}} instead.
+If \code{controls} is missing and \code{exclusive} is specified, the ambient scaling factor is computed by \code{\link{ambientContribControl}} instead.
 This can be helpful for explicitly removing cells with impossible marker combinations,
 though it is only as comprehensive as the knowledge of mutually exclusive marker sets.
 
