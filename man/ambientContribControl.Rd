@@ -3,23 +3,36 @@
 \name{ambientContribControl}
 \alias{ambientContribControl}
 \alias{controlAmbience}
+\alias{ambientContribControl,ANY-method}
+\alias{ambientContribControl,SummarizedExperiment-method}
 \title{Ambient contribution from controls}
 \usage{
-ambientContribControl(
+controlAmbience(...)
+
+ambientContribControl(y, ...)
+
+\S4method{ambientContribControl}{ANY}(
   y,
   ambient,
   features,
   mode = c("scale", "profile", "proportion")
 )
 
-controlAmbience(...)
+\S4method{ambientContribControl}{SummarizedExperiment}(y, ..., assay.type = "counts")
 }
 \arguments{
-\item{y}{A numeric matrix-like object containing counts.
-Each row represents a feature, e.g., a gene or a conjugated tag.
-Each column can represent a droplet or group of droplets.
+\item{...}{For the generic, further arguments to pass to individual methods.
 
-Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.}
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For \code{controlAmbience}, arguments to pass to \code{ambientContribControl}.}
+
+\item{y}{A numeric matrix-like object containing counts, where each row represents a feature (e.g., a gene or a conjugated tag)
+and each column represents either a cell or group of cells.
+
+Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+
+\code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.
@@ -32,7 +45,7 @@ Alternatively, a list of vectors specifying mutually exclusive sets of features.
 
 \item{mode}{String indicating the output to return, see Value.}
 
-\item{...}{Arguments to pass to \code{ambientContribControl}.}
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 If \code{mode="scale"},

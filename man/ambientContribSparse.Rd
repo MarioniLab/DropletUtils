@@ -2,22 +2,32 @@
 % Please edit documentation in R/ambientContribSparse.R
 \name{ambientContribSparse}
 \alias{ambientContribSparse}
+\alias{ambientContribSparse,ANY-method}
+\alias{ambientContribSparse,SummarizedExperiment-method}
 \title{Ambient contribution by assuming sparsity}
 \usage{
-ambientContribSparse(
+ambientContribSparse(y, ...)
+
+\S4method{ambientContribSparse}{ANY}(
   y,
   ambient,
   prop = 0.5,
   mode = c("scale", "profile", "proportion"),
   BPPARAM = SerialParam()
 )
+
+\S4method{ambientContribSparse}{SummarizedExperiment}(y, ..., assay.type = "counts")
 }
 \arguments{
-\item{y}{A numeric matrix-like object containing counts.
-Each row represents a feature, usually a conjugated tag.
-Each column can represent a droplet or group of droplets.
+\item{y}{A numeric matrix-like object containing counts, where each row represents a feature (usually a conjugated tag) and each column represents a cell or group of cells.
 
-Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.}
+Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+
+\code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.}
+
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each feature in the ambient solution.}
@@ -27,6 +37,8 @@ containing the proportions of transcripts for each feature in the ambient soluti
 \item{mode}{String indicating the output to return, see Value.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
+
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 If \code{mode="scale"}, a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.

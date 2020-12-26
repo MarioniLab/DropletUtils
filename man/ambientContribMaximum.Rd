@@ -3,9 +3,15 @@
 \name{ambientContribMaximum}
 \alias{ambientContribMaximum}
 \alias{maximumAmbience}
+\alias{ambientContribMaximum,ANY-method}
+\alias{ambientContribMaximum,SummarizedExperiment-method}
 \title{Ambient contribution by maximum scaling}
 \usage{
-ambientContribMaximum(
+maximumAmbience(...)
+
+ambientContribMaximum(y, ...)
+
+\S4method{ambientContribMaximum}{ANY}(
   y,
   ambient,
   threshold = 0.1,
@@ -16,11 +22,20 @@ ambientContribMaximum(
   BPPARAM = SerialParam()
 )
 
-maximumAmbience(...)
+\S4method{ambientContribMaximum}{SummarizedExperiment}(y, ..., assay.type = "counts")
 }
 \arguments{
-\item{y}{A numeric count matrix where each row represents a gene and each column represents a cluster of cells (see Caveats).
-\code{y} can also be a vector, in which case it is converted into a one-column matrix.}
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For \code{controlAmbience}, arguments to pass to \code{ambientContribMaximum}.}
+
+\item{y}{A numeric matrix-like object containing counts, where each row represents a gene and each column represents a cluster of cells (see Caveats).
+
+Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+
+\code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.
@@ -40,7 +55,7 @@ Defaults to zero, i.e., a Poisson model.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
 
-\item{...}{Arguments to pass to \code{ambientContribMaximum}.}
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 If \code{mode="scale"},

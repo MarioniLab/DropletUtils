@@ -2,9 +2,13 @@
 % Please edit documentation in R/removeAmbience.R
 \name{removeAmbience}
 \alias{removeAmbience}
+\alias{removeAmbience,ANY-method}
+\alias{removeAmbience,SummarizedExperiment-method}
 \title{Remove the ambient profile}
 \usage{
-removeAmbience(
+removeAmbience(y, ...)
+
+\S4method{removeAmbience}{ANY}(
   y,
   ambient,
   groups,
@@ -15,9 +19,18 @@ removeAmbience(
   sink = NULL,
   BPPARAM = SerialParam()
 )
+
+\S4method{removeAmbience}{SummarizedExperiment}(y, ..., assay.type = "counts")
 }
 \arguments{
-\item{y}{A numeric matrix-like object containing counts for each gene (row) and cell/library (column).}
+\item{y}{A numeric matrix-like object containing counts for each gene (row) and cell or group of cells (column).
+Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.}
+
+\item{...}{For the generic, further arguments to pass to specific methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For the ANY method, Further arguments to pass to \code{\link{ambientContribMaximum}}.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(y)},
 containing the proportions of transcripts for each gene in the ambient solution.}
@@ -28,8 +41,6 @@ This can also be a \linkS4class{DataFrame}, see \code{?\link{sumCountsAcrossCell
 \item{features}{A vector of control features or a list of mutually exclusive feature sets, 
 see \code{?\link{ambientContribControl}} for more details.}
 
-\item{...}{Further arguments to pass to \code{\link{ambientContribMaximum}}.}
-
 \item{size.factors}{Numeric scalar specifying the size factors for each column of \code{y},
 defaults to library size-derived size factors.}
 
@@ -38,6 +49,8 @@ defaults to library size-derived size factors.}
 \item{sink}{An optional \linkS4class{RealizationSink} object of the same dimensions as \code{y}.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
+
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 A numeric matrix-like object of the same dimensions as \code{y},

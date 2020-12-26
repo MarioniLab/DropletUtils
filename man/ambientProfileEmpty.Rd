@@ -3,9 +3,15 @@
 \name{ambientProfileEmpty}
 \alias{ambientProfileEmpty}
 \alias{estimateAmbience}
+\alias{ambientProfileEmpty,ANY-method}
+\alias{ambientProfileEmpty,SummarizedExperiment-method}
 \title{Estimate the ambient profile from empty droplets}
 \usage{
-ambientProfileEmpty(
+estimateAmbience(...)
+
+ambientProfileEmpty(m, ...)
+
+\S4method{ambientProfileEmpty}{ANY}(
   m,
   lower = 100,
   by.rank = NULL,
@@ -13,12 +19,20 @@ ambientProfileEmpty(
   good.turing = TRUE
 )
 
-estimateAmbience(...)
+\S4method{ambientProfileEmpty}{SummarizedExperiment}(m, ..., assay.type = "counts")
 }
 \arguments{
-\item{m}{A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For \code{estimateAmbience}, arguments to pass to \code{ambientProfileEmpty}.}
+
+\item{m}{A numeric matrix-like object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
 containing droplet data \emph{prior to any filtering or cell calling}.
-Columns represent barcoded droplets, rows represent genes.}
+Columns represent barcoded droplets, rows represent genes.
+
+For \code{emptyDrops}, this may also be a \linkS4class{SummarizedExperiment} object containing such a matrix.}
 
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
 at or below which all barcodes are assumed to correspond to empty droplets.}
@@ -29,7 +43,7 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{good.turing}{Logical scalar indicating whether to perform Good-Turing estimation of the proportions.}
 
-\item{...}{Arguments to pass to \code{ambientProfileEmpty}.}
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 A numeric vector of length equal to \code{nrow(m)},

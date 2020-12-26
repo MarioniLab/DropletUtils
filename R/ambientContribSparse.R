@@ -2,15 +2,18 @@
 #'
 #' Estimate the contribution of the ambient solution to each droplet by assuming that no more than a certain percentage of features are actually present/expressed in the cell.
 #'
-#' @param y A numeric matrix-like object containing counts.
-#' Each row represents a feature, usually a conjugated tag.
-#' Each column can represent a droplet or group of droplets.
+#' @param y A numeric matrix-like object containing counts, where each row represents a feature (usually a conjugated tag) and each column represents a cell or group of cells.
 #'
-#' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.
+#' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+#' 
+#' \code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each feature in the ambient solution.
 #' @param prop Numeric scalar specifying the maximum proportion of features that are expected to be present for any cell.
 #' @inheritParams ambientContribMaximum
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #' 
 #' @return
 #' If \code{mode="scale"}, a numeric vector is returned quantifying the estimated \dQuote{contribution} of the ambient solution to each column of \code{y}.
@@ -47,11 +50,13 @@
 #' scaling <- ambientContribSparse(y, ambient=amb)
 #' hist(scaling)
 #' 
-#' @export
+#' @name ambientContribSparse
+NULL
+
 #' @importFrom DelayedMatrixStats colQuantiles
 #' @importFrom DelayedArray DelayedArray getAutoBPPARAM setAutoBPPARAM
 #' @importFrom BiocParallel SerialParam
-ambientContribSparse <- function(y, ambient, prop=0.5, 
+.ambient_contrib_sparse <- function(y, ambient, prop=0.5, 
     mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam())
 {
     if (is.null(dim(y))) {
@@ -66,3 +71,18 @@ ambientContribSparse <- function(y, ambient, prop=0.5,
     scaling <- colQuantiles(DelayedArray(y/ambient), na.rm=TRUE, probs=1-prop)
     .report_ambient_profile(scaling, ambient=ambient, y=y, mode=match.arg(mode))
 }
+
+#' @export
+#' @rdname ambientContribSparse
+setGeneric("ambientContribSparse", function(y, ...) standardGeneric("ambientContribSparse"))
+
+#' @export 
+#' @rdname ambientContribSparse
+setMethod("ambientContribSparse", "ANY", .ambient_contrib_sparse)
+
+#' @export
+#' @rdname ambientContribSparse
+#' @importFrom SummarizedExperiment assay
+setMethod("ambientContribSparse", "SummarizedExperiment", function(y, ..., assay.type="counts") {
+    .ambient_contrib_sparse(assay(y, assay.type), ...)
+})

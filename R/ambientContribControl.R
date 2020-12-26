@@ -3,16 +3,21 @@
 #' Estimate the contribution of the ambient solution to a particular expression profile,
 #' based on the abundance of control features that should not be expressed in the latter.
 #'
-#' @param y A numeric matrix-like object containing counts.
-#' Each row represents a feature, e.g., a gene or a conjugated tag.
-#' Each column can represent a droplet or group of droplets.
+#' @param y A numeric matrix-like object containing counts, where each row represents a feature (e.g., a gene or a conjugated tag)
+#' and each column represents either a cell or group of cells.
 #'
-#' Alternatively, a numeric vector of counts; this is coerced into a one-column matrix.
+#' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+#' 
+#' \code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
 #' 
 #' Alternatively, a list of vectors specifying mutually exclusive sets of features.
 #' @inheritParams ambientContribMaximum
-#' @param ... Arguments to pass to \code{ambientContribControl}.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For \code{controlAmbience}, arguments to pass to \code{ambientContribControl}.
 #'
 #' @details
 #' Control features should be those that cannot be expressed and thus fully attributable to ambient contamination.
@@ -67,11 +72,13 @@
 #' SoupX removes ambient RNA contamination from droplet based single-cell RNA sequencing data.
 #' \emph{biorXiv}.
 #'
-#' @export
+#' @name ambientContribControl
+NULL
+
 #' @importFrom Matrix t
 #' @importFrom scuttle sumCountsAcrossFeatures
 #' @importFrom DelayedMatrixStats colMins
-ambientContribControl <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
+.ambient_contrib_control <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
     if (is.null(dim(y))) {
          y <- cbind(y)
     }
@@ -116,3 +123,19 @@ ambientContribControl <- function(y, ambient, features, mode=c("scale", "profile
 controlAmbience <- function(...) {
     ambientContribControl(...)
 }
+
+#' @export
+#' @rdname ambientContribControl
+setGeneric("ambientContribControl", function(y, ...) standardGeneric("ambientContribControl"))
+
+#' @export 
+#' @rdname ambientContribControl
+setMethod("ambientContribControl", "ANY", .ambient_contrib_control)
+
+#' @export
+#' @rdname ambientContribControl
+#' @importFrom SummarizedExperiment assay
+setMethod("ambientContribControl", "SummarizedExperiment", function(y, ..., assay.type="counts") {
+    .ambient_contrib_control(assay(y, assay.type), ...)
+})
+

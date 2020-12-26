@@ -2,14 +2,21 @@
 #'
 #' Compute barcode rank statistics and identify the knee and inflection points on the total count curve.
 #' 
-#' @param m A numeric matrix-like object where columns represent barcoded droplets and rows represent genes.
+#' @param m A numeric matrix-like object containing UMI counts, where columns represent barcoded droplets and rows represent genes.
+#' Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.
 #' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
 #' at or below which all barcodes are assumed to correspond to empty droplets.
 #' @param fit.bounds A numeric vector of length 2, specifying the lower and upper bounds on the total UMI count
 #' from which to obtain a section of the curve for spline fitting.
 #' @param exclude.from An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
 #' Ignored if \code{fit.bounds} is specified.
-#' @param df,... Further arguments to pass to \code{\link{smooth.spline}}.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
+#' @param df Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For the ANY method, further arguments to pass to \code{\link{smooth.spline}}.
 #' 
 #' @details
 #' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode
@@ -85,12 +92,16 @@
 #' 
 #' @seealso
 #' \code{\link{emptyDrops}}, where this function is used.
+#'
 #' @export
+#' @name barcodeRanks
+NULL
+
 #' @importFrom stats smooth.spline predict fitted
 #' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ...) {
+.barcode_ranks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ...) {
     totals <- unname(colSums(m))
     o <- order(totals, decreasing=TRUE)
 
@@ -170,3 +181,18 @@ barcodeRanks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, 
 
     c(left=left.edge, right=right.edge) + skip
 }
+
+#' @export
+#' @rdname barcodeRanks
+setGeneric("barcodeRanks", function(m, ...) standardGeneric("barcodeRanks"))
+
+#' @export
+#' @rdname barcodeRanks
+setMethod("barcodeRanks", "ANY", .barcode_ranks)
+
+#' @export
+#' @rdname barcodeRanks
+#' @importFrom SummarizedExperiment assay
+setMethod("barcodeRanks", "SummarizedExperiment", function(m, ..., assay.type="counts") {
+    .barcode_ranks(assay(m, assay.type), ...)
+})

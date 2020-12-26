@@ -7,7 +7,11 @@
 #' @inheritParams emptyDrops
 #' @param by.rank An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
 #' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
-#' @param ... Arguments to pass to \code{ambientProfileEmpty}.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For \code{estimateAmbience}, arguments to pass to \code{ambientProfileEmpty}.
 #'
 #' @details
 #' This function obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
@@ -63,9 +67,11 @@
 #'
 #' \code{\link{ambientContribMaximum}} and related functions, to estimate the contribution of ambient contamination in each library.
 #'
-#' @export
+#' @name ambientProfileEmpty
+NULL
+
 #' @importFrom Matrix rowSums colSums
-ambientProfileEmpty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE) {
+.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE) {
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
@@ -144,3 +150,18 @@ estimateAmbience <- function(...) {
 
     ambient.prob
 }
+
+#' @export
+#' @rdname ambientProfileEmpty
+setGeneric("ambientProfileEmpty", function(m, ...) standardGeneric("ambientProfileEmpty"))
+
+#' @export
+#' @rdname ambientProfileEmpty
+setMethod("ambientProfileEmpty", "ANY", .ambient_profile_empty)
+
+#' @export
+#' @rdname ambientProfileEmpty
+#' @importFrom SummarizedExperiment assay
+setMethod("ambientProfileEmpty", "SummarizedExperiment", function(m, ..., assay.type="counts") {
+    .ambient_profile_empty(assay(m, assay.type), ...)    
+})

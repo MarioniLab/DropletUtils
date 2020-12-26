@@ -3,18 +3,31 @@
 \name{ambientProfileBimodal}
 \alias{ambientProfileBimodal}
 \alias{inferAmbience}
+\alias{ambientProfileBimodal,ANY-method}
+\alias{ambientProfileBimodal,SummarizedExperiment-method}
 \title{Ambient profile from bimodality}
 \usage{
-ambientProfileBimodal(x, min.prop = 0.05)
-
 inferAmbience(...)
+
+ambientProfileBimodal(x, ...)
+
+\S4method{ambientProfileBimodal}{ANY}(x, min.prop = 0.05)
+
+\S4method{ambientProfileBimodal}{SummarizedExperiment}(x, ..., assay.type = "counts")
 }
 \arguments{
-\item{x}{A numeric matrix-like object containing counts for each feature (row) and cell (column).}
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For \code{inferAmbience}, arguments to pass to \code{ambientProfileBimodal}.}
+
+\item{x}{A numeric matrix-like object containing counts for each feature (row) and cell (column).
+Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.}
 
 \item{min.prop}{Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.}
 
-\item{...}{Arguments to pass to \code{ambientProfileBimodal}.}
+\item{assay.type}{Integer or scalar specifying the assay containing the count matrix.}
 }
 \value{
 A numeric vector of length equal to \code{nrow(x)}, containing the estimated ambient proportions for each feature.

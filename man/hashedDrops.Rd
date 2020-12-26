@@ -2,9 +2,13 @@
 % Please edit documentation in R/hashedDrops.R
 \name{hashedDrops}
 \alias{hashedDrops}
+\alias{hashedDrops,ANY-method}
+\alias{hashedDrops,SummarizedExperiment-method}
 \title{Demultiplex cell hashing data}
 \usage{
-hashedDrops(
+hashedDrops(x, ...)
+
+\S4method{hashedDrops}{ANY}(
   x,
   ambient = NULL,
   min.prop = 0.05,
@@ -16,11 +20,19 @@ hashedDrops(
   confident.min = 2,
   combinations = NULL
 )
+
+\S4method{hashedDrops}{SummarizedExperiment}(x, ..., assay.type = "counts")
 }
 \arguments{
 \item{x}{A numeric/integer matrix-like object containing UMI counts.
 Rows correspond to HTOs and columns correspond to cell barcodes.
-Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.}
+Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.
+
+Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.}
+
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(x)},
 specifying the relative abundance of each HTO in the ambient solution - see Details.}
@@ -41,6 +53,8 @@ specifying the relative abundance of each HTO in the ambient solution - see Deta
 
 \item{combinations}{An integer matrix specifying valid \emph{combinations} of HTOs.
 Each row corresponds to a single sample and specifies the indices of rows in \code{x} corresponding to the HTOs used to label that sample.}
+
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -65,9 +79,6 @@ Demultiplex cell barcodes into their samples of origin based on the most abundan
 Also identify potential doublets based on the presence of multiple significant HTOs.
 }
 \details{
-Note that this function is still experimental; feedback is welcome.
-
-
 The idea behind cell hashing is that cells from the same sample are stained with reagent conjugated with a single HTO.
 Cells are mixed across multiple samples and subjected to droplet-based single-cell sequencing.
 Cell barcode libraries can then be demultiplexed into individual samples based on whether their unique HTO is detected.

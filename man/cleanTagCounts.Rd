@@ -2,9 +2,13 @@
 % Please edit documentation in R/cleanTagCounts.R
 \name{cleanTagCounts}
 \alias{cleanTagCounts}
+\alias{cleanTagCounts,ANY-method}
+\alias{cleanTagCounts,SummarizedExperiment-method}
 \title{Clean a tag-based dataset}
 \usage{
-cleanTagCounts(
+cleanTagCounts(x, ...)
+
+\S4method{cleanTagCounts}{ANY}(
   x,
   controls,
   ...,
@@ -12,14 +16,21 @@ cleanTagCounts(
   exclusive = NULL,
   sparse.prop = 0.5
 )
+
+\S4method{cleanTagCounts}{SummarizedExperiment}(x, ..., assay.type = "counts")
 }
 \arguments{
-\item{x}{A numeric matrix-like object containing counts for each tag (row) in each cell (column).}
+\item{x}{A numeric matrix-like object containing counts for each tag (row) in each cell (column).
+Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.}
+
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment, further arguments to pass to the ANY method.
+
+For the ANY method, further arguments to pass to \code{\link{isOutlier}}.}
 
 \item{controls}{A vector specifying the rows of \code{x} corresponding to control tags.
 These are expected to be isotype controls that should not exhibit any real binding.}
-
-\item{...}{Further arguments to pass to \code{\link{isOutlier}}.}
 
 \item{ambient}{A numeric vector of length equal to \code{nrow(x)}, containing the relative concentration of each tag in the ambient solution.
 Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.}
@@ -28,6 +39,8 @@ Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.}
 Alternatively, a list of vectors of mutually exclusive sets of tags - see \code{\link{ambientContribControl}} for details.}
 
 \item{sparse.prop}{Numeric scalar specifying the minimum proportion of tags that should be present per cell.}
+
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:

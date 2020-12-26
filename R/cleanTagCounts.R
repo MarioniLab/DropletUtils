@@ -3,11 +3,17 @@
 #' Remove low-quality libraries from a count matrix where each row is a tag and each column corresponds to a cell-containing barcode.
 #'
 #' @param x A numeric matrix-like object containing counts for each tag (row) in each cell (column).
+#' Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(x)}, containing the relative concentration of each tag in the ambient solution.
 #' Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.
 #' @param controls A vector specifying the rows of \code{x} corresponding to control tags.
 #' These are expected to be isotype controls that should not exhibit any real binding.
-#' @param ... Further arguments to pass to \code{\link{isOutlier}}.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment, further arguments to pass to the ANY method.
+#'
+#' For the ANY method, further arguments to pass to \code{\link{isOutlier}}.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param exclusive A character vector of names of mutually exclusive tags that should never be expressed on the same cell.
 #' Alternatively, a list of vectors of mutually exclusive sets of tags - see \code{\link{ambientContribControl}} for details.
 #' @param sparse.prop Numeric scalar specifying the minimum proportion of tags that should be present per cell.
@@ -70,11 +76,13 @@
 #'
 #' \code{\link{isOutlier}}, to identify the outliers in a distribution of values.
 #'
-#' @export
+#' @name cleanTagCounts
+NULL
+
 #' @importFrom S4Vectors DataFrame
 #' @importFrom scuttle isOutlier
 #' @importFrom Matrix rowMeans colSums
-cleanTagCounts <- function(x, controls, ..., ambient=NULL, exclusive=NULL, sparse.prop=0.5) {
+.clean_tag_counts <- function(x, controls, ..., ambient=NULL, exclusive=NULL, sparse.prop=0.5) {
     if (is.null(ambient)) {
        ambient <- ambientProfileBimodal(x) 
     }
@@ -102,3 +110,18 @@ cleanTagCounts <- function(x, controls, ..., ambient=NULL, exclusive=NULL, spars
     df$discard <- df$zero.ambient | extra
     df
 }
+
+#' @export
+#' @rdname cleanTagCounts
+setGeneric("cleanTagCounts", function(x, ...) standardGeneric("cleanTagCounts"))
+
+#' @export
+#' @rdname cleanTagCounts
+setMethod("cleanTagCounts", "ANY", .clean_tag_counts)
+
+#' @export
+#' @rdname cleanTagCounts
+#' @importFrom SummarizedExperiment assay
+setMethod("cleanTagCounts", "SummarizedExperiment", function(x, ..., assay.type="counts") {
+    .clean_tag_counts(assay(x, assay.type), ...)
+})

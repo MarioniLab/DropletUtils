@@ -2,9 +2,11 @@
 #'
 #' Distinguish between droplets containing cells and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 #' 
-#' @param m A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
+#' @param m A numeric matrix-like object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
 #' containing droplet data \emph{prior to any filtering or cell calling}.
 #' Columns represent barcoded droplets, rows represent genes.
+#'
+#' For \code{emptyDrops}, this may also be a \linkS4class{SummarizedExperiment} object containing such a matrix.
 #' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
 #' at or below which all barcodes are assumed to correspond to empty droplets.
 #' @param by.rank An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.
@@ -16,7 +18,12 @@
 #' @param retain A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
-#' @param ... Further arguments to pass to \code{testEmptyDrops}.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For the ANY method, further arguments to pass to \code{testEmptyDrops}.
 #' 
 #' @section Details about \code{testEmptyDrops}:
 #' The \code{testEmptyDrops} function first obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower} (see \code{?\link{ambientProfileEmpty}} for details).
@@ -159,7 +166,10 @@
 #' \code{\link{ambientProfileEmpty}}, for more details on estimation of the ambient profile.
 #' 
 #' @name emptyDrops
+NULL
+
 #' @export
+#' @rdname emptyDrops
 #' @importFrom BiocParallel SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
@@ -328,17 +338,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     optimize(LOGLIK, interval=interval, maximum=TRUE)$maximum
 }
 
-#' @export
-#' @rdname emptyDrops
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
-emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ...) 
-# Combined function that puts these all together, always keeping cells above the knee 
-# point (they are given p-values of 0, as they are always rejected). 
-# 
-# written by Aaron Lun
-# created 7 August 2017
-{
+.empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ...) {
     m <- .rounded_to_integer(m, round)
     stats <- testEmptyDrops(m, lower=lower, round=FALSE, ...)
     tmp <- stats$PValue
@@ -368,3 +370,18 @@ emptyDrops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRU
     }
     m
 }
+
+#' @export
+#' @rdname emptyDrops
+setGeneric("emptyDrops", function(m, ...) standardGeneric("emptyDrops"))
+
+#' @export
+#' @rdname emptyDrops
+setMethod("emptyDrops", "ANY", .empty_drops)
+
+#' @export
+#' @rdname emptyDrops
+#' @importFrom SummarizedExperiment assay
+setMethod("emptyDrops", "SummarizedExperiment", function(m, ..., assay.type="counts") {
+    .empty_drops(assay(m, assay.type), ...)
+})

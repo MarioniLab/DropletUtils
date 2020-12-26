@@ -4,8 +4,14 @@
 #' by assuming that each feature has a bimodal abundance distribution with ambient and high-expressing components.
 #'
 #' @param x A numeric matrix-like object containing counts for each feature (row) and cell (column).
+#' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
 #' @param min.prop Numeric scalar in (0, 1) specifying the expected minimum proportion of barcodes contributed by each sample.
-#' @param ... Arguments to pass to \code{ambientProfileBimodal}.
+#' @param assay.type Integer or scalar specifying the assay containing the count matrix.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For \code{inferAmbience}, arguments to pass to \code{ambientProfileBimodal}.
 #' 
 #' @return A numeric vector of length equal to \code{nrow(x)}, containing the estimated ambient proportions for each feature.
 #'
@@ -46,8 +52,10 @@
 #' # Should be close to 1, 2, 3
 #' ambientProfileBimodal(x)
 #'
-#' @export
-ambientProfileBimodal <- function(x, min.prop=0.05) {
+#' @name ambientProfileBimodal
+NULL
+
+.ambient_profile_bimodal <- function(x, min.prop=0.05) {
     ambient <- numeric(nrow(x))
     names(ambient) <- rownames(x)
 
@@ -82,3 +90,18 @@ inferAmbience <- function(...) {
         out$cluster == which.min(out$centers)
     }
 }
+
+#' @export
+#' @rdname ambientProfileBimodal
+setGeneric("ambientProfileBimodal", function(x, ...) standardGeneric("ambientProfileBimodal"))
+
+#' @export
+#' @rdname ambientProfileBimodal
+setMethod("ambientProfileBimodal", "ANY", .ambient_profile_bimodal)
+
+#' @export
+#' @rdname ambientProfileBimodal
+#' @importFrom SummarizedExperiment assay
+setMethod("ambientProfileBimodal", "SummarizedExperiment", function(x, ..., assay.type="counts") {
+    .ambient_profile_bimodal(assay(x, assay.type), ...)    
+})

@@ -3,6 +3,8 @@
 \name{emptyDrops}
 \alias{emptyDrops}
 \alias{testEmptyDrops}
+\alias{emptyDrops,ANY-method}
+\alias{emptyDrops,SummarizedExperiment-method}
 \title{Identify empty droplets}
 \usage{
 testEmptyDrops(
@@ -17,7 +19,9 @@ testEmptyDrops(
   BPPARAM = SerialParam()
 )
 
-emptyDrops(
+emptyDrops(m, ...)
+
+\S4method{emptyDrops}{ANY}(
   m,
   lower = 100,
   retain = NULL,
@@ -25,11 +29,15 @@ emptyDrops(
   round = TRUE,
   ...
 )
+
+\S4method{emptyDrops}{SummarizedExperiment}(m, ..., assay.type = "counts")
 }
 \arguments{
-\item{m}{A numeric matrix object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
+\item{m}{A numeric matrix-like object - usually a \linkS4class{dgTMatrix} or \linkS4class{dgCMatrix} - 
 containing droplet data \emph{prior to any filtering or cell calling}.
-Columns represent barcoded droplets, rows represent genes.}
+Columns represent barcoded droplets, rows represent genes.
+
+For \code{emptyDrops}, this may also be a \linkS4class{SummarizedExperiment} object containing such a matrix.}
 
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
 at or below which all barcodes are assumed to correspond to empty droplets.}
@@ -48,11 +56,17 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
 
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For the ANY method, further arguments to pass to \code{testEmptyDrops}.}
+
 \item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
 
 \item{barcode.args}{Further arguments to pass to \code{\link{barcodeRanks}}.}
 
-\item{...}{Further arguments to pass to \code{testEmptyDrops}.}
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 \code{testEmptyDrops} will return a DataFrame with the following components:

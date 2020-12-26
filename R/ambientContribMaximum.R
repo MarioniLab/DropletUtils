@@ -3,8 +3,11 @@
 #' Compute the maximum contribution of the ambient solution to an expression profile for a group of droplets,
 #' by scaling the ambient profile and testing for significant deviations in the count profile.
 #'
-#' @param y A numeric count matrix where each row represents a gene and each column represents a cluster of cells (see Caveats).
-#' \code{y} can also be a vector, in which case it is converted into a one-column matrix.
+#' @param y A numeric matrix-like object containing counts, where each row represents a gene and each column represents a cluster of cells (see Caveats).
+#'
+#' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
+#' 
+#' \code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each gene in the ambient solution.
 #' Alternatively, a matrix where each row corresponds to a row of \code{y}
@@ -16,7 +19,12 @@
 #' @param num.iter Integer scalar specifying the number of iterations to use for the grid search.
 #' @param mode String indicating the output to return, see Value.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
-#' @param ... Arguments to pass to \code{ambientContribMaximum}.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For \code{controlAmbience}, arguments to pass to \code{ambientContribMaximum}.
 #' 
 #' @return 
 #' If \code{mode="scale"},
@@ -95,10 +103,12 @@
 #'
 #' \code{\link{ambientContribControl}} or \code{\link{ambientContribSparse}}, for other methods of estimating the contribution.
 #'
-#' @export
+#' @name ambientContribMaximum
+NULL
+
 #' @importFrom stats p.adjust ppois pnbinom
 #' @importFrom BiocParallel SerialParam
-ambientContribMaximum <- function(y, ambient, threshold=0.1, dispersion=0, 
+.ambient_contrib_maximum <- function(y, ambient, threshold=0.1, dispersion=0, 
     num.points=100, num.iter=5, mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam()) 
 {
     mode <- match.arg(mode)
@@ -218,3 +228,18 @@ ambientContribMaximum <- function(y, ambient, threshold=0.1, dispersion=0,
 maximumAmbience <- function(...) {
     ambientContribMaximum(...)
 }
+
+#' @export
+#' @rdname ambientContribMaximum
+setGeneric("ambientContribMaximum", function(y, ...) standardGeneric("ambientContribMaximum"))
+
+#' @export 
+#' @rdname ambientContribMaximum
+setMethod("ambientContribMaximum", "ANY", .ambient_contrib_maximum)
+
+#' @export
+#' @rdname ambientContribMaximum
+#' @importFrom SummarizedExperiment assay
+setMethod("ambientContribMaximum", "SummarizedExperiment", function(y, ..., assay.type="counts") {
+    .ambient_contrib_maximum(assay(y, assay.type), ...)
+})

@@ -3,14 +3,20 @@
 #' Estimate and remove the ambient profile from a count matrix, given pre-existing groupings of similar cells.
 #' This function is largely intended for plot beautification rather than real analysis.
 #'
-#' @param y A numeric matrix-like object containing counts for each gene (row) and cell/library (column).
+#' @param y A numeric matrix-like object containing counts for each gene (row) and cell or group of cells (column).
+#' Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(y)},
 #' containing the proportions of transcripts for each gene in the ambient solution.
 #' @param groups A vector of length equal to \code{ncol(y)}, specifying the assigned group for each cell.
 #' This can also be a \linkS4class{DataFrame}, see \code{?\link{sumCountsAcrossCells}}.
 #' @param features A vector of control features or a list of mutually exclusive feature sets, 
 #' see \code{?\link{ambientContribControl}} for more details.
-#' @param ... Further arguments to pass to \code{\link{ambientContribMaximum}}.
+#' @param ... For the generic, further arguments to pass to specific methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
+#'
+#' For the ANY method, Further arguments to pass to \code{\link{ambientContribMaximum}}.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param dispersion Numeric scalar specifying the dispersion to use in the quantile-quantile mapping.
 #' @param size.factors Numeric scalar specifying the size factors for each column of \code{y},
 #' defaults to library size-derived size factors.
@@ -52,13 +58,15 @@
 #'
 #' The \pkg{SoupX} package, which provides another implementation of the same general approach.
 #' 
-#' @export
+#' @name removeAmbience
+NULL
+
 #' @importFrom BiocParallel SerialParam
 #' @importFrom SummarizedExperiment assay colData
 #' @importFrom scuttle sumCountsAcrossCells librarySizeFactors
 #' @importFrom BiocGenerics match
 #' @importFrom DelayedArray blockApply colAutoGrid
-removeAmbience <- function(y, ambient, groups, features=NULL, ..., 
+.remove_ambience <- function(y, ambient, groups, features=NULL, ..., 
     size.factors=librarySizeFactors(y), dispersion=0.1, 
     sink=NULL, BPPARAM=SerialParam()) 
 {
@@ -137,3 +145,18 @@ removeAmbience <- function(y, ambient, groups, features=NULL, ...,
         q 
     }
 }
+
+#' @export
+#' @rdname removeAmbience
+setGeneric("removeAmbience", function(y, ...) standardGeneric("removeAmbience"))
+
+#' @export
+#' @rdname removeAmbience
+setMethod("removeAmbience", "ANY", .remove_ambience)
+
+#' @export
+#' @rdname removeAmbience
+#' @importFrom SummarizedExperiment assay
+setMethod("removeAmbience", "SummarizedExperiment", function(y, ..., assay.type="counts") {
+    .remove_ambience(assay(y, assay.type), ...)
+})

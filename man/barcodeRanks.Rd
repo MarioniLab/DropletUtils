@@ -2,9 +2,13 @@
 % Please edit documentation in R/barcodeRanks.R
 \name{barcodeRanks}
 \alias{barcodeRanks}
+\alias{barcodeRanks,ANY-method}
+\alias{barcodeRanks,SummarizedExperiment-method}
 \title{Calculate barcode ranks}
 \usage{
-barcodeRanks(
+barcodeRanks(m, ...)
+
+\S4method{barcodeRanks}{ANY}(
   m,
   lower = 100,
   fit.bounds = NULL,
@@ -12,9 +16,18 @@ barcodeRanks(
   df = 20,
   ...
 )
+
+\S4method{barcodeRanks}{SummarizedExperiment}(m, ..., assay.type = "counts")
 }
 \arguments{
-\item{m}{A numeric matrix-like object where columns represent barcoded droplets and rows represent genes.}
+\item{m}{A numeric matrix-like object containing UMI counts, where columns represent barcoded droplets and rows represent genes.
+Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.}
+
+\item{...}{For the generic, further arguments to pass to individual methods.
+
+For the SummarizedExperiment method, further arguments to pass to the ANY method.
+
+For the ANY method, further arguments to pass to \code{\link{smooth.spline}}.}
 
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
 at or below which all barcodes are assumed to correspond to empty droplets.}
@@ -25,7 +38,9 @@ from which to obtain a section of the curve for spline fitting.}
 \item{exclude.from}{An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
 Ignored if \code{fit.bounds} is specified.}
 
-\item{df, ...}{Further arguments to pass to \code{\link{smooth.spline}}.}
+\item{df}{Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.}
+
+\item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
 A \linkS4class{DataFrame} where each row corresponds to a column of \code{m}, and containing the following fields:

@@ -3,11 +3,11 @@
 #' Demultiplex cell barcodes into their samples of origin based on the most abundant hash tag oligo (HTO).
 #' Also identify potential doublets based on the presence of multiple significant HTOs.
 #'
-#' Note that this function is still experimental; feedback is welcome.
-#'
 #' @param x A numeric/integer matrix-like object containing UMI counts.
 #' Rows correspond to HTOs and columns correspond to cell barcodes.
 #' Each barcode is assumed to correspond to a cell, i.e., cell calling is assumed to have already been performed.
+#'
+#' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
 #' @param ambient A numeric vector of length equal to \code{nrow(x)},
 #' specifying the relative abundance of each HTO in the ambient solution - see Details.
 #' @param min.prop Numeric scalar to be used to infer the ambient profile when \code{ambient=NULL}, see \code{\link{ambientProfileBimodal}}.
@@ -19,6 +19,10 @@
 #' @param confident.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.
 #' @param combinations An integer matrix specifying valid \emph{combinations} of HTOs.
 #' Each row corresponds to a single sample and specifies the indices of rows in \code{x} corresponding to the HTOs used to label that sample.
+#' @param assay.type Integer or string specifying the assay containing the count matrix.
+#' @param ... For the generic, further arguments to pass to individual methods.
+#'
+#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'
 #' @return
 #' A \linkS4class{DataFrame} with one row per column of \code{x}, containing the following fields:
@@ -185,12 +189,14 @@
 #' @seealso
 #' \code{\link{emptyDrops}}, to identify which barcodes are likely to contain cells.
 #' 
-#' @export
+#' @name hashedDrops
+NULL
+
 #' @importFrom Matrix t colSums
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
 #' @importFrom beachmat colBlockApply
-hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
+.hashed_drops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
     doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2, combinations=NULL)
 { 
     totals <- colSums(x)
@@ -290,3 +296,18 @@ hashedDrops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5,
 
     output
 }
+
+#' @export
+#' @rdname hashedDrops
+setGeneric("hashedDrops", function(x, ...) standardGeneric("hashedDrops"))
+
+#' @export
+#' @rdname hashedDrops
+setMethod("hashedDrops", "ANY", .hashed_drops)
+
+#' @export
+#' @rdname hashedDrops
+#' @importFrom SummarizedExperiment assay
+setMethod("hashedDrops", "SummarizedExperiment", function(x, ..., assay.type="counts") {
+    .hashed_drops(assay(x, assay.type), ...)
+})

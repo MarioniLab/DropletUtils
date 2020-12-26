@@ -10,6 +10,8 @@
 \item Added \code{ambientContribSparse()} to estimate the ambient contribution under sparsity assumptions.
 
 \item Added \code{cleanTagCounts()} to remove undesirable barcodes from tag count matrices.
+
+\item Converted all matrix-accepting functions to S4 generics to support SummarizedExperiment inputs.
 }}
 
 \section{Version 1.10.0}{\itemize{
