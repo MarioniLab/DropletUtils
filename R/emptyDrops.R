@@ -174,6 +174,7 @@ NULL
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom beachmat colBlockApply
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
     round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
 {
@@ -219,7 +220,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     obs.totals <- totals[keep]
 
     # Calculating the log-multinomial probability for each cell.
-    obs.P <- .compute_multinom_prob_data(obs.m, ambient.prop, alpha=alpha)
+    obs.p <- colBlockApply(mat, prop=prop, alpha=alpha, BPPARAM=BPPARAM, FUN=.compute_multinom_prob_data)
+    obs.p <- unlist(obs.P, use.names=FALSE)
     rest.P <- .compute_multinom_prob_rest(obs.totals, alpha=alpha)
 
     # Computing the p-value for each observed probability.
@@ -292,8 +294,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 }
 
 #' @importFrom scuttle whichNonZero
-.compute_multinom_prob_data <- function(mat, prop, alpha=Inf)
-# Efficiently calculates the data-dependent component of the log-multinomial probability.
+.compute_multinom_prob_data <- function(mat, prop, alpha=Inf, BPPARAM=SerialParam())
+# Efficiently calculates the data-dependent component of the log-multinomial probability
+# for a column-wise chunk of the full matrix (or, indeed, the full matrix itself).
 # Also does so for the Dirichlet-multinomial log-probability for a given 'alpha'.
 {
     nonzero <- whichNonZero(mat)
