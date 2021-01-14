@@ -101,8 +101,11 @@ NULL
 #' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-.barcode_ranks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ...) {
-    totals <- unname(colSums(m))
+.barcode_ranks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ..., BPPARAM=SerialParam()) {
+    old <- .parallelize(BPPARAM)
+    on.exit(setAutoBPPARAM(old))
+
+    totals <- unname(.intColSums(m))
     o <- order(totals, decreasing=TRUE)
 
     stuff <- rle(totals[o])

@@ -170,12 +170,25 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
-#' @importFrom BiocParallel SerialParam
+#' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
+#' @importFrom scuttle .bpNotSharedOrUp
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
     round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
 {
+    if (!.bpNotSharedOrUp(BPPARAM)) {
+        bpstart(BPPARAM)
+        on.exit(bpstop(BPPARAM))
+    }
+
+    old <- .parallelize(BPPARAM)
+    on.exit(setAutoBPPARAM(old), add=TRUE)
+
+    # NOTE: this is probably fine, as you don't have that many cell-containing
+    # droplets per sample, so the sparse matrix will generally be small.
+    m <- .realize_DA_to_memory(m)
+
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
@@ -340,9 +353,19 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
-.empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ...) {
+#' @importFrom BiocParallel SerialParam
+.empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ..., BPPARAM=SerialParam()) {
+    if (!.bpNotSharedOrUp(BPPARAM)) {
+        bpstart(BPPARAM)
+        on.exit(bpstop(BPPARAM))
+    }
+
+    # NOTE: this is probably fine, as you don't have that many cell-containing
+    # droplets per sample, so the sparse matrix will generally be small.
+    m <- .realize_DA_to_memory(m)
+
     m <- .rounded_to_integer(m, round)
-    stats <- testEmptyDrops(m, lower=lower, round=FALSE, ...)
+    stats <- testEmptyDrops(m, lower=lower, round=FALSE, ..., BPPARAM=BPPARAM)
     tmp <- stats$PValue
     
     if (is.null(retain)) {
@@ -357,19 +380,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(stats)
 }
 
-#' @importFrom Matrix colSums rowSums
-.rounded_to_integer <- function(m, round=TRUE) {
-    if (round) {
-        cs <- colSums(m)
-        rs <- rowSums(m)
-        if (!isTRUE(all.equal(cs, round(cs))) ||
-            !isTRUE(all.equal(rs, round(rs)))) 
-        {
-            m <- round(m)
-        }
-    }
-    m
-}
 
 #' @export
 #' @rdname emptyDrops
