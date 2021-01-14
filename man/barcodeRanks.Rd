@@ -14,7 +14,8 @@ barcodeRanks(m, ...)
   fit.bounds = NULL,
   exclude.from = 50,
   df = 20,
-  ...
+  ...,
+  BPPARAM = SerialParam()
 )
 
 \S4method{barcodeRanks}{SummarizedExperiment}(m, ..., assay.type = "counts")

@@ -14,7 +14,7 @@
 #' @param test.ambient A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.
 #' @param ignore A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).
 #' @param alpha A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.
-#' @param BPPARAM A BiocParallelParam object indicating whether parallelization should be used to compute p-values.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
 #' @param retain A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.

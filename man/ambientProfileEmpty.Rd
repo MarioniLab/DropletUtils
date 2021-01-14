@@ -16,7 +16,8 @@ ambientProfileEmpty(m, ...)
   lower = 100,
   by.rank = NULL,
   round = TRUE,
-  good.turing = TRUE
+  good.turing = TRUE,
+  BPPARAM = SerialParam()
 )
 
 \S4method{ambientProfileEmpty}{SummarizedExperiment}(m, ..., assay.type = "counts")
@@ -42,6 +43,8 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.}
 
 \item{good.turing}{Logical scalar indicating whether to perform Good-Turing estimation of the proportions.}
+
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.}
 
 \item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
