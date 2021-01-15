@@ -17,6 +17,7 @@
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'
 #' For the ANY method, further arguments to pass to \code{\link{smooth.spline}}.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
 #' 
 #' @details
 #' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode
@@ -101,8 +102,11 @@ NULL
 #' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-.barcode_ranks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ...) {
-    totals <- unname(colSums(m))
+.barcode_ranks <- function(m, lower=100, fit.bounds=NULL, exclude.from=50, df=20, ..., BPPARAM=SerialParam()) {
+    old <- .parallelize(BPPARAM)
+    on.exit(setAutoBPPARAM(old))
+
+    totals <- unname(.intColSums(m))
     o <- order(totals, decreasing=TRUE)
 
     stuff <- rle(totals[o])

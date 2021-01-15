@@ -14,7 +14,7 @@
 #' @param test.ambient A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.
 #' @param ignore A numeric scalar specifying the lower bound on the total UMI count, at or below which barcodes will be ignored (see Details for how this differs from \code{lower}).
 #' @param alpha A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme.
-#' @param BPPARAM A BiocParallelParam object indicating whether parallelization should be used to compute p-values.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
 #' @param retain A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
@@ -170,12 +170,26 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
-#' @importFrom BiocParallel SerialParam
+#' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
+#' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom beachmat colBlockApply
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
     round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
 {
+    if (!.bpNotSharedOrUp(BPPARAM)) {
+        bpstart(BPPARAM)
+        on.exit(bpstop(BPPARAM))
+    }
+
+    old <- .parallelize(BPPARAM)
+    on.exit(setAutoBPPARAM(old), add=TRUE)
+
+    # NOTE: this is probably fine, as you don't have that many cell-containing
+    # droplets per sample, so the sparse matrix will generally be small.
+    m <- .realize_DA_to_memory(m, BPPARAM)
+
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
@@ -206,7 +220,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     obs.totals <- totals[keep]
 
     # Calculating the log-multinomial probability for each cell.
-    obs.P <- .compute_multinom_prob_data(obs.m, ambient.prop, alpha=alpha)
+    obs.P <- colBlockApply(obs.m, prop=ambient.prop, alpha=alpha, BPPARAM=BPPARAM, FUN=.compute_multinom_prob_data)
+    obs.P <- unlist(obs.P, use.names=FALSE)
     rest.P <- .compute_multinom_prob_rest(obs.totals, alpha=alpha)
 
     # Computing the p-value for each observed probability.
@@ -278,12 +293,13 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     list(seeds=seeds.per.core, streams=streams.per.core)
 }
 
-#' @importFrom scuttle whichNonZero
-.compute_multinom_prob_data <- function(mat, prop, alpha=Inf)
-# Efficiently calculates the data-dependent component of the log-multinomial probability.
+#' @importFrom beachmat whichNonZero
+.compute_multinom_prob_data <- function(block, prop, alpha=Inf, BPPARAM=SerialParam())
+# Efficiently calculates the data-dependent component of the log-multinomial probability
+# for a column-wise chunk of the full matrix (or, indeed, the full matrix itself).
 # Also does so for the Dirichlet-multinomial log-probability for a given 'alpha'.
 {
-    nonzero <- whichNonZero(mat)
+    nonzero <- whichNonZero(block)
     i <- nonzero$i
     j <- nonzero$j
     x <- nonzero$x
@@ -297,7 +313,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     # No need to defend against NA values from tapply,
     # these should not be present after removal of all-zero columns.
-    j <- factor(j, levels=seq_len(ncol(mat)))
+    j <- factor(j, levels=seq_len(ncol(block)))
     obs.P <- tapply(p.n0, INDEX=j, FUN=sum)
     as.numeric(obs.P)
 }
@@ -312,7 +328,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     }
 }
 
-#' @importFrom scuttle whichNonZero
+#' @importFrom beachmat whichNonZero
 #' @importFrom stats optimize 
 .estimate_alpha <- function(mat, prop, totals, interval=c(0.01, 10000))
 # Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution.
@@ -340,9 +356,16 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
-.empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ...) {
+#' @importFrom BiocParallel SerialParam
+.empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, ..., BPPARAM=SerialParam()) {
+    if (!.bpNotSharedOrUp(BPPARAM)) {
+        bpstart(BPPARAM)
+        on.exit(bpstop(BPPARAM))
+    }
+
+    m <- .realize_DA_to_memory(m, BPPARAM)
     m <- .rounded_to_integer(m, round)
-    stats <- testEmptyDrops(m, lower=lower, round=FALSE, ...)
+    stats <- testEmptyDrops(m, lower=lower, round=FALSE, ..., BPPARAM=BPPARAM)
     tmp <- stats$PValue
     
     if (is.null(retain)) {
@@ -357,19 +380,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     return(stats)
 }
 
-#' @importFrom Matrix colSums rowSums
-.rounded_to_integer <- function(m, round=TRUE) {
-    if (round) {
-        cs <- colSums(m)
-        rs <- rowSums(m)
-        if (!isTRUE(all.equal(cs, round(cs))) ||
-            !isTRUE(all.equal(rs, round(rs)))) 
-        {
-            m <- round(m)
-        }
-    }
-    m
-}
 
 #' @export
 #' @rdname emptyDrops

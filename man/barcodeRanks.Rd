@@ -14,7 +14,8 @@ barcodeRanks(m, ...)
   fit.bounds = NULL,
   exclude.from = 50,
   df = 20,
-  ...
+  ...,
+  BPPARAM = SerialParam()
 )
 
 \S4method{barcodeRanks}{SummarizedExperiment}(m, ..., assay.type = "counts")
@@ -39,6 +40,8 @@ from which to obtain a section of the curve for spline fitting.}
 Ignored if \code{fit.bounds} is specified.}
 
 \item{df}{Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.}
+
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
 
 \item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }

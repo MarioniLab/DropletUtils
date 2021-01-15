@@ -71,7 +71,18 @@
 NULL
 
 #' @importFrom Matrix rowSums colSums
-.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE) {
+#' @importFrom BiocParallel bpstart bpstop SerialParam
+#' @importFrom scuttle .bpNotSharedOrUp
+#' @importFrom DelayedArray setAutoBPPARAM
+.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
+    if (!.bpNotSharedOrUp(BPPARAM)) {
+        bpstart(BPPARAM)
+        on.exit(bpstop(BPPARAM))
+    }
+
+    old <- .parallelize(BPPARAM)
+    on.exit(setAutoBPPARAM(old), add=TRUE)
+
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
@@ -95,14 +106,10 @@ estimateAmbience <- function(...) {
     ambientProfileEmpty(...)
 }
 
-.intColSums <- function(m) {
-    # Enforcing discreteness mainly for emptyDrops()'s Monte Carlo step.
-    as.integer(round(colSums(m)))
-}
-
 #' @importFrom Matrix rowSums
 .compute_ambient_stats <- function(m, totals, lower) {
     # This doesn't invalidate 'totals', by definition.
+    # NOTE: parallelization handled by setAutoBPPARAM above.
     discard <- rowSums(m) == 0
     if (any(discard)) {
         m <- m[!discard,,drop=FALSE]

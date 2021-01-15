@@ -12,6 +12,8 @@
 \item Added \code{cleanTagCounts()} to remove undesirable barcodes from tag count matrices.
 
 \item Converted all matrix-accepting functions to S4 generics to support SummarizedExperiment inputs.
+
+\item \code{emptyDrops()} will now coerce all \linkS4class{DelayedArray} inputs into wrapped \linkS4class{SparseArraySeed}s.
 }}
 
 \section{Version 1.10.0}{\itemize{

@@ -27,7 +27,8 @@ emptyDrops(m, ...)
   retain = NULL,
   barcode.args = list(),
   round = TRUE,
-  ...
+  ...,
+  BPPARAM = SerialParam()
 )
 
 \S4method{emptyDrops}{SummarizedExperiment}(m, ..., assay.type = "counts")
@@ -54,7 +55,7 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.}
 
-\item{BPPARAM}{A BiocParallelParam object indicating whether parallelization should be used to compute p-values.}
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.}
 
 \item{...}{For the generic, further arguments to pass to individual methods.
 

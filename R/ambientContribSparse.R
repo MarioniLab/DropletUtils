@@ -54,7 +54,7 @@
 NULL
 
 #' @importFrom DelayedMatrixStats colQuantiles
-#' @importFrom DelayedArray DelayedArray getAutoBPPARAM setAutoBPPARAM
+#' @importFrom DelayedArray setAutoBPPARAM
 #' @importFrom BiocParallel SerialParam
 .ambient_contrib_sparse <- function(y, ambient, prop=0.5, 
     mode=c("scale", "profile", "proportion"), BPPARAM=SerialParam())
@@ -63,8 +63,7 @@ NULL
         y <- cbind(y)
     }
 
-    old <- getAutoBPPARAM()
-    setAutoBPPARAM(BPPARAM)
+    old <- .parallelize(BPPARAM)
     on.exit(setAutoBPPARAM(old))
 
     ambient[ambient==0] <- NA_real_ # trigger the formation of NAs.

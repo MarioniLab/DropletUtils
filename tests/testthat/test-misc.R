@@ -9,7 +9,7 @@ totals <- Matrix::colSums(my.counts)
 test_that("barcodeRanks runs to completion", {
     limit <- 100
     brout <- barcodeRanks(my.counts, lower=limit)
-    expect_identical(brout$total, totals)
+    expect_equal(brout$total, totals)
     expect_identical(brout$rank, rank(-totals, ties.method="average"))
     expect_true(all(is.na(brout$fitted[totals <= limit])))
 
