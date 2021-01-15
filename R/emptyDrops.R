@@ -188,7 +188,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     # NOTE: this is probably fine, as you don't have that many cell-containing
     # droplets per sample, so the sparse matrix will generally be small.
-    m <- .realize_DA_to_memory(m)
+    m <- .realize_DA_to_memory(m, BPPARAM)
 
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
@@ -220,8 +220,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     obs.totals <- totals[keep]
 
     # Calculating the log-multinomial probability for each cell.
-    obs.p <- colBlockApply(mat, prop=prop, alpha=alpha, BPPARAM=BPPARAM, FUN=.compute_multinom_prob_data)
-    obs.p <- unlist(obs.P, use.names=FALSE)
+    obs.P <- colBlockApply(obs.m, prop=ambient.prop, alpha=alpha, BPPARAM=BPPARAM, FUN=.compute_multinom_prob_data)
+    obs.P <- unlist(obs.P, use.names=FALSE)
     rest.P <- .compute_multinom_prob_rest(obs.totals, alpha=alpha)
 
     # Computing the p-value for each observed probability.
@@ -293,13 +293,13 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     list(seeds=seeds.per.core, streams=streams.per.core)
 }
 
-#' @importFrom scuttle whichNonZero
-.compute_multinom_prob_data <- function(mat, prop, alpha=Inf, BPPARAM=SerialParam())
+#' @importFrom beachmat whichNonZero
+.compute_multinom_prob_data <- function(block, prop, alpha=Inf, BPPARAM=SerialParam())
 # Efficiently calculates the data-dependent component of the log-multinomial probability
 # for a column-wise chunk of the full matrix (or, indeed, the full matrix itself).
 # Also does so for the Dirichlet-multinomial log-probability for a given 'alpha'.
 {
-    nonzero <- whichNonZero(mat)
+    nonzero <- whichNonZero(block)
     i <- nonzero$i
     j <- nonzero$j
     x <- nonzero$x
@@ -313,7 +313,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     # No need to defend against NA values from tapply,
     # these should not be present after removal of all-zero columns.
-    j <- factor(j, levels=seq_len(ncol(mat)))
+    j <- factor(j, levels=seq_len(ncol(block)))
     obs.P <- tapply(p.n0, INDEX=j, FUN=sum)
     as.numeric(obs.P)
 }
@@ -328,7 +328,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     }
 }
 
-#' @importFrom scuttle whichNonZero
+#' @importFrom beachmat whichNonZero
 #' @importFrom stats optimize 
 .estimate_alpha <- function(mat, prop, totals, interval=c(0.01, 10000))
 # Efficiently finds the MLE for the overdispersion parameter of a Dirichlet-multinomial distribution.
@@ -363,10 +363,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
         on.exit(bpstop(BPPARAM))
     }
 
-    # NOTE: this is probably fine, as you don't have that many cell-containing
-    # droplets per sample, so the sparse matrix will generally be small.
-    m <- .realize_DA_to_memory(m)
-
+    m <- .realize_DA_to_memory(m, BPPARAM)
     m <- .rounded_to_integer(m, round)
     stats <- testEmptyDrops(m, lower=lower, round=FALSE, ..., BPPARAM=BPPARAM)
     tmp <- stats$PValue

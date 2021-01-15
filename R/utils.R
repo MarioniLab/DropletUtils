@@ -6,21 +6,22 @@
 }
 
 #' @importFrom Matrix colSums
-.intColSums <- function(m, BPPARAM) {
+.intColSums <- function(m) {
     # Enforcing discreteness mainly for emptyDrops()'s Monte Carlo step.
     as.integer(round(colSums(m)))
 }
 
-#' @importFrom DelayedArray DelayedArray SparseArraySeed which
+#' @importFrom DelayedArray DelayedArray SparseArraySeed which seed
+#' @importFrom beachmat whichNonZero
 #' @importClassesFrom DelayedArray DelayedArray SparseArraySeed
-.realize_da_to_memory <- function(m) {
+.realize_DA_to_memory <- function(m, BPPARAM) {
     if (is(m, "DelayedArray")) {
         if (!is(seed(m), "SparseArraySeed")) {
-            idx <- which(m!=0, arr.ind=TRUE)
+            idx <- whichNonZero(m, BPPARAM)
             m <- DelayedArray(
                 SparseArraySeed(
-                    nzindex=idx, 
-                    nzdata=m[idx],
+                    nzindex=cbind(idx$i, idx$j), 
+                    nzdata=idx$x,
                     dim=dim(m),
                     dimnames=dimnames(m)
                 )
@@ -37,4 +38,3 @@
     setAutoBPPARAM(BPPARAM)
     old
 }
-

@@ -344,6 +344,20 @@ test_that("emptyDrops works with by.rank=TRUE", {
     expect_identical(out, ref)
 })
 
+set.seed(80002)
+test_that("emptyDrops realizes HDF5Arrays properly", {
+    my.counts <- DropletUtils:::simCounts() 
+
+    set.seed(999)
+    out <- emptyDrops(my.counts)
+
+    set.seed(999)
+    library(HDF5Array)
+    da <- as(my.counts, "HDF5Array")
+    ref <- emptyDrops(da)
+    expect_identical(out, ref)
+})
+
 test_that("emptyDrops fails when you don't give it low counts", {
     y <- matrix(rpois(100000, lambda=100), ncol=10000)
     expect_error(emptyDrops(y), "no counts available")
