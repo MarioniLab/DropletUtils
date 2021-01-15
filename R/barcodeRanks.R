@@ -17,6 +17,7 @@
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'
 #' For the ANY method, further arguments to pass to \code{\link{smooth.spline}}.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
 #' 
 #' @details
 #' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode

@@ -41,6 +41,8 @@ Ignored if \code{fit.bounds} is specified.}
 
 \item{df}{Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.}
 
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
+
 \item{assay.type}{Integer or string specifying the assay containing the count matrix.}
 }
 \value{
