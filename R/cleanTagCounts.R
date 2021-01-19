@@ -13,6 +13,7 @@
 #' For the SummarizedExperiment, further arguments to pass to the ANY method.
 #'
 #' For the ANY method, further arguments to pass to \code{\link{isOutlier}}.
+#' This includes \code{batch} to account for multi-batch experiments, and \code{nmads} to specify the stringency of the outlier-based filter.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param exclusive A character vector of names of mutually exclusive tags that should never be expressed on the same cell.
 #' Alternatively, a list of vectors of mutually exclusive sets of tags - see \code{\link{ambientContribControl}} for details.
@@ -35,8 +36,8 @@
 #' }
 #'
 #' @details
-#' We remove cells for which there is no detectable ambient contamination, i.e., \code{ambient.scale} is zero.
-#' We expect non-zero counts for most tags due to the deeply sequenced nature of tag-based data.
+#' We remove cells for which there is no detectable ambient contamination.
+#' Specifically, we expect non-zero counts for most tags due to the deeply sequenced nature of tag-based data.
 #' If \code{sparse.prop} or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
 #'
 #' We also remove cells for which the total control count is unusually high.

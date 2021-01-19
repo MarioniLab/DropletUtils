@@ -27,7 +27,8 @@ Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.}
 
 For the SummarizedExperiment, further arguments to pass to the ANY method.
 
-For the ANY method, further arguments to pass to \code{\link{isOutlier}}.}
+For the ANY method, further arguments to pass to \code{\link{isOutlier}}.
+This includes \code{batch} to account for multi-batch experiments, and \code{nmads} to specify the stringency of the outlier-based filter.}
 
 \item{controls}{A vector specifying the rows of \code{x} corresponding to control tags.
 These are expected to be isotype controls that should not exhibit any real binding.}
@@ -61,8 +62,8 @@ Only present if \code{controls} is \emph{not} supplied.
 Remove low-quality libraries from a count matrix where each row is a tag and each column corresponds to a cell-containing barcode.
 }
 \details{
-We remove cells for which there is no detectable ambient contamination, i.e., \code{ambient.scale} is zero.
-We expect non-zero counts for most tags due to the deeply sequenced nature of tag-based data.
+We remove cells for which there is no detectable ambient contamination.
+Specifically, we expect non-zero counts for most tags due to the deeply sequenced nature of tag-based data.
 If \code{sparse.prop} or more tags have zero counts, this is indicative of a failure in library preparation for that cell.
 
 We also remove cells for which the total control count is unusually high.
