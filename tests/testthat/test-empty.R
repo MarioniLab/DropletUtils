@@ -261,12 +261,6 @@ test_that("emptyDrops runs to completion", {
     }
     expect_equal(e.out$LogProb[valid], collected[valid])
 
-    # Checking ambient tests.
-    e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE, alpha=Inf)
-    expect_identical(e.out$Total, e.out2$Total)
-    expect_identical(e.out$LogProb[totals>limit], e.out2$LogProb[totals>limit])
-    expect_true(all(!is.na(e.out2$LogProb[totals>0])))
-
     # Checking the ignore argument works correctly.
     set.seed(1001)
     e.out3a <- emptyDrops(my.counts, lower=limit, ignore=200, alpha=Inf)
@@ -286,6 +280,32 @@ test_that("emptyDrops runs to completion", {
     e.outK <- emptyDrops(my.counts, retain=K*0.6, alpha=Inf)
     expect_true(all(e.outK$FDR[totals >= K*0.6]==0))
     expect_true(!all(e.outK$FDR[totals < K*0.6]==0))
+})
+
+test_that("emptyDrops ambient tests work correctly", {
+    set.seed(1000)
+    my.counts <- DropletUtils:::simCounts()
+    limit <- 100
+
+    set.seed(1001)
+    e.out <- emptyDrops(my.counts, lower=limit, alpha=Inf)
+   
+    set.seed(1001)
+    e.out2 <- emptyDrops(my.counts, lower=limit, test.ambient=TRUE, alpha=Inf)
+    expect_identical(e.out$Total, e.out2$Total)
+
+    keep <- e.out$Total > limit
+    expect_identical(e.out$LogProb[keep], e.out2$LogProb[keep])
+    expect_identical(e.out$PValue[keep], e.out2$PValue[keep])
+    expect_identical(e.out$FDR, e.out2$FDR)
+    expect_true(all(!is.na(e.out2$LogProb[e.out$Total>0])))
+
+    # Respects the NA setting.
+    set.seed(1001)
+    e.out3 <- emptyDrops(my.counts, lower=limit, test.ambient=NA, alpha=Inf)
+    expect_identical(e.out2$LogProb, e.out3$LogProb)
+    expect_identical(e.out2$PValue, e.out3$PValue)
+    expect_false(identical(e.out2$FDR, e.out3$FDR))
 })
 
 test_that("emptyDrops works correctly with alpha estimation", {
@@ -336,12 +356,25 @@ test_that("emptyDrops works with by.rank=TRUE", {
     my.counts <- DropletUtils:::simCounts() 
 
     set.seed(999)
-    out <- emptyDrops(my.counts, by.rank=1000)
+    out <- emptyDrops(my.counts, lower=NA, by.rank=1000) # forcing the old lower to not be used.
+    expect_true(is.finite(metadata(out)$lower))
     expect_false(metadata(out)$lower==100)
+    expect_true(all(is.na(out$LogProb[out$Totals < metadata(out)$lower])))
 
     set.seed(999)
     ref <- emptyDrops(my.counts, lower=metadata(out)$lower, by.rank=NULL)
     expect_identical(out, ref)
+
+    # Interacts properly with test.ambient=
+    set.seed(1000)
+    e.out <- emptyDrops(my.counts, lower=NA, by.rank=1000, alpha=Inf)
+
+    set.seed(1000)
+    e.out2 <- emptyDrops(my.counts, lower=NA, by.rank=1000, test.ambient=TRUE, alpha=Inf)
+    keep <- e.out$Total > metadata(e.out)$lower
+    expect_identical(e.out$LogProb[keep], e.out2$LogProb[keep])
+    expect_identical(e.out$PValue[keep], e.out2$PValue[keep])
+    expect_identical(e.out$FDR, e.out2$FDR)
 })
 
 set.seed(80002)

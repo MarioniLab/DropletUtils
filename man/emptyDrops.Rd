@@ -27,6 +27,7 @@ emptyDrops(m, ...)
   retain = NULL,
   barcode.args = list(),
   round = TRUE,
+  test.ambient = FALSE,
   ...,
   BPPARAM = SerialParam()
 )
@@ -53,7 +54,8 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.}
 
-\item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.}
+\item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.
+If set, this is used to redefine \code{lower} and any specified value for \code{lower} is ignored.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.}
 
@@ -129,6 +131,9 @@ All barcodes with total counts above \code{retain} are assigned p-values of zero
 This ensures that their Monte Carlo p-values do not affect the correction of other genes, and also means that they will have FDR values of zero.
 However, their original Monte Carlo p-values are still reported in the output, as these may be useful for diagnostic purposes.
 
+This effect also means that users will not be able to recover the reported \code{FDR} by simply running \code{\link{p.adjust}} on the reported \code{PValue}.
+Similarly, setting \code{test.ambient=TRUE} will also modify the p-values prior to correction, see commentary below.
+
 In general, users should call \code{emptyDrops} rather than \code{testEmptyDrops}.
 The latter is a \dQuote{no frills} version that is largely intended for use within other functions.
 }
@@ -142,25 +147,30 @@ If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count p
 If \code{alpha=Inf}, the sampling of molecules is modelled with a multinomial distribution.
 
 Users can check whether the model is suitable by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
-Under the null hypothesis, the p-values for presumed ambient barcodes (i.e., with total counts below \code{lower}) should be uniformly distributed.
+Under the null hypothesis, the p-values for presumed ambient barcodes (i.e., with total counts less than or equal to \code{lower}) should be uniformly distributed.
 Skews in the p-value distribution are indicative of an inaccuracy in the model and/or its estimates (of \code{alpha} or the ambient profile).
 }
 
 \section{\code{NA} values in the results}{
 
-We assume that barcodes with total UMI counts below \code{lower} correspond to empty droplets.
+We assume that barcodes with total UMI counts less than or equal to \code{lower} correspond to empty droplets.
 These are used to estimate the ambient expression profile against which the remaining barcodes are tested.
 Under this definition, these low-count barcodes cannot be cell-containing droplets and are excluded from the hypothesis testing.
+By removing these uninteresting tests, we obtain a modest improvement in detection power for the high-count barcodes.
 
 However, it is still desirable for the number of rows of the output DataFrame to be the same as \code{ncol(m)}.
 This allows easy subsetting of \code{m} based on a logical vector constructed from the output (e.g., to retain all FDR values below a threshold).
 To satisfy this requirement, the rows for the excluded barcodes are filled in with \code{NA} values for all fields in the output.
 We suggest using \code{\link{which}} to pick barcodes below a FDR threshold, see the Examples.
 
-If \code{test.ambient=FALSE}, non-\code{NA} statistics will be reported for all barcodes.
-This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes below \code{lower}.
+If \code{test.ambient=TRUE}, non-\code{NA} p-values will be reported for all barcodes with positive total counts, including those not greater than \code{lower}.
+This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes corresponding to (presumably) empty droplets.
 Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution.
 Any strong peaks in the p-values near zero indicate that \code{emptyDrops} is not controlling the FDR correctly.
+
+Note that, when setting \code{test.ambient=TRUE} in \code{\link{emptyDrops}}, barcodes less than or equal to \code{lower} will still have \code{NA} values in \code{FDR}.
+Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting.
+For back-compatibility purposes, setting \code{test.ambient=NA} will include these barcodes in the correction.
 }
 
 \section{Non-empty droplets versus cells}{

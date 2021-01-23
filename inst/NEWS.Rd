@@ -14,6 +14,11 @@
 \item Converted all matrix-accepting functions to S4 generics to support SummarizedExperiment inputs.
 
 \item \code{emptyDrops()} will now coerce all \linkS4class{DelayedArray} inputs into wrapped \linkS4class{SparseArraySeed}s.
+
+\item Setting \code{test.ambient=TRUE} in \code{emptyDrops()} will no longer alter the FDRs compared to \code{test.ambient=FALSE}.
+Added \code{test.ambient=NA} to retain back-compatible behavior.
+
+\item Bugfix for correct use of redefined \code{lower} when \code{by.rank=} is set in \code{\link{emptyDrops()}}.
 }}
 
 \section{Version 1.10.0}{\itemize{
