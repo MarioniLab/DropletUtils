@@ -117,6 +117,8 @@ simBasicMolInfo <- function(out.file, ngems=1, umi.length=10, barcode.length=4,
 .write_stripped_mol_info <- function(out.file, current, barcode.length, 
     gene.names, feature.types, library.info, version="2")
 {
+    out.file <- path.expand(out.file) # protect against tilde's.
+
     unlink(out.file)
     h5 <- h5createFile(out.file)
 

@@ -170,6 +170,7 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
 .write_hdf5 <- function(path, genome, x, barcodes, gene.id, gene.symbol, gene.type, version="3",
     chemistry="Single Cell 3' v3", original.gem.groups=1L, library.ids="custom")
 {
+    path <- path.expand(path) # protect against tilde's.
     h5createFile(path)
 
     if (version=="3") {
