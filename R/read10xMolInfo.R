@@ -90,6 +90,8 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
     get.cell=TRUE, get.umi=TRUE, get.gem=TRUE, get.gene=TRUE, get.reads=TRUE,
     get.library=TRUE, extract.library.info=FALSE, version=c("auto", "2", "3"))
 {
+    sample <- path.expand(sample) # protect against unexpanded tilde's.
+
     version <- match.arg(version)
     if (version=="auto") {
         available <- h5ls(sample, recursive=FALSE)
@@ -175,7 +177,6 @@ read10xMolInfo <- function(sample, barcode.length=NULL, keep.unmapped=FALSE,
     output
 }
 
-#' @importFrom rhdf5 h5read
 .extract_mol_info <- function(sample, ..., use.library=NULL, get.library=FALSE, 
     extract.library.info=FALSE, subset.library.features=FALSE) 
 {

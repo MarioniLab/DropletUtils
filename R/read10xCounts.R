@@ -246,6 +246,7 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
 #' @importFrom HDF5Array TENxMatrix
 #' @importFrom utils head
 .read_from_hdf5 <- function(path, genome=NULL, version) {
+    path <- path.expand(path) # eliminate tilde's.
     available <- h5ls(path, recursive=FALSE)
     available <- available[available$otype=="H5I_GROUP",]
 
