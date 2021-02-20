@@ -13,6 +13,7 @@ hashedDrops(x, ...)
   ambient = NULL,
   min.prop = 0.05,
   pseudo.count = 5,
+  constant.amb = FALSE,
   doublet.nmads = 3,
   doublet.min = 2,
   doublet.mixture = FALSE,

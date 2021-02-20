@@ -92,19 +92,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// hashed_subtract
-Rcpp::NumericMatrix hashed_subtract(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count, int n_expected);
-RcppExport SEXP _DropletUtils_hashed_subtract(SEXP matSEXP, SEXP propSEXP, SEXP pseudo_countSEXP, SEXP n_expectedSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< Rcpp::RObject >::type mat(matSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
-    Rcpp::traits::input_parameter< double >::type pseudo_count(pseudo_countSEXP);
-    Rcpp::traits::input_parameter< int >::type n_expected(n_expectedSEXP);
-    rcpp_result_gen = Rcpp::wrap(hashed_subtract(mat, prop, pseudo_count, n_expected));
-    return rcpp_result_gen;
-END_RCPP
-}
 // hashed_deltas
 Rcpp::List hashed_deltas(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count, int n_expected);
 RcppExport SEXP _DropletUtils_hashed_deltas(SEXP matSEXP, SEXP propSEXP, SEXP pseudo_countSEXP, SEXP n_expectedSEXP) {
@@ -115,6 +102,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type pseudo_count(pseudo_countSEXP);
     Rcpp::traits::input_parameter< int >::type n_expected(n_expectedSEXP);
     rcpp_result_gen = Rcpp::wrap(hashed_deltas(mat, prop, pseudo_count, n_expected));
+    return rcpp_result_gen;
+END_RCPP
+}
+// hashed_constant
+Rcpp::List hashed_constant(Rcpp::RObject mat, Rcpp::NumericVector prop, double pseudo_count, int n_expected);
+RcppExport SEXP _DropletUtils_hashed_constant(SEXP matSEXP, SEXP propSEXP, SEXP pseudo_countSEXP, SEXP n_expectedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::RObject >::type mat(matSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prop(propSEXP);
+    Rcpp::traits::input_parameter< double >::type pseudo_count(pseudo_countSEXP);
+    Rcpp::traits::input_parameter< int >::type n_expected(n_expectedSEXP);
+    rcpp_result_gen = Rcpp::wrap(hashed_constant(mat, prop, pseudo_count, n_expected));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -144,8 +144,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_DropletUtils_find_swapped", (DL_FUNC) &_DropletUtils_find_swapped, 6},
     {"_DropletUtils_get_cell_barcodes", (DL_FUNC) &_DropletUtils_get_cell_barcodes, 3},
     {"_DropletUtils_group_cells", (DL_FUNC) &_DropletUtils_group_cells, 2},
-    {"_DropletUtils_hashed_subtract", (DL_FUNC) &_DropletUtils_hashed_subtract, 4},
     {"_DropletUtils_hashed_deltas", (DL_FUNC) &_DropletUtils_hashed_deltas, 4},
+    {"_DropletUtils_hashed_constant", (DL_FUNC) &_DropletUtils_hashed_constant, 4},
     {"_DropletUtils_montecarlo_pval", (DL_FUNC) &_DropletUtils_montecarlo_pval, 8},
     {NULL, NULL, 0}
 };

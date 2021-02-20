@@ -196,7 +196,7 @@ NULL
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
 #' @importFrom beachmat colBlockApply
-.hashed_drops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, 
+.hashed_drops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, constant.amb=FALSE, 
     doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2, combinations=NULL)
 { 
     totals <- colSums(x)
@@ -216,12 +216,23 @@ NULL
         n.expected <- ncol(combinations)
     }
 
-    output <- colBlockApply(x, FUN=hashed_deltas, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
+    if (constant.amb) {
+        output <- colBlockApply(x, FUN=hashed_deltas_const, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
 
-    lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
-    lfc2 <- log2(unlist(lapply(output, "[[", i="FC2"), use.names=FALSE))
-    best.sample <- do.call(cbind, lapply(output, "[[", i="Best"))
-    second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
+        lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
+        const.amb <- median(unlist(lapply(output, "[[", i="Ambient"), use.names=FALSE))
+        lfc2 <- log2(unlist(lapply(output, "[[", i="Numerator"), use.names=FALSE)/const.amb)
+
+        best.sample <- do.call(cbind, lapply(output, "[[", i="Best"))
+        second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
+    } else {
+        output <- colBlockApply(x, FUN=hashed_deltas, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
+        lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
+        lfc2 <- log2(unlist(lapply(output, "[[", i="FC2"), use.names=FALSE))
+        best.sample <- do.call(cbind, lapply(output, "[[", i="Best"))
+        second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
+    }
+
 
     no.lfc2 <- all(is.na(lfc2))
     if (!no.lfc2) {
