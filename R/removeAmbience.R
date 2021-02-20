@@ -10,7 +10,7 @@
 #' @param groups A vector of length equal to \code{ncol(y)}, specifying the assigned group for each cell.
 #' This can also be a \linkS4class{DataFrame}, see \code{?\link{sumCountsAcrossCells}}.
 #' @param features A vector of control features or a list of mutually exclusive feature sets, 
-#' see \code{?\link{ambientContribControl}} for more details.
+#' see \code{?\link{ambientContribNegative}} for more details.
 #' @param ... For the generic, further arguments to pass to specific methods.
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
@@ -31,7 +31,7 @@
 #' @details
 #' This function will aggregate counts from each group of related cells into an average profile.
 #' For each group, we estimate the contribution of the ambient profile and subtract it from the average.
-#' By default, this is done with \code{\link{ambientContribMaximum}}, but if enough is known about the biological system, users can specify \code{feaures} to use \code{\link{ambientContribControl}} instead.
+#' By default, this is done with \code{\link{ambientContribMaximum}}, but if enough is known about the biological system, users can specify \code{feaures} to use \code{\link{ambientContribNegative}} instead.
 #'
 #' We then perform quantile-quantile mapping of counts in \code{y} from the old to new averages.
 #' This approach preserves the mean-variance relationship and improves the precision of estimate of the ambient contribution, but relies on a sensible grouping of similar cells, e.g., unsupervised clusters or cell type annotations.
@@ -52,7 +52,7 @@
 #' summary(rowMeans(removed[101:1000,]))
 #'
 #' @seealso
-#' \code{\link{ambientContribMaximum}} and \code{\link{ambientContribControl}}, to estimate the ambient contribution.
+#' \code{\link{ambientContribMaximum}} and \code{\link{ambientContribNegative}}, to estimate the ambient contribution.
 #'
 #' \code{\link{estimateAmbience}}, to estimate the ambient profile.
 #'
@@ -78,7 +78,7 @@ NULL
     if (is.null(features)) {
         profile <- ambientContribMaximum(old.means, ambient=ambient, ..., mode="profile")
     } else {
-        profile <- ambientContribControl(old.means, ambient=ambient, features=features, mode="profile")
+        profile <- ambientContribNegative(old.means, ambient=ambient, features=features, mode="profile")
     }
     new.means <- old.means - profile
     new.means[new.means < 0] <- 0

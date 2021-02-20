@@ -80,7 +80,7 @@
 #' @seealso
 #' \code{\link{ambientProfileEmpty}} and \code{\link{ambientProfileBimodal}}, to estimate the ambient profile.
 #'
-#' \code{\link{ambientContribSparse}} and \code{\link{ambientContribControl}}, for other methods to estimate the ambient contribution.
+#' \code{\link{ambientContribSparse}} and \code{\link{ambientContribNegative}}, for other methods to estimate the ambient contribution.
 #'
 #' \code{\link{emptyDrops}}, which uses the ambient profile to call cells.
 #'
@@ -101,7 +101,7 @@
 #' @seealso 
 #' \code{\link{ambientProfileEmpty}} or \code{\link{ambientProfileBimodal}}, to obtain an estimate to use in \code{ambient}.
 #'
-#' \code{\link{ambientContribControl}} or \code{\link{ambientContribSparse}}, for other methods of estimating the contribution.
+#' \code{\link{ambientContribNegative}} or \code{\link{ambientContribSparse}}, for other methods of estimating the contribution.
 #'
 #' @name ambientContribMaximum
 NULL

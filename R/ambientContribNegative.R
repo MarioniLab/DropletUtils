@@ -1,7 +1,7 @@
-#' Ambient contribution from controls
+#' Ambient contribution from negative controls
 #'
 #' Estimate the contribution of the ambient solution to a particular expression profile,
-#' based on the abundance of control features that should not be expressed in the latter.
+#' based on the abundance of negative control features that should not be expressed in the latter.
 #'
 #' @param y A numeric matrix-like object containing counts, where each row represents a feature (e.g., a gene or a conjugated tag)
 #' and each column represents either a cell or group of cells.
@@ -9,7 +9,7 @@
 #' Alternatively, a \linkS4class{SummarizedExperiment} object containing such a matrix.
 #' 
 #' \code{y} can also be a numeric vector of counts; this is coerced into a one-column matrix.
-#' @param features A logical, integer or character vector specifying the control features in \code{y} and \code{ambient}.
+#' @param features A logical, integer or character vector specifying the negative control features in \code{y} and \code{ambient}.
 #' 
 #' Alternatively, a list of vectors specifying mutually exclusive sets of features.
 #' @inheritParams ambientContribMaximum
@@ -17,10 +17,10 @@
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'
-#' For \code{controlAmbience}, arguments to pass to \code{ambientContribControl}.
+#' For \code{controlAmbience}, arguments to pass to \code{ambientContribNegative}.
 #'
 #' @details
-#' Control features should be those that cannot be expressed and thus fully attributable to ambient contamination.
+#' Negative control features should be those that cannot be expressed and thus fully attributable to ambient contamination.
 #' This is most commonly determined \emph{a priori} from the biological context and experimental system.
 #' For example, if spike-ins were introduced into the solution prior to cell capture,
 #' these would serve as a gold standard for ambient contamination in \code{y}.
@@ -28,12 +28,12 @@
 #' under the assumption that all high-quality libraries are stripped nuclei.
 #'
 #' If \code{features} is a list, it is expected to contain multiple sets of mutually exclusive features.
-#' These features need not be controls but each cell should only express features in one set (or no sets).
+#' Each cell should only express features in at most one set; no cell should express features in different sets.
 #' The expression of multiple sets can thus be attributed to ambient contamination.
 #' For this mode, an archetypal pairing is that of hemoglobins with immunoglobulins (Young and Behjati, 2018), 
 #' which should not be co-expressed in any (known) cell type.
 #'
-#' \code{controlAmbience} is soft-deprecated; use \code{ambientContribControl} instead.
+#' \code{controlAmbience} is soft-deprecated; use \code{ambientContribNegative} instead.
 #'
 #' @return 
 #' If \code{mode="scale"},
@@ -54,31 +54,32 @@
 #' y <- rpois(1000, ambient * 50)
 #' y <- y + c(integer(100), rpois(900, 5)) # actual biology, but first 100 genes silent.
 #'
-#' # Using the first 100 genes as a control:
-#' scaling <- ambientContribControl(y, ambient, features=1:100)
+#' # Using the first 100 genes as negative controls:
+#' scaling <- ambientContribNegative(y, ambient, features=1:100)
 #' scaling
 #'
-#' # Estimating the control contribution to 'y' by 'ambient'.
-#' contribution <- ambientContribControl(y, ambient, features=1:100, mode="profile")
+#' # Estimating the negative control contribution to 'y' by 'ambient'.
+#' contribution <- ambientContribNegative(y, ambient, features=1:100, mode="profile")
 #' DataFrame(ambient=drop(contribution), total=y)
 #'
 #' @seealso 
 #' \code{\link{ambientProfileEmpty}} or \code{\link{ambientProfileBimodal}}, to obtain a profile estimate to use in \code{ambient}.
 #'
-#' \code{\link{ambientContribMaximum}} or \code{\link{ambientContribSparse}}, for other methods of estimating contribution when control features are not available.
+#' \code{\link{ambientContribMaximum}} or \code{\link{ambientContribSparse}},
+#' for other methods of estimating contribution when negative control features are not available.
 #'
 #' @references
 #' Young MD and Behjati S (2018).
 #' SoupX removes ambient RNA contamination from droplet based single-cell RNA sequencing data.
 #' \emph{biorXiv}.
 #'
-#' @name ambientContribControl
+#' @name ambientContribNegative
 NULL
 
 #' @importFrom Matrix t
 #' @importFrom scuttle sumCountsAcrossFeatures
 #' @importFrom DelayedMatrixStats colMins
-.ambient_contrib_control <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
+.ambient_contrib_negative <- function(y, ambient, features, mode=c("scale", "profile", "proportion")) {
     if (is.null(dim(y))) {
          y <- cbind(y)
     }
@@ -119,23 +120,23 @@ NULL
 }
 
 #' @export
-#' @rdname ambientContribControl
+#' @rdname ambientContribNegative
 controlAmbience <- function(...) {
-    ambientContribControl(...)
+    ambientContribNegative(...)
 }
 
 #' @export
-#' @rdname ambientContribControl
-setGeneric("ambientContribControl", function(y, ...) standardGeneric("ambientContribControl"))
+#' @rdname ambientContribNegative
+setGeneric("ambientContribNegative", function(y, ...) standardGeneric("ambientContribNegative"))
 
 #' @export 
-#' @rdname ambientContribControl
-setMethod("ambientContribControl", "ANY", .ambient_contrib_control)
+#' @rdname ambientContribNegative
+setMethod("ambientContribNegative", "ANY", .ambient_contrib_negative)
 
 #' @export
-#' @rdname ambientContribControl
+#' @rdname ambientContribNegative
 #' @importFrom SummarizedExperiment assay
-setMethod("ambientContribControl", "SummarizedExperiment", function(y, ..., assay.type="counts") {
-    .ambient_contrib_control(assay(y, assay.type), ...)
+setMethod("ambientContribNegative", "SummarizedExperiment", function(y, ..., assay.type="counts") {
+    .ambient_contrib_negative(assay(y, assay.type), ...)
 })
 

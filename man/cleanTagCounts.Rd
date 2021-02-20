@@ -37,7 +37,7 @@ These are expected to be isotype controls that should not exhibit any real bindi
 Defaults to \code{\link{ambientProfileBimodal}(x)} if not explicitly provided.}
 
 \item{exclusive}{A character vector of names of mutually exclusive tags that should never be expressed on the same cell.
-Alternatively, a list of vectors of mutually exclusive sets of tags - see \code{\link{ambientContribControl}} for details.}
+Alternatively, a list of vectors of mutually exclusive sets of tags - see \code{\link{ambientContribNegative}} for details.}
 
 \item{sparse.prop}{Numeric scalar specifying the minimum proportion of tags that should be present per cell.}
 
@@ -76,7 +76,7 @@ This represents the amount of ambient contamination - see \code{?\link{ambientCo
 and cells with unusually high values are assumed to be affected by protein aggregates.
 High outliers are again identified and removed based on the log-ambient scale.
 
-If \code{controls} is missing and \code{exclusive} is specified, the ambient scaling factor is computed by \code{\link{ambientContribControl}} instead.
+If \code{controls} is missing and \code{exclusive} is specified, the ambient scaling factor is computed by \code{\link{ambientContribNegative}} instead.
 This can be helpful for explicitly removing cells with impossible marker combinations,
 though it is only as comprehensive as the knowledge of mutually exclusive marker sets.
 

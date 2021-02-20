@@ -33,7 +33,7 @@
 #' For gene expression, the sparsity assumption is less justifiable.
 #' Each cell could feasibly express a majority of the transcriptome (once we ignore constitutively silent features in the annotation, like pseudogenes).
 #' The sparsity of gene expression data also yields less precise scale estimates, reducing their utility in downstream applications.
-#' See \code{\link{ambientContribControl}} or \code{\link{ambientContribMaximum}} instead, which operate from different assumptions.
+#' See \code{\link{ambientContribNegative}} or \code{\link{ambientContribMaximum}} instead, which operate from different assumptions.
 #'
 #' @author Aaron Lun
 #'
