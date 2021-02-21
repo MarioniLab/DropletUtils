@@ -19,6 +19,7 @@
 #' @param confident.min A numeric scalar specifying the minimum threshold on the log-fold change to use to identify singlets.
 #' @param combinations An integer matrix specifying valid \emph{combinations} of HTOs.
 #' Each row corresponds to a single sample and specifies the indices of rows in \code{x} corresponding to the HTOs used to label that sample.
+#' @param constant.ambient Logical scalar indicating whether a constant level of ambient contamination should be used to estimate \code{LogFC2} for all cells.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param ... For the generic, further arguments to pass to individual methods.
 #'
@@ -40,7 +41,7 @@
 #' and \code{confident.threshold}, the threshold applied to non-doublet \code{LogFC} values to identify confident singlets.
 #'
 #' If \code{combinations} is specified, \code{Best} instead specifies the sample (i.e., row index of \code{combinations}).
-#' The interpretation of \code{LogFC} and \code{LogFC2} are slightly different, and \code{Second} is not reported - see details.
+#' The interpretation of \code{LogFC} and \code{LogFC2} are slightly different, and \code{Second} is not reported - see \dQuote{Resolving combinatorial hashes}.
 #'
 #' @details
 #' The idea behind cell hashing is that cells from the same sample are stained with reagent conjugated with a single HTO.
@@ -49,9 +50,10 @@
 #'
 #' We identify the sample of origin for each cell barcode as that corresponding to the most abundant HTO.
 #' (See below for more details on exactly how \dQuote{most abundant} is defined.)
-#' The log-fold change between the largest and second-largest abundances is also reported for each barcode, with large log-fold changes representing confident assignment to a single sample.
-#' We also report the log-fold change of the second-most abundant HTO over the estimated level of ambient contamination.
-#' Large log-fold changes indicate that the second HTO has greater abundance than expected, consistent with a doublet.
+#' The log-fold change between the largest and second-largest abundances is reported for each barcode (\code{LogFC}), 
+#' with large log-fold changes representing confident assignment to a single sample.
+#' We also report the log-fold change of the second-most abundant HTO over the estimated level of ambient contamination (\code{LogFC2}),
+#' with large log-fold changes indicating that a doublet is present.
 #'
 #' To facilitate quality control, we explicitly identify problematic barcodes as outliers on the relevant metrics.
 #' \itemize{
@@ -70,6 +72,17 @@
 #' The hard threshold is again arbitrary, but this time it aims to avoid insufficiently aggressive outlier detection - 
 #' typically from an inflation of the MAD when the \code{LogFC} values are large, positive and highly variable.
 #'
+#' @section Use only on non-empty droplets:
+#' This function assumes that cell calling has already been performed, e.g., with \code{\link{emptyDrops}}.
+#' Specifically, \code{x} should only contain columns corresponding to non-empty droplets.
+#' If empty droplets are included, their log-fold changes will simply reflect stochastic sampling in the ambient solution
+#' and violate the assumptions involved in outlier detection.
+#'
+#' If \code{x} contains columns for both empty and non-empty droplets,
+#' it is straightforward to simply run \code{\link{emptyDrops}} on the HTO count matrix to identify the latter.
+#' Note that some fiddling with the \code{lower=} argument may be required,
+#' depending on the sequencing depth of the HTO libraries.
+#'
 #' @section Adjusting abundances for ambient contamination:
 #' HTO abundances require some care to compute due to the presence of ambient contamination in each library.
 #' Ideally, the experiment would be performed in such a manner that the concentration of each HTO is the same.
@@ -83,7 +96,7 @@
 #' We then subtract the scaled ambient proportions from the HTO count profile to remove the effect of contamination.
 #' Abundances that would otherwise be negative are set to zero.
 #'
-#' The scaling factor for each cell is defined by computing ratios between the HTO counts and \code{ambient}, and taking the median across all HTOs.
+#' The scaling factor for each barcode is defined by computing ratios between the HTO counts and \code{ambient}, and taking the median across all HTOs.
 #' However, this strict definition is only used when there are at least 5 HTOs being considered.
 #' For experiments with 3-4 HTOs, we assume that higher-order multiplets are negligible and define the scaling factor as the third-largest ratio.
 #' For experiments with only 2 HTOs, the second-most abundant HTO is always used to estimate the ambient contamination.
@@ -95,33 +108,36 @@
 #' If \code{ambient=NULL}, the profile is inferred from \code{x} using \code{\link{ambientProfileBimodal}}.
 #'
 #' @section Computing the log-fold changes:
-#' After subtraction of the ambient noise but before calculation of the log-fold changes,
-#' we need to add a pseudo-count to ensure that the log-fold changes are well-defined.
-#' We set the pseudo-count to the average ambient HTO count (i.e., the average of the scaled \code{ambient}), effectively exploiting the ambient contamination as a natural pseudo-count that scales with barcode-specific capture efficiency and sequencing depth.
-#' (In libraries with low sequencing depth, we still enforce a minimum pseudo-count of \code{pseudo.count}.)
+#' HTO abundances may be set to zero after subtracting the ambient noise.
+#' Thus, we need to add a pseudo-count to ensure that we can actually compute the log-fold changes described in \dQuote{Value}.
 #'
-#' This scaling behavior is useful as it ensures that shrinkage of the log-fold changes is not more severe for libraries that have not been sequenced as deeply.
-#' We thus avoid excessive variability in the log-fold change distribution that would otherwise reduce the precision of outlier detection.
-#' The implicit assumption is that the number of contaminating transcript molecules is roughly the same in each droplet, meaning that any differences in ambient coverage between libraries reflect technical biases that would also affect cell-derived HTO counts. 
+#' For each barcode, we define the pseudo-count as the average ambient HTO count, i.e., the average of the scaled \code{ambient} for that barcode. 
+#' This is motivated by the assumption that the number of contaminating transcript molecules is roughly the same in each droplet,
+#' such that any differences in ambient coverage between libraries reflect barcode-specific biases (capture efficiency, sequencing depth) that would also affect cell-derived HTO counts. 
+#' By using the average ambient count as the pseudo-count, we ensure that the shrinkage of the log-fold changes is not driven by the sequencing depth,
+#' e.g., a constant pseudo-count would inflict greater shrinkage on libraries that have not been sequenced as deeply.
+#' This avoids excessive variability in the log-fold change distribution that would otherwise reduce the precision of outlier detection.
+#' Another nice aspect of this approach is that it collapses to a no-op if the experiment is well-executed with identical concentrations of all HTOs in the ambient solution.
+#' (That said, we still enforce a minimum pseudo-count of \code{pseudo.count} if the average ambient count is lower than that,
+#' simply to avoid highly variable log-fold changes when dealing with very low counts.)
 #'
-#' Another nice aspect of this entire procedure (subtraction and re-addition) is that it collapses to a no-op if the experiment is well-executed with identical concentrations of all HTOs in the ambient solution.
-#' 
-#' @section Use only on non-empty droplets:
-#' This function assumes that cell calling has already been performed, e.g., with \code{\link{emptyDrops}}.
-#' Specifically, \code{x} should only contain columns corresponding to non-empty droplets.
-#' If empty droplets are included, their log-fold changes will simply reflect stochastic sampling in the ambient solution
-#' and violate the assumptions involved in outlier detection.
-#'
-#' If \code{x} contains columns for both empty and non-empty droplets,
-#' it is straightforward to simply run \code{\link{emptyDrops}} on the HTO count matrix to identify the latter.
-#' Note that some fiddling with the \code{lower=} argument may be required,
-#' depending on the sequencing depth of the HTO libraries.
+#' Once the pseudo-count is added to the ambient-subtracted abundances, we compute the log-fold changes as described in \dQuote{Value}.
+#' \code{LogFC} is defined as the log-fold change in the most abundant HTO over the second-most abundant HTO.
+#' \code{LogFC2} is defined as the log-fold change in the second-most abundant HTO over the ambient contamination.
+#' By default, the denominator for \code{LogFC2} is set to the per-barcode average ambient count, equivalent to the pseudo-count used above.
+#' This cancels out any variation in sequencing depth for more precise outlier calls.
 #'
 #' @section Handling 2 or fewer samples:
-#' If \code{x} has no more than two rows, \code{Doublet}, \code{LogFC2} and \code{doublet.threshold} are set to \code{NA}.
+#' If \code{x} has no more than two rows, \code{LogFC2}, \code{Doublet} and \code{doublet.threshold} are set to \code{NA}.
 #' Strictly speaking, doublet detection is not possible as the second HTO is always used to estimate the ambient scaling and thus \code{LogFC2} is always zero.
-#' However, \code{Confident} calls are still available in the output of this function so assignment to the individual samples can still be performed.
+#' \code{Confident} calls are still available in the output of this function so assignment to the individual samples can still be performed.
 #' In this scenario, the non-confident assignments are probably also doublets, though this cannot be said with much certainty.
+#'
+#' To work around this limitation, we can set \code{constant.ambient=TRUE},
+#' which defines the denominator of each barcode's \code{LogFC2} as the median of the per-barcode average ambient counts across all barcodes.
+#' This is useful in scenarios where \code{nrow(x)} is too small and we cannot assume that the abundances of most HTOs are driven by ambient contamination.
+#' By assuming most barcodes are not doublets, we can obtain a dataset-wide baseline for the ambient contamination to compute \code{LogFC2}.
+#' The cost of this approach is that the log-fold changes will be more variable as sequencing depth is not cancelled out. 
 #' 
 #' If \code{x} has no more than one row, \code{Confident}, \code{LogFC} and \code{confident.threshold} are set to \code{NA}.
 #' Obviously, if there is only one HTO, the identity of the assigned sample is a foregone conclusion.
@@ -137,7 +153,7 @@
 #' \item The reported \code{LogFC} is now the log-fold change between the \eqn{n}th most abundant HTO and the \eqn{n+1}th HTO,
 #' where \eqn{n} is the number of HTOs in a valid combination. 
 #' This captures the drop-off in abundance beyond the expected number of HTOs.
-#' \item The reported \code{LogFC2} is now the log-fold change of the \eqn{n+1}th HTO over the ambient solution.
+#' \item The reported \code{LogFC2} is now the log-fold change of the \eqn{n+1}th HTO over the ambient contamination.
 #' This captures the high abundance of the more-than-expected number of HTOs when doublets are present.
 #' \item \code{Best} no longer refers to the row index of \code{x}, but instead to the row index of \code{combinations}.
 #' This may contain \code{NA} values if a particular combination of HTOs is observed but not present in the expected set.
@@ -145,10 +161,11 @@
 #' }
 #'
 #' We also generalize the edge-case behavior when there are not enough HTOs to support doublet detection. 
-#' Consider that an inter-sample doublet may result in either \eqn{n + 1} to \eqn{2n} abundant HTOs.
+#' Consider that an inter-sample doublet may result in up to \eqn{2n} abundant HTOs.
 #' Estimation of the scaling factor will attempt to avoid using the top \eqn{2n} ratios.
-#' If \code{nrow(x)} is equal to or less than \eqn{n + 1}, doublet statistics will not be reported at all, 
+#' If \code{nrow(x)} is equal to or less than \eqn{2n}, doublet statistics will not be reported at all, 
 #' i.e., \code{Doublet} and \code{LogFC2} are set to \code{NA}.
+#' This can be overcome by setting \code{constant.ambient=TRUE} as described above.
 #'
 #' @author Aaron Lun
 #' @examples
@@ -196,7 +213,7 @@ NULL
 #' @importFrom S4Vectors DataFrame
 #' @importFrom stats median mad
 #' @importFrom beachmat colBlockApply
-.hashed_drops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, constant.amb=FALSE, 
+.hashed_drops <- function(x, ambient=NULL, min.prop=0.05, pseudo.count=5, constant.ambient=FALSE, 
     doublet.nmads=3, doublet.min=2, doublet.mixture=FALSE, confident.nmads=3, confident.min=2, combinations=NULL)
 { 
     totals <- colSums(x)
@@ -216,8 +233,8 @@ NULL
         n.expected <- ncol(combinations)
     }
 
-    if (constant.amb) {
-        output <- colBlockApply(x, FUN=hashed_deltas_const, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
+    if (constant.ambient) {
+        output <- colBlockApply(x, FUN=hashed_constant, prop=ambient, pseudo_count=pseudo.count, n_expected=n.expected)
 
         lfc <- log2(unlist(lapply(output, "[[", i="FC"), use.names=FALSE))
         const.amb <- median(unlist(lapply(output, "[[", i="Ambient"), use.names=FALSE))
@@ -232,7 +249,6 @@ NULL
         best.sample <- do.call(cbind, lapply(output, "[[", i="Best"))
         second.sample <- unlist(lapply(output, "[[", i="Second"), use.names=FALSE)
     }
-
 
     no.lfc2 <- all(is.na(lfc2))
     if (!no.lfc2) {
@@ -254,7 +270,8 @@ NULL
     }
 
     # Using outlier detection to identify confident singlets.
-    if (!all(is.na(lfc))) {
+    no.lfc1 <- all(is.na(lfc))
+    if (!no.lfc1) {
         lfc.singlet <- lfc[!is.doublet]
         med.singlet <- median(lfc.singlet)
         mad.singlet <- mad(lfc.singlet, center=med.singlet)
@@ -268,6 +285,9 @@ NULL
     }
 
     if (no.lfc2) {
+        if (!no.lfc1 && !constant.ambient) {
+            warning("could not obtain explicit doublet calls, consider using 'constant.ambient=TRUE'")
+        }
         is.doublet <- rep(NA, ncol(x))
     }
 

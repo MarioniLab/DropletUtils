@@ -20,6 +20,7 @@ REF <- function(y, p, pseudo) {
 
     ref.best <- ref.second <- integer(ncells)
     ref.fc <- ref.fc2 <- numeric(ncells)
+    ref.ps <- numeric(ncells)
 
     for (i in seq_len(ncells)) {
         Y <- y[,i]
@@ -45,9 +46,10 @@ REF <- function(y, p, pseudo) {
         sorted <- Y0[o]
         ref.fc[i] <- sorted[1]/sorted[2]
         ref.fc2[i] <- sorted[2]/PS
+        ref.ps[i] <- PS
     }
 
-    list(Best=ref.best, Second=ref.second, FC=ref.fc, FC2=ref.fc2)   
+    list(Best=ref.best, Second=ref.second, FC=ref.fc, FC2=ref.fc2, Pseudo=ref.ps)  
 }
 
 test_that("hashed_deltas works as expected", {
@@ -143,7 +145,7 @@ test_that("hashedDrops works as expected", {
 })
 
 test_that("hashedDrops handles low number of tags gracefully", {
-    out <- hashedDrops(y[1:2,])
+    expect_warning(out <- hashedDrops(y[1:2,]), "consider")
     expect_true(all(!is.na(out$LogFC)))
     expect_true(all(!is.na(out$Confident)))
     expect_true(all(is.na(out$LogFC2)))
@@ -192,14 +194,14 @@ test_that("edge cases are handled correctly with combinatorial barcodes", {
     mat <- matrix(10, 4, 1)
     mat[2:4,1] <- 100
 
-    out <- hashedDrops(mat, combinations=rbind(4:2), ambient=rep(1, nrow(mat)))
+    expect_warning(out <- hashedDrops(mat, combinations=rbind(4:2), ambient=rep(1, nrow(mat))), "consider")
     expect_identical(out$LogFC, log2(100/10))
     expect_identical(out$Best, 1L)
     expect_identical(out$LogFC2, NA_real_)
     expect_identical(out$Doublet, NA)
 
     # Doublet statistics come back online with just enough HTOs.
-    mat <- matrix(10, 5, 1)
+    mat <- matrix(10, 7, 1)
     mat[2:4,1] <- 100
 
     out <- hashedDrops(mat, combinations=rbind(4:2), ambient=rep(1, nrow(mat)))
@@ -218,15 +220,15 @@ test_that("edge cases are handled correctly with combinatorial barcodes", {
             (170 - SCALING * 1.017 + PSEUDO))
     }
 
-    for (counter in 17:14) { # Using the last one...
+    for (counter in 17:15) { # Using the last one...
         keep <- 20:counter
-        out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep])
+        expect_warning(out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep]), "consider")
         SCALING <- mat[counter]/ambient[counter]
         PSEUDO <- mean(ambient[keep]) * SCALING
         expect_identical(out$LogFC, .compute_expected_lfc(SCALING, PSEUDO))
     }
 
-    for (counter in 13:9) { # Using the first past the 2*n_expected...
+    for (counter in 14:9) { # Using the first past the 2*n_expected...
         keep <- 20:counter
         out <- hashedDrops(mat[keep,,drop=FALSE], combinations=rbind(4:2), ambient=ambient[keep])
         SCALING <- mat[14]/ambient[14]
@@ -243,3 +245,17 @@ test_that("edge cases are handled correctly with combinatorial barcodes", {
     }
 })
 
+test_that("hashedDrops works with constant ambience", {
+    ref <- hashedDrops(y)
+    out <- hashedDrops(y, constant.ambient=TRUE)
+    same.col <- c("Total", "Best", "Second", "LogFC")
+    expect_identical(ref[,same.col], out[,same.col])
+
+    ref.calc <- REF(y, metadata(ref)$ambient, 5)
+    lfc2 <- log2(ref.calc$FC2 * ref.calc$Pseudo / median(ref.calc$Pseudo))
+    expect_equal(lfc2, out$LogFC2)
+
+    expect_identical(out$Best, true.sample)
+    expect_equal(out$Second[1:ndoub], next.sample[1:ndoub])
+    expect_true(min(out$LogFC2[1:ndoub]) > max(out$LogFC2[-(1:ndoub)]))
+})
