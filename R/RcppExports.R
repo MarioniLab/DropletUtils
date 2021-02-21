@@ -33,6 +33,10 @@ hashed_deltas <- function(mat, prop, pseudo_count, n_expected) {
     .Call('_DropletUtils_hashed_deltas', PACKAGE = 'DropletUtils', mat, prop, pseudo_count, n_expected)
 }
 
+hashed_constant <- function(mat, prop, pseudo_count, n_expected) {
+    .Call('_DropletUtils_hashed_constant', PACKAGE = 'DropletUtils', mat, prop, pseudo_count, n_expected)
+}
+
 montecarlo_pval <- function(totalval, totallen, prob, ambient, iterations, alpha, seeds, streams) {
     .Call('_DropletUtils_montecarlo_pval', PACKAGE = 'DropletUtils', totalval, totallen, prob, ambient, iterations, alpha, seeds, streams)
 }
