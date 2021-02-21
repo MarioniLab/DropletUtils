@@ -19,6 +19,8 @@
 Added \code{test.ambient=NA} to retain back-compatible behavior.
 
 \item Bugfix for correct use of redefined \code{lower} when \code{by.rank=} is set in \code{\link{emptyDrops()}}.
+
+\item Added a \code{constant.ambient=TRUE} option to \code{hashedDrops()} to better support experiments with very few HTOs.
 }}
 
 \section{Version 1.10.0}{\itemize{
