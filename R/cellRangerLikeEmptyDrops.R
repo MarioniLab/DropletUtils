@@ -39,9 +39,9 @@
 #'
 #' @details
 #' This function is an approximate implementation of the  `--soloCellFilter  EmptyDrops_CR` filtering approach of STARsolo 
-#' (https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1), which, itself, was reverse engineered from the behavior of  CellRanger 3+. 
+#' (\url{https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1}), which, itself, was reverse engineered from the behavior of  CellRanger 3+. 
 #' The original C++ code on which this function is based can be found at 
-#' (https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp) 
+#' (\url{https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp}) 
 #' All parameters are defaulty set as the default value used in starSolo and Cellranger.
 #' In the most cases, users just need to specify the raw and unfiltered count matrix, \code{m}.
 #' See \code{?\link{emptyDrops}} for an alternative approach for cell calling.
