@@ -40,11 +40,23 @@
 
 #' @details
 #' This function is an approximate implementation of the  \code{--soloCellFilter  EmptyDrops_CR} filtering approach of STARsolo 2.7.9a
-#' , which, itself, was reverse engineered from the behavior of  CellRanger 3+. 
-#' All parameters are defaulty set as the default value used in starSolo 2.7.9a.
-#' In the most cases, users just need to specify the raw and unfiltered count matrix, \code{m}.
+#' , which, itself, was reverse-engineered from the behavior of  CellRanger 3+. 
+#' All parameters are default set as the default value used in starSolo 2.7.9a.
+#' In most cases, users just need to specify the raw and unfiltered count matrix, \code{m}.
 #' See \code{?\link{emptyDrops}} for an alternative approach for cell calling.
 #' 
+#' The main differences between \code{cellRangerLikeEmptyDrops} and \code{emptyDrops} are 
+#' 1. \code{cellRangerLikeEmptyDrops} first applies a simple filtering strategy to identify 
+#' retained cells according to the ranking of the total count of barcodes. This process is based on
+#'  \code{expected}, \code{max.percentile}, \code{max.min.ratio}, \code{umi.min}, and \code{umi.min.frac.median}. 
+#' 2. \code{cellRangerLikeEmptyDrops} takes barcodes whose total count rank within a certain range 
+#' (by default, (45,000, 90,000]) as the input of SimpleGoodTuring. So in addition to the lower 
+#' limit \code{lower}, it also has an upper limit \code{upper}.
+#' 3. When computing ambient profile, \code{cellRangerLikeEmptyDrops} defines a candidate pool. 
+#' Only the barcodes in the pool are involved in ambient profile computation and are assigned a p-value. 
+#' By default, the pool include the 20,000 barcodes whose total count rank right after the barcodes 
+#' selected by the simple filtering strategy described above.
+#'  
 #' @return
 #' A DataFrame like \code{\link{emptyDrops}}, with an additional binary \code{is.cell} field demonstrating whether
 #' barcodes are estimated as real barcodes.
@@ -85,7 +97,7 @@ NULL
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom beachmat colBlockApply
-.test_empty_drops_cr <- function(m, lower=NULL, upper=NULL, niters=10000, ignore=NULL, retain=NULL, alpha=Inf, 
+.test_empty_drops_cr <- function(m, lower=NULL, upper=NULL, niters=10000, ignore=NULL, test.ambient=TRUE, retain=NULL, alpha=Inf, 
                            round=TRUE, by.rank.upper=45000, by.rank.lower=90000, BPPARAM=SerialParam()) 
 {
   if (!.bpNotSharedOrUp(BPPARAM)) {
@@ -120,10 +132,13 @@ NULL
   
   # Removing supposed ambient barcodes from the matrix.
   # Also removing additional barcodes that don't pass some total count threshold.
-  keep <- totals > 0L
-  
+  if (!test.ambient) {
+    keep <- !ambient
+  } else {
+    keep <- totals > 0L
+  }
   if (!is.null(ignore)) { 
-    keep <- keep & totals >= ignore
+    keep <- keep & totals > ignore
   }
   if (!is.null(retain)) {
     keep <- keep & totals < retain
@@ -187,7 +202,6 @@ NULL
   
   # Computing the average profile from the ambient barcodes.
   ambient <- totals >= lower & totals <= upper # lower => "T" in the text.
-
   ambient.m <- m[,ambient,drop=FALSE]
   ambient.prof <- rowSums(ambient.m)
   
@@ -225,7 +239,7 @@ NULL
                                            # emptyDrops arguments
                                            barcode.args=list(),
                                            round=TRUE,
-                                           alpha=Inf, 
+                                           test.ambient=TRUE,
                                            ...,
                                            BPPARAM=SerialParam()
 ) {
@@ -242,6 +256,10 @@ NULL
   if (!.bpNotSharedOrUp(BPPARAM)) {
     bpstart(BPPARAM)
     on.exit(bpstop(BPPARAM))
+  }
+  
+  if (correct.ambient <- is.na(test.ambient)) {
+    test.ambient <- TRUE
   }
   
   m <- .realize_DA_to_memory(m, BPPARAM)
@@ -290,8 +308,10 @@ NULL
   always <- stats$Total >= retain
   tmp[always] <- 0
   
-  discard <- (stats$Total <= ignore)
-  tmp[discard] <- NA_real_
+  if (test.ambient && !correct.ambient) {
+    discard <- (stats$Total <= lower)
+    tmp[discard] <- NA_real_
+  }
   
   stats$FDR <- p.adjust(tmp, method="BH")
   stats$is.cell = stats$FDR <= fdr.threshold
