@@ -34,7 +34,7 @@
 #'
 #' @param barcode.args Further arguments to pass to \code{\link{barcodeRanks}}.
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
-#' @param alpha A numeric scalar specifying the scaling parameter for the Dirichlet-multinomial sampling scheme (see \code{?\link{emptyDrops}}).
+#' @param test.ambient A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to \code{lower}.
 #' @param ... For the generic, further arguments to pass to to individual methods.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
 
@@ -295,6 +295,7 @@ NULL
                             retain=retain, 
                             by.rank.lower=by.rank.lower, 
                             by.rank.upper=by.rank.upper, 
+                            test.ambient=test.ambient,
                             ...,
                             BPPARAM=BPPARAM) 
 
