@@ -32,7 +32,7 @@
 #' 
 #' @param maxMinRatio A numeric scalar specifying the maximum ratio of maximum UMI count and minimum UMI count used in simple filtering, 
 #' maximum UMI count used in simple filtering is determined first by \code{nExpectedCells*(1-maxPercentile)}, minimum UMI count used in
-#'  simple filtering is then determined by this ratio, as specified in the call to CellRanger..
+#'  simple filtering is then determined by this ratio.
 #'  
 #' @param seed Integer specifying the seed that will be used to run \code{emptyDrops}
 #' @param ... For the generic, further arguments to pass to \code{emptyDrops}.
