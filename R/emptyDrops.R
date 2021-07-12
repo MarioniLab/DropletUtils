@@ -179,13 +179,21 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
+    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
+{
+    .test_empty_drops(m=m, lower=lower, niters=niters, test.ambient=test.ambient, ignore=ignore, 
+        alpha=alpha, round=round, by.rank=by.rank, ambient.FUN = .compute_ambient_stats, 
+        BPPARAM=BPPARAM, retain=NULL, bottom=NULL, by.rank.bottom=NULL) 
+}
+
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom beachmat colBlockApply
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
+.test_empty_drops <- function(m, lower=100, bottom=NULL, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
+    round=TRUE, by.rank=NULL, by.rank.bottom=NULL, retain=NULL, BPPARAM=SerialParam()) 
 {
     if (!.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
