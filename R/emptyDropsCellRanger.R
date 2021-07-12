@@ -118,7 +118,8 @@ NULL
     # of STARsolo 2.7.9a (https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1),
     # which, itself, was reverse engineered from the behavior of 
     # CellRanger 3+. The original C++ code on which this 
-    # function is based can be found at (https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp) 
+    # function is based can be found at (https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp
+    #  and https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_emptyDrops_CR.cpp) 
     
     ####################################################################################################################
     # setup emptyDrops
