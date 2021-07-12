@@ -1,174 +1,202 @@
-#' Estimate the ambient profile from empty droplets
+#' An approximate implementation of the \code{--soloCellFilter  EmptyDrops_CR} filtering approach to identify empty droplets.
 #'
-#' Estimate the transcript proportions in the ambient solution from an unfiltered count matrix,
-#' assuming that low-count barcodes correspond to \dQuote{known empty} droplets.
-#' Zeroes are filled in using the Good-Turing method.
+#' An approximate implementation of the \code{--soloCellFilter  EmptyDrops_CR} filtering approach, 
+#' which, itself, was reverse-engineered from the behavior of CellRanger 3+.
+#' 
+#' @param m A numeric matrix-like object containing counts, where columns represent barcoded droplets and rows represent features.
+#' The matrix should only contain barcodes for an individual sample, prior to any filtering for barcodes.
+#' 
+#' @param expected A numeric scalar specifying the expected number of barcodes in this sample It is same as \code{nExpectedCells} in STARsolo.
+#' 
+#' @param max.percentile A numeric scalar specifying the percentile used in simple filtering, barcodes selected by simple filtering 
+#' will be regarded as real barcodes regardless of the \code{emptyDrops} result. It is same as \code{maxPercentile} in STARsolo.
+#' 
+#' @param max.min.ratio A numeric scalar specifying the maximum ratio of maximum UMI count and minimum UMI count used in simple filtering, 
+#' maximum UMI count used in simple filtering is determined first by \code{expected*(1-max.percentile)}, minimum UMI count used in
+#'  simple filtering is then determined by this ratio. It is same as \code{maxMinRatio} in STARsolo.
+#'  
+#' @param umi.min A numeric scalar specifying the minimum UMI count above which a sample will be included in ambient profiles. It is same as \code{umiMin} in STARsolo.
+#' 
+#' @param umi.min.frac.median A numeric scalar between 0 and 1 specifying that only the barcodes whose UMI count are above this number 
+#' fraction of the median UMI count of the top \code{expected} barcodes will be included in the ambient profile. 
+#' It is same as \code{umiMinFracMedian} in STARsolo.
+#' 
+#' @param cand.max.n An integer specifying the maximum number of ambient barcodes that are possible to be regarded as real barcodes. It is same as \code{canMaxN} in STARsolo.
+#' 
+#' @param ind.min An integer specifying the lowest UMI count ranking of the ambient pool, barcodes with UMI count ranking below
+#' this number will not be included in the ambient pool. It is same as \code{indMin} in STARsolo. It is also same as \code{by.rank} in \code{emptyDrops}.
+
+#' @param ind.max An integer specifying the highest UMI count ranking of the ambient pool, barcodes with UMI count ranking above
+#' this number will not be included in the ambient pool. It is same as \code{indMax} in STARsolo.
+#' 
+#' @param fdr A numeric scalar specifying the FDR threshold to filter barcodes. Barcodes whose FDR returned by emptyDrops
+#' is above this threshold will not be regarded as real barcodes. It is same as \code{FDR} in STARsolo.
 #'
-#' @inheritParams emptyDrops
-#' @param by.rank An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
-#' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
-#' @param ... For the generic, further arguments to pass to individual methods.
-#'
-#' For the SummarizedExperiment method, further arguments to pass to the ANY method.
-#'
-#' For \code{estimateAmbience}, arguments to pass to \code{ambientProfileEmpty}.
-#'
+#' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
+#' @param niters An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.
+#' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
+
 #' @details
-#' This function obtains an estimate of the composition of the ambient pool of RNA based on the barcodes with total UMI counts less than or equal to \code{lower}.
-#' For each gene, counts are summed across all low-count barcodes and the resulting count vector is used for Good-Turing estimation of the proportions for each transcript.
-#' The aim here is to obtain reasonable proportions for genes with counts of zero in low-count barcodes but non-zero counts for other barcodes (thus avoiding likelihoods of zero when modelling the latter with the proportions).
-#'
-#' This function will also attempt to detect whether \code{m} contains non-integer values by seeing if the column and row sums are discrete.
-#' If such values are present, \code{m} is first \code{\link{round}}ed to the nearest integer value before proceeding.
-#' This may be relevant when the count matrix is generated from pseudo-alignment methods like Alevin (see the \pkg{tximeta} package for details).
-#' Rounding is performed by default as discrete count values are necessary for the Good-Turing algorithm, but if \code{m} is known to be discrete, setting \code{round=FALSE} can provide a small efficiency improvement.
+#' This function is an approximate implementation of the  \code{--soloCellFilter  EmptyDrops_CR} filtering approach of STARsolo 2.7.9a
+#' , which, itself, was reverse-engineered from the behavior of  CellRanger 3+. 
+#' All parameters are default set as the default value used in starSolo 2.7.9a.
+#' In most cases, users just need to specify the raw and unfiltered count matrix, \code{m}.
+#' See \code{?\link{emptyDrops}} for an alternative approach for cell calling.
 #' 
-#' Setting \code{good.turing=FALSE} may be convenient to obtain raw counts for use in further modelling.
-#'
-#' \code{estimateAmbience} is soft-deprecated; use \code{ambientProfileEmpty} instead.
-#'
-#' @section Behavior at zero counts:
-#' Good-Turing returns zero probabilities for zero counts if none of the summed counts are equal to 1.
-#' This is technically correct but not helpful, so we protect against this by adding a single \dQuote{pseudo-feature} with a count of 1 to the profile.
-#' The modified profile is used to calculate a Good-Turing estimate of observing any feature that has zero counts, which is then divided to get the per-feature probability. 
-#' We scale down all the other probabilities to make space for this new pseudo-probability, which has some properties of unclear utility (see \url{https://github.com/MarioniLab/DropletUtils/issues/39}). 
-#' 
-#' Note that genes with counts of zero across all barcodes in \code{m} automatically have proportions of zero.
-#' This ensures that the estimation is not affected by the presence/absence of non-expressed genes in different annotations.
-#' In any case, such genes are likely to be completely irrelevant to downstream steps and can be safely ignored.
-#'
-#' @section Finding the assumed empty droplets:
-#' The default approach is to assume that all barcodes with total counts less than or equal to \code{lower} are empty.
-#' This is generally effective but may not be adequate for datasets with unusually low or high sequencing depth, such that all or none of the barcodes are detected as empty respectively.
-#' For example, there is no obvious choice for \code{lower} in CITE-seq data given that the coverage can be highly variable. 
-#'
-#' In such cases, an alternative approach can be used by passing an integer to the \code{by.rank} argument.
-#' This specifies the number of barcodes with the highest total counts to ignore; the remaining barcodes are assumed to be ambient.
-#' The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
-#' By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
-#'
+#' The main differences between \code{emptyDropsCellRanger} and \code{emptyDrops} are 
+#' 1. \code{emptyDropsCellRanger} first applies a simple filtering strategy to identify 
+#' retained cells according to the ranking of the total count of barcodes. This process is based on
+#'  \code{expected}, \code{max.percentile}, \code{max.min.ratio}, \code{umi.min}, and \code{umi.min.frac.median}. 
+#' 2. \code{emptyDropsCellRanger} takes barcodes whose total count rank within a certain range 
+#' (by default, (45,000, 90,000]) as the input of SimpleGoodTuring. So in addition to the lower 
+#' limit \code{lower}, it also has an bottom limit \code{bottom}.
+#' 3. When computing ambient profile, \code{emptyDropsCellRanger} defines a candidate pool. 
+#' Only the barcodes in the pool are involved in ambient profile computation and are assigned a p-value. 
+#' By default, the pool include the 20,000 barcodes whose total count rank right after the barcodes 
+#' selected by the simple filtering strategy described above.
+#'  
 #' @return
-#' A numeric vector of length equal to \code{nrow(m)},
-#' containing the estimated proportion of each transcript in the ambient solution.
-#'
-#' If \code{good.turing=FALSE}, the vector instead contains the sum of counts for each gene across all low-count barcodes.
-#'
-#' @author Aaron Lun
+#' A DataFrame like \code{\link{emptyDrops}}, with an additional binary \code{is.cell} field demonstrating whether
+#' barcodes are estimated as real barcodes.
+#' 
+#' @author
+#' Dongze He, Rob Patro
+#' 
 #' @examples
 #' # Mocking up some data:
 #' set.seed(0)
 #' my.counts <- DropletUtils:::simCounts()
 #' 
-#' ambience <- ambientProfileEmpty(my.counts)
-#' head(ambience)
-#'
+#' # Identify likely cell-containing droplets.
+#' e.out <- emptyDropsCellRanger(my.counts)
+#' e.out
+#' 
+#' # Get matrix of estimated barcodes.
+#' cell.counts <- my.counts[, e.out$is.cell]
+#' 
+#' @references
+#' Kaminow et al. (2021).
+#' STARsolo: accurate, fast and versatile mapping/quantification of single-cell and single-nucleus RNA-seq data
+#' \url{https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1}
+#' 
 #' @seealso
-#' \code{\link{emptyDrops}} and \code{\link{hashedDrops}}, where the ambient profile estimates are used for testing.
+#' \code{\link{emptyDrops}}, for another method for calling barcodes.
 #'
-#' \code{\link{ambientContribMaximum}} and related functions, to estimate the contribution of ambient contamination in each library.
-#'
-#' @name ambientProfileEmpty
+#' @name emptyDropsCellRanger
 NULL
 
-#' @importFrom Matrix rowSums colSums
-#' @importFrom BiocParallel bpstart bpstop SerialParam
-#' @importFrom scuttle .bpNotSharedOrUp
-#' @importFrom DelayedArray setAutoBPPARAM
-.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
+# Authors: Dongze He, Rob Patro
+# Center of Bioinformatics and Computational Biology, University of Maryland, College Park, Maryland, 20740
+
+#' @export
+#' @rdname emptyDropsCellRanger
+
+#' @importFrom stats p.adjust
+#' @importFrom S4Vectors metadata<- metadata
+#' @importFrom BiocParallel SerialParam
+.empty_drops_cell_ranger  <- function(m, 
+                                      # STARsolo arguments
+                                      ## simple filtering
+                                      expected=3000,            # nExpectedCells
+                                      max.percentile=0.99,      # maxPercentile
+                                      max.min.ratio=10,         # maxMinRatio
+                                      ## emptyDrops_CR
+                                      umi.min=500,              # umiMin
+                                      umi.min.frac.median=0.01, # umiMinFracMedian
+                                      can.max.n=20000,          # candMaxN
+                                      ind.min=45000,            # indMin
+                                      ind.max=90000,            # indMax
+                                      fdr=0.01,                 # FDR
+                                      # emptyDrops arguments
+                                      round=TRUE,
+                                      niters=10000,
+                                      BPPARAM=SerialParam()
+) {
+    
+    # This function is an approximate implementation of the 
+    # `--soloCellFilter  EmptyDrops_CR` filtering approach 
+    # of STARsolo 2.7.9a (https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1),
+    # which, itself, was reverse engineered from the behavior of 
+    # CellRanger 3+. The original C++ code on which this 
+    # function is based can be found at (https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp) 
+    
+    ####################################################################################################################
+    # setup emptyDrops
     if (!.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
-
-    old <- .parallelize(BPPARAM)
-    on.exit(setAutoBPPARAM(old), add=TRUE)
-
+    
+    m <- .realize_DA_to_memory(m, BPPARAM)
     m <- .rounded_to_integer(m, round)
+
+    ###################################################################################################################    
+    # Simple Filtering
+    # https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp
+    # line 36-61
     totals <- .intColSums(m)
-    lower <- .get_lower(totals, lower, by.rank=by.rank)
+    
+    max.ind <- round(expected * (1 - max.percentile)) # maxind
+    n.umi.max <- totals[order(totals, decreasing = TRUE)[min(length(totals), max.ind)]] # nUMImax
+    ## retain: barcodes with UMI count higher than retain will be regarded as real barcodes without any further tests
+    retain <- max(round(n.umi.max/max.min.ratio),1) # nUMImin
+    ncells.simple <- sum(totals>=retain)
+    
+    ###################################################################################################################    
+    # select candidate barcodes
+    # SoloFeature_emptyDrops_CR.cpp line 117-134
+    
+    i.cand.first = ncells.simple+1
+    min.umi  <- max(umi.min, round(umi.min.frac.median * totals[ncells.simple/2]))
+    i.cand.last = min(ncells.simple + can.max.n, sum(totals > min.umi))
 
-    if (good.turing) {
-        a <- .compute_ambient_stats(m, totals, lower=lower)
-        output <- numeric(nrow(m))
-        output[!a$discard] <- a$ambient.prop
-        names(output) <- rownames(m)
-    } else {
-        ambient <- totals <= lower
-        output <- rowSums(m[,ambient,drop=FALSE])
-    }
+    ## ignore: barcodes with UMI count higher than retain will be regarded as emptyDrops,
+    ## but barcodes with UMI counts between [ignore, lower] will be used in SimpleGoodTuring
+    ignore = totals[order(totals, decreasing = TRUE)[i.cand.last]]
 
-    output
+    stats <- .test_empty_drops(m=m, 
+                               lower=NULL, 
+                               bottom=NULL, 
+                               niters=niters, 
+                               test.ambient=FALSE, 
+                               ignore=ignore, 
+                               alpha=Inf, 
+                               round=FALSE, 
+                               by.rank=ind.min, 
+                               by.rank.bottom=ind.max, 
+                               retain=retain,
+                               BPPARAM=BPPARAM) 
+
+    tmp <- stats$PValue
+    
+    # Possibly redefine 'lower' based on 'by.rank=' passed to testEmptyDrops.
+    lower <- metadata(stats)$lower
+    bottom <- metadata(stats)$bottom
+    
+    metadata(stats)$retain <- retain
+    always <- stats$Total >= retain
+    tmp[always] <- 0
+    
+    discard <- (stats$Total <= ignore)
+    tmp[discard] <- NA_real_
+    
+    stats$FDR <- p.adjust(tmp, method="BH")
+    stats$is.cell = stats$FDR <= fdr
+    stats$is.cell[is.na(stats$is.cell)] <- FALSE
+    stats
 }
 
 #' @export
-#' @rdname ambientProfileEmpty
-estimateAmbience <- function(...) {
-    ambientProfileEmpty(...)
-}
-
-#' @importFrom Matrix rowSums
-.compute_ambient_stats <- function(m, totals, lower) {
-    # This doesn't invalidate 'totals', by definition.
-    # NOTE: parallelization handled by setAutoBPPARAM above.
-    discard <- rowSums(m) == 0
-    if (any(discard)) {
-        m <- m[!discard,,drop=FALSE]
-    }
-
-    # Computing the average profile from the ambient cells.
-    ambient <- totals <= lower # lower => "T" in the text.
-    ambient.m <- m[,ambient,drop=FALSE]
-    ambient.prof <- rowSums(ambient.m)
-
-    if (sum(ambient.prof)==0) {
-        stop("no counts available to estimate the ambient profile")
-    }
-    ambient.prop <- .safe_good_turing(ambient.prof)
-
-    list(
-        m=m, # this MUST have the same number of columns as input.
-        discard=discard,
-        ambient=ambient,
-        ambient.m=ambient.m,
-        ambient.prop=ambient.prop
-    )
-}
-
-.get_lower <- function(totals, lower, by.rank) {
-    if (is.null(by.rank)) {
-        lower
-    } else if (by.rank >= length(totals)) {
-        stop("not have enough columns for supplied 'by.rank'")
-    } else {
-        totals[order(totals, decreasing=TRUE)[by.rank+1]]
-    }
-}
-
-#' @importFrom edgeR goodTuringProportions
-.safe_good_turing <- function(ambient.prof) {
-    ambient.prob <- goodTuringProportions(ambient.prof)
-
-    still.zero <- ambient.prob<=0
-    if (any(still.zero)) {
-        pseudo.prob <- 1/sum(ambient.prof)
-        ambient.prob[still.zero] <- pseudo.prob/sum(still.zero)
-        ambient.prob[!still.zero] <- ambient.prob[!still.zero] * (1 - pseudo.prob)
-    }
-
-    ambient.prob
-}
+#' @rdname emptyDropsCellRanger
+setGeneric("emptyDropsCellRanger", function(m, ...) standardGeneric("emptyDropsCellRanger"))
 
 #' @export
-#' @rdname ambientProfileEmpty
-setGeneric("ambientProfileEmpty", function(m, ...) standardGeneric("ambientProfileEmpty"))
+#' @rdname emptyDropsCellRanger
+setMethod("emptyDropsCellRanger", "ANY", .empty_drops_cell_ranger)
 
 #' @export
-#' @rdname ambientProfileEmpty
-setMethod("ambientProfileEmpty", "ANY", .ambient_profile_empty)
-
-#' @export
-#' @rdname ambientProfileEmpty
+#' @rdname emptyDropsCellRanger
 #' @importFrom SummarizedExperiment assay
-setMethod("ambientProfileEmpty", "SummarizedExperiment", function(m, ..., assay.type="counts") {
-    .ambient_profile_empty(assay(m, assay.type), ...)    
+setMethod("emptyDropsCellRanger", "SummarizedExperiment", function(m, ..., assay.type="counts") {
+  .empty_drops_cell_ranger(assay(m, assay.type), ...)
 })
