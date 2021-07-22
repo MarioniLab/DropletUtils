@@ -187,7 +187,7 @@ NULL
 testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
     round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
 {
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
@@ -367,7 +367,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 #' @importFrom S4Vectors metadata<- metadata
 #' @importFrom BiocParallel SerialParam
 .empty_drops <- function(m, lower=100, retain=NULL, barcode.args=list(), round=TRUE, test.ambient=FALSE, ..., BPPARAM=SerialParam()) {
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
