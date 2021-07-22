@@ -75,7 +75,7 @@ NULL
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom DelayedArray setAutoBPPARAM
 .ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
-    if (!.bpNotSharedOrUp(BPPARAM)) {
+    if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
