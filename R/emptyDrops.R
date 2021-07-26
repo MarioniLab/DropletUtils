@@ -179,13 +179,22 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
+
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
+    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
+{
+    .test_empty_drops(m=m, lower=lower, bottom=NULL, niters=niters, test.ambient=test.ambient, ignore=ignore, 
+        alpha=alpha, round=round, by.rank=by.rank, by.rank.bottom=NULL, retain=NULL, BPPARAM=BPPARAM) 
+}
+
+
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom beachmat colBlockApply
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
+.test_empty_drops <- function(m, lower=100, bottom=NULL, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
+    round=TRUE, by.rank=NULL, by.rank.bottom=NULL, retain=NULL, BPPARAM=SerialParam()) 
 {
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
@@ -202,8 +211,8 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
     lower <- .get_lower(totals, lower, by.rank=by.rank)
-
-    astats <- .compute_ambient_stats(m, totals, lower=lower)
+    bottom <- .get_bottom(totals, bottom, by.rank.bottom=by.rank.bottom) # by default it is NULL
+    astats <- .compute_ambient_stats(m, totals, lower=lower, bottom=bottom)
     m <- astats$m
     ambient <- astats$ambient
     ambient.prop <- astats$ambient.prop
@@ -224,6 +233,9 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     }
     if (!is.null(ignore)) { 
         keep <- keep & totals > ignore
+    }
+    if (!is.null(retain)) { # by default, it is NULL
+        keep <- keep & totals < retain
     }
     obs.m <- m[,keep,drop=FALSE]
     obs.totals <- totals[keep]
@@ -249,7 +261,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     all.lim[keep] <- limited
 
     output <- DataFrame(Total=totals, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
-    metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
+    metadata(output) <- list(lower=lower, bottom=bottom, niters=niters, ambient=ambient.prop, alpha=alpha)
     output
 }
 

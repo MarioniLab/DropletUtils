@@ -107,7 +107,7 @@ estimateAmbience <- function(...) {
 }
 
 #' @importFrom Matrix rowSums
-.compute_ambient_stats <- function(m, totals, lower) {
+.compute_ambient_stats <- function(m, totals, lower, bottom=NULL) {
     # This doesn't invalidate 'totals', by definition.
     # NOTE: parallelization handled by setAutoBPPARAM above.
     discard <- rowSums(m) == 0
@@ -117,6 +117,9 @@ estimateAmbience <- function(...) {
 
     # Computing the average profile from the ambient cells.
     ambient <- totals <= lower # lower => "T" in the text.
+    if (!is.null(bottom)) {
+        ambient <- ambient & totals > bottom
+    }
     ambient.m <- m[,ambient,drop=FALSE]
     ambient.prof <- rowSums(ambient.m)
 
@@ -142,6 +145,16 @@ estimateAmbience <- function(...) {
     } else {
         totals[order(totals, decreasing=TRUE)[by.rank+1]]
     }
+}
+
+.get_bottom <- function(totals, bottom, by.rank.bottom) {
+  if (is.null(bottom) & is.null(by.rank.bottom)) {
+    NULL
+  } else if (by.rank.bottom >= length(totals)) {
+    min(totals)
+  } else {
+    totals[order(totals, decreasing=TRUE)[by.rank.bottom +1]]
+  }
 }
 
 #' @importFrom edgeR goodTuringProportions

@@ -6,6 +6,8 @@ Authors@R: c(
     person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
     person("Jonathan", "Griffiths", role="ctb"), 
     person("Davis", "McCarthy", role="ctb"))
+    person("Dongze", "He", role="ctb"))
+    person("Rob", "Patro", role="ctb"))
 Depends: SingleCellExperiment
 Imports: 
     utils,
