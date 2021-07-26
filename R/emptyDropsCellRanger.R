@@ -76,9 +76,6 @@
 #' @name emptyDropsCellRanger
 NULL
 
-#' @export
-#' @rdname emptyDropsCellRanger
-
 #' @importFrom stats p.adjust
 #' @importFrom S4Vectors metadata<- metadata
 #' @importFrom BiocParallel SerialParam
