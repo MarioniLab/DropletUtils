@@ -179,23 +179,22 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
-
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
-{
-    .test_empty_drops(m=m, lower=lower, bottom=NULL, niters=niters, test.ambient=test.ambient, ignore=ignore, 
-        alpha=alpha, round=round, by.rank=by.rank, by.rank.bottom=NULL, retain=NULL, BPPARAM=BPPARAM) 
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) {
+    ambfun <- function(mat, totals) {
+        lower <- .get_lower(totals, lower, by.rank=by.rank)
+        astats <- .compute_ambient_stats(mat, totals, lower=lower)
+        astats$metadata <- list(lower = lower)
+        astats
+    }
+    .test_empty_drops(m=m, ambient.FUN=ambfun, niters=niters, test.ambient=test.ambient, ignore=ignore, alpha=alpha, round=round, BPPARAM=BPPARAM) 
 }
-
 
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom beachmat colBlockApply
-.test_empty_drops <- function(m, lower=100, bottom=NULL, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, by.rank=NULL, by.rank.bottom=NULL, retain=NULL, BPPARAM=SerialParam()) 
-{
+.test_empty_drops <- function(m, ambient.FUN, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, BPPARAM=SerialParam()) {
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
@@ -210,9 +209,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
-    lower <- .get_lower(totals, lower, by.rank=by.rank)
-    bottom <- .get_bottom(totals, bottom, by.rank.bottom=by.rank.bottom) # by default it is NULL
-    astats <- .compute_ambient_stats(m, totals, lower=lower, bottom=bottom)
+    astats <- ambient.FUN(m, totals)
     m <- astats$m
     ambient <- astats$ambient
     ambient.prop <- astats$ambient.prop
@@ -233,9 +230,6 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     }
     if (!is.null(ignore)) { 
         keep <- keep & totals > ignore
-    }
-    if (!is.null(retain)) { # by default, it is NULL
-        keep <- keep & totals < retain
     }
     obs.m <- m[,keep,drop=FALSE]
     obs.totals <- totals[keep]
@@ -261,7 +255,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     all.lim[keep] <- limited
 
     output <- DataFrame(Total=totals, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
-    metadata(output) <- list(lower=lower, bottom=bottom, niters=niters, ambient=ambient.prop, alpha=alpha)
+    metadata(output) <- c(astats$metadata, list(niters=niters, ambient=ambient.prop, alpha=alpha))
     output
 }
 
