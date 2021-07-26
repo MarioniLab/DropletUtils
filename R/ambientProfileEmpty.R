@@ -107,7 +107,7 @@ estimateAmbience <- function(...) {
 }
 
 #' @importFrom Matrix rowSums
-.compute_ambient_stats <- function(m, totals, lower, minimum=NULL) {
+.compute_ambient_stats <- function(m, totals, lower) {
     # This doesn't invalidate 'totals', by definition.
     # NOTE: parallelization handled by setAutoBPPARAM above.
     discard <- rowSums(m) == 0
@@ -117,12 +117,6 @@ estimateAmbience <- function(...) {
 
     # Computing the average profile from the ambient cells.
     ambient <- totals <= lower # lower => "T" in the text.
-
-    # Require a minimum count for the ambient profile, if so desired.
-    if (!is.null(minimum)) { 
-        ambient <- ambient & totals > minimum
-    }
-
     ambient.m <- m[,ambient,drop=FALSE]
     ambient.prof <- rowSums(ambient.m)
 

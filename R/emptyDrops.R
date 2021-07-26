@@ -184,6 +184,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
         lower <- .get_lower(totals, lower, by.rank=by.rank)
         astats <- .compute_ambient_stats(mat, totals, lower=lower)
         astats$metadata <- list(lower = lower)
+        astats$keep <- !astats$ambient
         astats
     }
     .test_empty_drops(m=m, ambient.FUN=ambfun, niters=niters, test.ambient=test.ambient, ignore=ignore, alpha=alpha, round=round, BPPARAM=BPPARAM) 
@@ -224,7 +225,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     # Removing supposed ambient cells from the matrix.
     # Also removing additional cells that don't pass some total count threshold, if required.
     if (!test.ambient) {
-        keep <- !ambient
+        keep <- astats$keep
     } else {
         keep <- totals > 0L
     }
