@@ -1,15 +1,16 @@
-#' An approximate implementation of the \code{--soloCellFilter  EmptyDrops_CR} filtering approach to identify empty droplets.
+#' CellRanger's emptyDrops variant 
 #'
-#' An approximate implementation of the \code{--soloCellFilter  EmptyDrops_CR} filtering approach, 
-#' which, itself, was reverse-engineered from the behavior of CellRanger 3+.
+#' An approximate implementation of the \code{--soloCellFilter EmptyDrops_CR} filtering approach, 
+#' which itself was reverse-engineered from the behavior of CellRanger 3.
 #' 
 #' @param m A numeric matrix-like object containing counts, where columns represent barcoded droplets and rows represent features.
 #' The matrix should only contain barcodes for an individual sample, prior to any filtering for barcodes.
-#' @param expected A numeric scalar specifying the expected number of barcodes in this sample It is same as \code{nExpectedCells} in STARsolo.
-#' @param max.percentile A numeric scalar specifying the percentile used in simple filtering, barcodes selected by simple filtering 
-#' These will be regarded as real barcodes regardless of the \code{emptyDrops} result. 
-#' It is same as \code{maxPercentile} in STARsolo.
-#' @param max.min.ratio A numeric scalar specifying the maximum ratio of maximum UMI count and minimum UMI count used in simple filtering, 
+#' @param expected A numeric scalar specifying the expected number of barcodes in this sample.
+#' This argument is the same as \code{nExpectedCells} in \pkg{STARsolo}.
+#' @param max.percentile A numeric scalar specifying a percentile of barcodes based on their total counts.
+#' Barcodes with higher totals will be treated as real barcodes regardless of their \code{emptyDrops} p-values.
+#' This argument is same as \code{maxPercentile} in \pkg{STARsolo}.
+#' @param max.min.ratio A numeric scalar specifying the maximum ratio of maximum UMI count and minimum UMI count used in simple filtering. 
 #' maximum UMI count used in simple filtering is determined first by \code{expected*(1-max.percentile)}, minimum UMI count used in
 #'  simple filtering is then determined by this ratio. It is same as \code{maxMinRatio} in STARsolo.
 #' @param umi.min A numeric scalar specifying the minimum UMI count above which a sample will be included in ambient profiles. It is same as \code{umiMin} in STARsolo.
@@ -28,27 +29,21 @@
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
 #'
 #' @details
-#' This function is an approximate implementation of the  \code{--soloCellFilter  EmptyDrops_CR} filtering approach of STARsolo 2.7.9a
-#' , which, itself, was reverse-engineered from the behavior of  CellRanger 3+. 
-#' All parameters are default set as the default value used in starSolo 2.7.9a.
-#' In most cases, users just need to specify the raw and unfiltered count matrix, \code{m}.
-#' See \code{?\link{emptyDrops}} for an alternative approach for cell calling.
-#' 
-#' The main differences between \code{emptyDropsCellRanger} and \code{emptyDrops} are 
-#' 1. \code{emptyDropsCellRanger} first applies a simple filtering strategy to identify 
-#' retained cells according to the ranking of the total count of barcodes. This process is based on
-#'  \code{expected}, \code{max.percentile}, \code{max.min.ratio}, \code{umi.min}, and \code{umi.min.frac.median}. 
-#' 2. \code{emptyDropsCellRanger} takes barcodes whose total count rank within a certain range 
-#' (by default, (45,000, 90,000]) as the input of SimpleGoodTuring. So in addition to the lower 
-#' limit \code{lower}, it also has an bottom limit \code{bottom}.
-#' 3. When computing ambient profile, \code{emptyDropsCellRanger} defines a candidate pool. 
+#' This function is an approximate implementation of the \code{--soloCellFilter EmptyDrops_CR} filtering approach of STARsolo 2.7.9a,
+#' which itself was reverse-engineered from the behavior of  CellRanger 3+. 
+#' The main differences between \code{emptyDropsCellRanger} and \code{emptyDrops} are:
+#' \itemize{
+#' \item \code{emptyDropsCellRanger} first applies a simple filtering strategy to identify retained cells according to the ranking of the total count of barcodes.
+#' This process is based on\code{expected}, \code{max.percentile}, \code{max.min.ratio}, \code{umi.min}, and \code{umi.min.frac.median}. 
+#' \item \code{emptyDropsCellRanger} takes barcodes whose total count rank within a certain range - by default, (45,000, 90,000] - as the input to the simple Good-Turing algorithm.
+#' So in addition to the lower limit in \code{lower}, it also has an bottom limit \code{bottom}.
+#' \item When computing ambient profile, \code{emptyDropsCellRanger} defines a candidate pool. 
 #' Only the barcodes in the pool are involved in ambient profile computation and are assigned a p-value. 
-#' By default, the pool include the 20,000 barcodes whose total count rank right after the barcodes 
-#' selected by the simple filtering strategy described above.
+#' By default, the pool include the 20,000 barcodes whose total count rank right after the barcodes selected by the simple filtering strategy described above.
+#' }
 #'  
 #' @return
-#' A DataFrame like \code{\link{emptyDrops}}, with an additional binary \code{is.cell} field demonstrating whether
-#' barcodes are estimated as real barcodes.
+#' A \linkS4class{DataFrame} with the same fields as that returned by \code{\link{emptyDrops}}.
 #' 
 #' @author
 #' Dongze He, Rob Patro
@@ -71,7 +66,7 @@
 #' \url{https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1}
 #' 
 #' @seealso
-#' \code{\link{emptyDrops}}, for another method for calling barcodes.
+#' \code{\link{emptyDrops}}, for the original implementation.
 #'
 #' @name emptyDropsCellRanger
 NULL
@@ -172,8 +167,6 @@ NULL
     tmp[always] <- 0
     
     stats$FDR <- p.adjust(tmp, method="BH")
-    stats$is.cell <- stats$FDR <= fdr
-    stats$is.cell[is.na(stats$is.cell)] <- FALSE
     stats
 }
 
