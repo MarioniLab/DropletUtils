@@ -7,17 +7,19 @@
 #' The matrix should only contain barcodes for an individual sample, prior to any filtering for barcodes.
 #' @param expected A numeric scalar specifying the expected number of barcodes in this sample.
 #' This argument is the same as \code{nExpectedCells} in \pkg{STARsolo}.
-#' @param max.percentile A numeric scalar specifying a percentile of barcodes based on their total counts.
-#' Barcodes with higher totals will be treated as real barcodes regardless of their \code{emptyDrops} p-values.
+#' @param max.percentile A numeric scalar specifying the top percentile of barcodes assumed to be real cells based on their total counts.
+#' Specifically, barcodes with higher totals than this percentile will be treated as real cells regardless of their \code{emptyDrops} p-values.
 #' This argument is same as \code{maxPercentile} in \pkg{STARsolo}.
-#' @param max.min.ratio A numeric scalar specifying the maximum ratio of maximum UMI count and minimum UMI count used in simple filtering. 
+#' @param max.min.ratio A numeric scalar specifying the maximum ratio of the maximum UMI count and minimum UMI count used in simple filtering. 
 #' maximum UMI count used in simple filtering is determined first by \code{expected*(1-max.percentile)}, minimum UMI count used in
 #'  simple filtering is then determined by this ratio. It is same as \code{maxMinRatio} in STARsolo.
-#' @param umi.min A numeric scalar specifying the minimum UMI count above which a sample will be included in ambient profiles. It is same as \code{umiMin} in STARsolo.
+#' @param umi.min A numeric scalar specifying the minimum UMI count for inclusion of a barcode in the ambient profile.
+#' This argument is the same as \code{umiMin} in \pkg{STARsolo}.
 #' @param umi.min.frac.median A numeric scalar between 0 and 1 specifying that only the barcodes whose UMI count are above this number 
 #' fraction of the median UMI count of the top \code{expected} barcodes will be included in the ambient profile. 
-#' It is same as \code{umiMinFracMedian} in STARsolo.
-#' @param cand.max.n An integer specifying the maximum number of ambient barcodes that are possible to be regarded as real barcodes. It is same as \code{canMaxN} in STARsolo.
+#' This argument is the same as \code{umiMinFracMedian} in \pkg{STARsolo}.
+#' @param cand.max.n An integer specifying the maximum number of ambient barcodes that are possible to be regarded as real barcodes. 
+#' This argument is the same as \code{canMaxN} in \pkg{STARsolo}.
 #' @param ind.min An integer specifying the lowest UMI count ranking of the ambient pool, barcodes with UMI count ranking below
 #' this number will not be included in the ambient pool. It is same as \code{indMin} in STARsolo. It is also same as \code{by.rank} in \code{emptyDrops}.
 #' @param ind.max An integer specifying the highest UMI count ranking of the ambient pool, barcodes with UMI count ranking above
