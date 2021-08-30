@@ -128,7 +128,7 @@ NULL
         ncells.simple <- sum(totals >= retain)
         min.umi  <- max(umi.min, round(umi.min.frac.median * totals[ncells.simple/2]))
         i.cand.last <- min(ncells.simple + can.max.n, sum(totals > min.umi))
-        max.rank <- min(ind.max + 1, length(totals), i.cand.last)
+        # max.rank <- min(ind.max + 1, length(totals), i.cand.last)
 
         # NOTE: parallelization handled by setAutoBPPARAM above.
         discard <- rowSums(m) == 0
@@ -138,7 +138,7 @@ NULL
 
         o <- order(totals, decreasing=TRUE)
         ambient <- logical(length(totals))
-        ambient[o[ind.min:max.rank]] <- TRUE
+        ambient[o[min(ind.min, length(totals)):min(ind.max, length(totals))]] <- TRUE
         ambient.m <- m[,ambient,drop=FALSE]
         ambient.prof <- rowSums(ambient.m)
 
@@ -149,8 +149,10 @@ NULL
 
         # Barcodes to keep are not just !ambient, as we want to exclude the
         # barcodes that are too low to be even considered as ambient.
-        keep <- (o < ind.min) 
-
+        # keep <- (o < (ncells.simple+1))
+        keep <- logical(length(totals)) 
+        keep[o[(ncells.simple+1):i.cand.last]] = TRUE
+        
         list(
             m=m, # this MUST have the same number of columns as input.
             discard=discard,
@@ -158,7 +160,7 @@ NULL
             ambient.m=ambient.m,
             ambient.prop=ambient.prop,
             keep=keep,
-            metadata=list(lower = totals[o[ind.min]], bottom=totals[o[max.rank]], retain=retain)
+            metadata=list(lower = totals[o[min(ind.min, length(totals))]], bottom=totals[o[min(ind.max, length(totals))]], retain=retain)
         )
     }
 
