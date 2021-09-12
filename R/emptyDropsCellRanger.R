@@ -5,45 +5,66 @@
 #' 
 #' @param m A numeric matrix-like object containing counts, where columns represent barcoded droplets and rows represent features.
 #' The matrix should only contain barcodes for an individual sample, prior to any filtering for barcodes.
-#' @param expected A numeric scalar specifying the expected number of barcodes in this sample.
-#' This argument is the same as \code{nExpectedCells} in \pkg{STARsolo}.
-#' @param max.percentile A numeric scalar specifying the top percentile of barcodes assumed to be real cells based on their total counts.
-#' Specifically, barcodes with higher totals than this percentile will be treated as real cells regardless of their \code{emptyDrops} p-values.
-#' This argument is same as \code{maxPercentile} in \pkg{STARsolo}.
-#' @param max.min.ratio A numeric scalar specifying the maximum ratio of the maximum UMI count and minimum UMI count used in simple filtering. 
-#' maximum UMI count used in simple filtering is determined first by \code{expected*(1-max.percentile)}, minimum UMI count used in
-#'  simple filtering is then determined by this ratio. It is same as \code{maxMinRatio} in STARsolo.
-#' @param umi.min A numeric scalar specifying the minimum UMI count for inclusion of a barcode in the ambient profile.
-#' This argument is the same as \code{umiMin} in \pkg{STARsolo}.
-#' @param umi.min.frac.median A numeric scalar between 0 and 1 specifying that only the barcodes whose UMI count are above this number 
-#' fraction of the median UMI count of the top \code{expected} barcodes will be included in the ambient profile. 
-#' This argument is the same as \code{umiMinFracMedian} in \pkg{STARsolo}.
-#' @param cand.max.n An integer specifying the maximum number of ambient barcodes that are possible to be regarded as real barcodes. 
-#' This argument is the same as \code{canMaxN} in \pkg{STARsolo}.
-#' @param ind.min An integer specifying the lowest UMI count ranking of the ambient pool, barcodes with UMI count ranking below
-#' this number will not be included in the ambient pool. It is same as \code{indMin} in STARsolo. It is also same as \code{by.rank} in \code{emptyDrops}.
-#' @param ind.max An integer specifying the highest UMI count ranking of the ambient pool, barcodes with UMI count ranking above
-#' this number will not be included in the ambient pool. It is same as \code{indMax} in STARsolo.
-#' @param fdr A numeric scalar specifying the FDR threshold to filter barcodes. Barcodes whose FDR returned by emptyDrops
-#' is above this threshold will not be regarded as real barcodes. It is same as \code{FDR} in STARsolo.
-#' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
+#' @param n.expected.cells An integer scalar specifying the number of expected cells in a sample. 
+#' @param max.percentile A numeric scalar between 0 and 1 used to define the maximum UMI count used in the simple filtering algorithm. 
+#' @param max.min.ratio An integer scalar specifying the ratio of the maximum and minimum UMI count used in the simple filtering algorithm. 
+#' @param umi.min An integer scalar specifying the minimum UMI count for inclusion of a barcode in the cell candidate pool. 
+#' @param umi.min.frac.median A numeric scalar between 0 and 1 used to define the minimum UMI count for inclusion of a barcode in the cell candidate pool.
+#' @param cand.max.n An integer scalar specifying the maximum number of barcodes that can be included in the cell candidate pool. 
+#' @param ind.min An integer scalar specifying the lowest UMI count ranking for inclusion of a barcode in the ambient profile. 
+#' @param ind.max An integer scalar specifying the highest UMI count ranking for inclusion of a barcode in the ambient profile. 
+#' @param round A logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
 #' @param niters An integer scalar specifying the number of iterations to use for the Monte Carlo p-value calculations.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.
 #'
-#' @details
-#' This function is an approximate implementation of the \code{--soloCellFilter EmptyDrops_CR} filtering approach of STARsolo 2.7.9a,
-#' which itself was reverse-engineered from the behavior of  CellRanger 3+. 
+#' @section Details about \code{emptyDropsCellRanger} arguments:
+#' The arguments in \pkg{STARsolo} are in one-to-one correspondence with the arguments in \code{emptyDropsCellRanger}. All parameters defaults are set as the same as those used in STARsolo 2.7.9a.
+#' \itemize{
+#' \item \code{n.expected.cells}: This argument is used to define the number of expected cells in a sample. 
+#' It is the same as \code{nExpectedCells} in \pkg{STARsolo}. 
+#' \item \code{max.percentile}: Together with \code{n.expected.cells}, \code{max.percentile} defines the maximum UMI count that an expected cell can have. 
+#' This argument is the same as \code{maxPercentile} in \pkg{STARsolo}. 
+#' \item \code{max.min.ratio}: Based on the maximum UMI count computed using \code{n.expected.cells} and \code{max.percentile}, \code{max.min.ratio} defines the threshold of the minimum UMI count that an expected cell can have according to their ratio. 
+#' The barcodes whose UMI count is above this threshold are assigned as real cells by the simple filtering algorithm (\code{nCellsSimple} in \pkg{STARsolo}). 
+#' It is same as \code{maxMinRatio} in \pkg{STARsolo}.
+#' \item \code{umi.min}: This argument is one of the three thresholds used to define the lower bound of the cell candidate pool.
+#' \code{umi.min} specifies the minimum UMI count for inclusion of a barcode in the cell candidate pool. 
+#' This argument is the same as \code{umiMin} in \pkg{STARsolo}.
+#' \item \code{umi.min.frac.median}: This argument is one of the three thresholds used to define the lower bound of the cell candidate pool. 
+#' This argument defines the minimum UMI as \code{umi.min.frac.median} times the median UMI count of the real cells assigned by the simple filtering algorithm. 
+#' This argument is the same as \code{umiMinFracMedian} in \pkg{STARsolo}.
+#' \item \code{cand.max.n}: This argument is one of the three thresholds used to define the lower bound of the cell candidate pool. 
+#' This argument defines the minimum UMI as the UMI count of the barcodes whose UMI count ranks as the \code{cand.max.n}-th behind the real cells defined by the simple filtering algorithm. 
+#' This argument is the same as \code{umiMinFracMedian} in \pkg{STARsolo}.
+#' \item \code{ind.min}: This argument specifies the lowest UMI count ranking of the barcodes in the ambient pool. 
+#' This argument is same as \code{indMin} in \pkg{STARsolo}.
+#' \item \code{ind.max}: This argument specifies the highest UMI count ranking of the barcodes in the ambient pool. 
+#' This argument is same as \code{indMin} in \pkg{STARsolo}.
+#' }
+#' 
+#' @section Details about \code{emptyDropsCellRanger}:
+#' \code{emptyDropsCellRanger} works on only three subsets of the barcodes in a sample. 
+#' The first subset includes barcodes that are selected by the simple filtering pipeline. 
+#' These barcodes will be regarded as high quality cells without any further filtering.
+#' The second subset defines the ambient pool. 
+#' This subset is defined by \code{ind.min} and \code{ind.max}. 
+#' The barcodes that fall in this category will be used to compute the ambient profile. 
+#' Real cells are expected to have significantly non-ambient profile.
+#' The third subset defines the cell candidate pool. 
+#' This subset includes the barcodes whose number of UMI count is lower than that of the cells selected by the simple filtering algorithm and higher than the threshold defined by \code{umi.min}, \code{umi.min.frac.median} and \code{cand.max.n} together.
+#' Only the barcodes within this subset will be considered further (as potential non-empty barcodes) to compute the deviations from the ambient profile, and then the p-value and FDR. 
+#' In other words, besides barcodes that are assigned as cells directly by the simple filtering algorithm, only the barcodes that fall in this category have the chance be selected as real cells (FDR is not \code{NAN}.).
+#' 
+#' @section Differences between \code{emptyDropsCellRanger} and \code{emptyDrops}:
 #' The main differences between \code{emptyDropsCellRanger} and \code{emptyDrops} are:
 #' \itemize{
-#' \item \code{emptyDropsCellRanger} first applies a simple filtering strategy to identify retained cells according to the ranking of the total count of barcodes.
-#' This process is based on\code{expected}, \code{max.percentile}, \code{max.min.ratio}, \code{umi.min}, and \code{umi.min.frac.median}. 
-#' \item \code{emptyDropsCellRanger} takes barcodes whose total count rank within a certain range - by default, (45,000, 90,000] - as the input to the simple Good-Turing algorithm.
-#' So in addition to the lower limit in \code{lower}, it also has an bottom limit \code{bottom}.
-#' \item When computing ambient profile, \code{emptyDropsCellRanger} defines a candidate pool. 
-#' Only the barcodes in the pool are involved in ambient profile computation and are assigned a p-value. 
-#' By default, the pool include the 20,000 barcodes whose total count rank right after the barcodes selected by the simple filtering strategy described above.
+#' \item \code{emptyDropsCellRanger} applies a simple filtering strategy to identify some real cells before any further investigation.
+#' \item \code{emptyDropsCellRanger} takes barcodes whose total count ranks within a certain range - by default, (45,000, 90,000] - to compute the ambient profile.
+#' While \code{emptyDrops} only defines the upper bound using \code{lower} or \code{by.rank}.
+#' \item \code{emptyDropsCellRanger} defines a cell candidate pool according to three parameters, \code{umi.min},\code{umi.min.frac.median} and \code{cand.max.n}. While in \code{emptyDrops}, this is defined by \code{lower}.
 #' }
-#'  
+#' 
+#' 
 #' @return
 #' A \linkS4class{DataFrame} with the same fields as that returned by \code{\link{emptyDrops}}.
 #' 
@@ -56,11 +77,16 @@
 #' my.counts <- DropletUtils:::simCounts()
 #' 
 #' # Identify likely cell-containing droplets.
-#' e.out <- emptyDropsCellRanger(my.counts)
-#' e.out
-#' 
-#' # Get matrix of estimated barcodes.
-#' cell.counts <- my.counts[, e.out$is.cell]
+#' out <- emptyDropsCellRanger(my.counts)
+#' out
+#'
+#' is.cell <- out$FDR <= 0.01
+#' sum(is.cell, na.rm=TRUE)
+#'
+#' # Subsetting the matrix to the cell-containing droplets.
+#' # (using 'which()' to handle NAs smoothly).
+#' cell.counts <- my.counts[,which(is.cell),drop=FALSE]
+#' dim(cell.counts)
 #' 
 #' @references
 #' Kaminow et al. (2021).
@@ -77,24 +103,23 @@ NULL
 #' @importFrom S4Vectors metadata<- metadata
 #' @importFrom BiocParallel SerialParam
 .empty_drops_cell_ranger  <- function(m, 
-    # STARsolo arguments
-    ## simple filtering
-    expected=3000,            # nExpectedCells
-    max.percentile=0.99,      # maxPercentile
-    max.min.ratio=10,         # maxMinRatio
+                                      # STARsolo arguments
+                                      ## simple filtering
+                                      n.expected.cells=3000,            # nExpectedCells
+                                      max.percentile=0.99,      # maxPercentile
+                                      max.min.ratio=10,         # maxMinRatio
+                                      
+                                      ## emptyDrops_CR
+                                      umi.min=500,              # umiMin
+                                      umi.min.frac.median=0.01, # umiMinFracMedian
+                                      can.max.n=20000,          # candMaxN
+                                      ind.min=45000,            # indMin
+                                      ind.max=90000,            # indMax
 
-    ## emptyDrops_CR
-    umi.min=500,              # umiMin
-    umi.min.frac.median=0.01, # umiMinFracMedian
-    can.max.n=20000,          # candMaxN
-    ind.min=45000,            # indMin
-    ind.max=90000,            # indMax
-    fdr=0.01,                 # FDR
-
-    # emptyDrops arguments
-    round=TRUE,
-    niters=10000,
-    BPPARAM=SerialParam())
+                                      # emptyDrops arguments
+                                      round=TRUE,
+                                      niters=10000,
+                                      BPPARAM=SerialParam())
 {  
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
@@ -113,37 +138,36 @@ NULL
         # Simple Filtering
         # https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp
         # line 36-61
-        max.ind <- round(expected * (1 - max.percentile)) # maxind
+        max.ind <- round(n.expected.cells * (1 - max.percentile)) # maxind
         n.umi.max <- totals[order(totals, decreasing = TRUE)[min(length(totals), max.ind)]] # nUMImax
-
+        
         # Barcodes with UMI count higher than retain will be regarded as real
         # barcodes without any further tests
         retain <- max(round(n.umi.max/max.min.ratio),1) # nUMImin
-
+        
         # select barcodes to use as ambient solution
         # SoloFeature_emptyDrops_CR.cpp line 117-134
         ncells.simple <- sum(totals >= retain)
         min.umi  <- max(umi.min, round(umi.min.frac.median * totals[ncells.simple/2]))
         i.cand.last <- min(ncells.simple + can.max.n, sum(totals > min.umi))
-        # max.rank <- min(ind.max + 1, length(totals), i.cand.last)
 
         # NOTE: parallelization handled by setAutoBPPARAM above.
-        discard <- rowSums(m) == 0
+        discard <- rowSums(mat) == 0
         if (any(discard)) {
-            m <- m[!discard,,drop=FALSE]
+            mat <- mat[!discard,,drop=FALSE]
         }
-
+        
         o <- order(totals, decreasing=TRUE)
         ambient <- logical(length(totals))
         ambient[o[min(ind.min, length(totals)):min(ind.max, length(totals))]] <- TRUE
-        ambient.m <- m[,ambient,drop=FALSE]
+        ambient.m <- mat[,ambient,drop=FALSE]
         ambient.prof <- rowSums(ambient.m)
-
+        
         if (sum(ambient.prof)==0) {
             stop("no counts available to estimate the ambient profile")
         }
         ambient.prop <- .safe_good_turing(ambient.prof)
-
+        
         # Barcodes to keep are not just !ambient, as we want to exclude the
         # barcodes that are too low to be even considered as ambient.
         # keep <- (o < (ncells.simple+1))
@@ -151,7 +175,7 @@ NULL
         keep[o[(ncells.simple+1):i.cand.last]] = TRUE
         
         list(
-            m=m, # this MUST have the same number of columns as input.
+            m=mat, # this MUST have the same number of columns as input.
             discard=discard,
             ambient=ambient,
             ambient.m=ambient.m,
@@ -160,9 +184,9 @@ NULL
             metadata=list(lower = totals[o[min(ind.min, length(totals))]], bottom=totals[o[min(ind.max, length(totals))]], retain=retain)
         )
     }
-
+    
     stats <- .test_empty_drops(m=m, ambient.FUN=ambfun, niters=niters, test.ambient=FALSE, ignore=NULL, alpha=Inf, round=round, BPPARAM=BPPARAM)
-
+    
     tmp <- stats$PValue
     retain <- metadata(stats)$retain
     always <- stats$Total >= retain
