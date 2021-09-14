@@ -395,3 +395,13 @@ test_that("emptyDrops fails when you don't give it low counts", {
     y <- matrix(rpois(100000, lambda=100), ncol=10000)
     expect_error(emptyDrops(y), "no counts available")
 })
+
+set.seed(80003)
+test_that("emptyDropsCellRanger does something sensible", {
+    my.counts <- DropletUtils:::simCounts(nempty=100000, nlarge=2000, nsmall=1000)
+    out <- emptyDropsCellRanger(my.counts)
+
+    s <- colSums(my.counts)
+    expect_true(all(is.na(out$FDR[rank(-s) > 3000]))) # known ambients always ignored
+    expect_true(all(out$FDR[rank(-s) < 2000] == 0)) # large cells always detected
+})

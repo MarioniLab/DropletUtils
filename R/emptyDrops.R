@@ -179,14 +179,23 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) {
+    ambfun <- function(mat, totals) {
+        lower <- .get_lower(totals, lower, by.rank=by.rank)
+        astats <- .compute_ambient_stats(mat, totals, lower=lower)
+        astats$metadata <- list(lower = lower)
+        astats$keep <- !astats$ambient
+        astats
+    }
+    .test_empty_drops(m=m, ambient.FUN=ambfun, niters=niters, test.ambient=test.ambient, ignore=ignore, alpha=alpha, round=round, BPPARAM=BPPARAM) 
+}
+
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom S4Vectors DataFrame metadata<-
 #' @importFrom Matrix colSums
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom beachmat colBlockApply
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, 
-    round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) 
-{
+.test_empty_drops <- function(m, ambient.FUN, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, BPPARAM=SerialParam()) {
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
@@ -201,9 +210,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
 
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
-    lower <- .get_lower(totals, lower, by.rank=by.rank)
-
-    astats <- .compute_ambient_stats(m, totals, lower=lower)
+    astats <- ambient.FUN(m, totals)
     m <- astats$m
     ambient <- astats$ambient
     ambient.prop <- astats$ambient.prop
@@ -218,7 +225,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     # Removing supposed ambient cells from the matrix.
     # Also removing additional cells that don't pass some total count threshold, if required.
     if (!test.ambient) {
-        keep <- !ambient
+        keep <- astats$keep
     } else {
         keep <- totals > 0L
     }
@@ -249,7 +256,7 @@ testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignor
     all.lim[keep] <- limited
 
     output <- DataFrame(Total=totals, LogProb=all.lr, PValue=all.p, Limited=all.lim, row.names=colnames(m))
-    metadata(output) <- list(lower=lower, niters=niters, ambient=ambient.prop, alpha=alpha)
+    metadata(output) <- c(astats$metadata, list(niters=niters, ambient=ambient.prop, alpha=alpha))
     output
 }
 
