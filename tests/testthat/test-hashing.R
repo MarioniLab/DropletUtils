@@ -259,3 +259,22 @@ test_that("hashedDrops works with constant ambience", {
     expect_equal(out$Second[1:ndoub], next.sample[1:ndoub])
     expect_true(min(out$LogFC2[1:ndoub]) > max(out$LogFC2[-(1:ndoub)]))
 })
+
+test_that("hashedDrops works correctly when one row is all-zero", {
+    pluszero <- rbind(0, y)
+
+    ref <- hashedDrops(y)
+    out <- hashedDrops(pluszero)
+    out$Best <- out$Best - 1L
+    out$Second <- out$Second - 1L
+    metadata(out)$ambient <- metadata(out)$ambient[-1]
+    expect_identical(out, ref)
+
+    # Works with combinations.
+    combos <- t(combn(nrow(y), 2))
+    ref <- hashedDrops(y, combinations=combos)
+    out <- hashedDrops(pluszero, combinations=combos + 1)
+    metadata(out)$ambient <- metadata(out)$ambient[-1]
+    expect_identical(out, ref)
+})
+

@@ -222,6 +222,7 @@ NULL
     if (is.null(ambient)) {
         ambient <- ambientProfileBimodal(x, min.prop)
     }
+    original.ambient <- ambient
 
     discard <- ambient == 0
     x <- x[!discard,,drop=FALSE]
@@ -292,35 +293,25 @@ NULL
     }
 
     # Translating from indices to combinations, if requested.
-    best.sample <- best.sample + 1L
-    second.sample <- second.sample + 1L
+    keep <- which(!discard)
+    best.sample[] <- keep[best.sample + 1L]
+
+    output <- DataFrame(row.names=cell.names, Total=totals)
 
     if (is.null(combinations)) {
-        best.sample <- drop(best.sample)
+        output$Best <- drop(best.sample)
+        output$Second <- keep[second.sample + 1L]
     } else {
         best.sample <- t(best.sample)
         combinations <- t(apply(combinations, 1, sort))
         colnames(combinations) <- colnames(best.sample) <- seq_len(n.expected)
-        best.sample <- match(DataFrame(best.sample), DataFrame(combinations))
+        output$Best <- match(DataFrame(best.sample), DataFrame(combinations))
     }
 
-    output <- DataFrame(
-        row.names=cell.names,
-        Total=totals,
-        Best=best.sample,
-        Second=second.sample,
-        LogFC=lfc,
-        LogFC2=lfc2,
-        Doublet=is.doublet,
-        Confident=confident.singlet
-    )
-   
-    if (!is.null(combinations)) {
-        output$Second <- NULL
-    }
+    output <- cbind(output, DataFrame(LogFC=lfc, LogFC2=lfc2, Doublet=is.doublet, Confident=confident.singlet))
 
     metadata(output) <- list(
-        ambient=ambient,
+        ambient=original.ambient,
         confident.threshold=lower.threshold,
         doublet.threshold=upper.threshold
     )
