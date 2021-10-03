@@ -117,7 +117,7 @@
 #' \url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices}
 #'
 #' @export
-#' @importFrom S4Vectors DataFrame
+#' @importFrom S4Vectors DataFrame ROWNAMES<-
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importFrom BiocParallel SerialParam bplapply
 read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE, 
@@ -153,7 +153,7 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
         stop("gene information differs between runs")
     }
     gene_info <- gene_info_list[[1]]
-    rownames(gene_info) <- gene_info$ID
+    ROWNAMES(gene_info) <- gene_info$ID
 
     # Forming the full data matrix.
     full_data <- do.call(cbind, full_data)
@@ -187,7 +187,7 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
 #' @importFrom methods as
 #' @importClassesFrom Matrix dgCMatrix
 #' @importFrom Matrix readMM
-#' @importFrom utils read.delim
+#' @importFrom utils read.delim head
 .read_from_sparse <- function(path, version, is.prefix=FALSE, compressed=NULL) {
     FUN <- if (is.prefix) paste0 else file.path
 
@@ -215,10 +215,14 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
 
     gene.info <- read.delim(gene.loc, header=FALSE, colClasses="character", 
         stringsAsFactors=FALSE, quote="", comment.char="")
-    if (version=="3") {
-        colnames(gene.info) <- c("ID", "Symbol", "Type")
-    } else {
-        colnames(gene.info) <- c("ID", "Symbol")
+    possible.names <- c("ID", "Symbol", "Type", "Chromosome", "Start", "End")
+    colnames(gene.info) <- head(possible.names, ncol(gene.info))
+    if (ncol(gene.info) > 3) {
+        # Newer cellranger versions like to add coordinates, so 
+        # let's throw it into the GRanges for fun.
+        gr <- GRanges(gene.info$Chromosome, gene.info$Start, gene.info$End)
+        mcols(gr) <- DataFrame(gene.info[,1:3])
+        gene.info <- gr 
     }
 
     list(
