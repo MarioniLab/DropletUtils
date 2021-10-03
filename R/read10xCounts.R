@@ -120,6 +120,7 @@
 #' @importFrom S4Vectors DataFrame ROWNAMES<-
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importFrom BiocParallel SerialParam bplapply
+#' @importFrom GenomicRanges GRanges
 read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE, 
     type=c("auto", "sparse", "HDF5", "prefix"), version=c("auto", "2", "3"), 
     genome=NULL, compressed=NULL, BPPARAM=SerialParam())
