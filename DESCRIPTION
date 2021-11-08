@@ -17,6 +17,7 @@ Imports:
     Rcpp,
     BiocGenerics,
     S4Vectors,
+    IRanges,
     GenomicRanges,
     SummarizedExperiment,
     BiocParallel,

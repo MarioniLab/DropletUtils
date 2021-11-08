@@ -189,6 +189,8 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
 #' @importClassesFrom Matrix dgCMatrix
 #' @importFrom Matrix readMM
 #' @importFrom utils read.delim head
+#' @importFrom IRanges IRanges
+#' @importFrom S4Vectors mcols<-
 .read_from_sparse <- function(path, version, is.prefix=FALSE, compressed=NULL) {
     FUN <- if (is.prefix) paste0 else file.path
 
