@@ -214,14 +214,13 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
     gene.loc <- .check_for_compressed(gene.loc, compressed)
     matrix.loc <- .check_for_compressed(matrix.loc, compressed)
 
-    gene.info <- read.delim(gene.loc, header=FALSE, colClasses="character", 
-        stringsAsFactors=FALSE, quote="", comment.char="")
+    gene.info <- read.delim(gene.loc, header=FALSE, stringsAsFactors=FALSE, quote="", comment.char="")
     possible.names <- c("ID", "Symbol", "Type", "Chromosome", "Start", "End")
     colnames(gene.info) <- head(possible.names, ncol(gene.info))
     if (ncol(gene.info) > 3) {
         # Newer cellranger versions like to add coordinates, so 
         # let's throw it into the GRanges for fun.
-        gr <- GRanges(gene.info$Chromosome, gene.info$Start, gene.info$End)
+        gr <- GRanges(gene.info$Chromosome, IRanges(gene.info$Start, gene.info$End))
         mcols(gr) <- DataFrame(gene.info[,1:3])
         gene.info <- gr 
     }
