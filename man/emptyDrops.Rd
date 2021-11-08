@@ -201,7 +201,7 @@ my.counts <- DropletUtils:::simCounts()
 out <- emptyDrops(my.counts)
 out
 
-is.cell <- out$FDR <= 0.01
+is.cell <- out$FDR <= 0.001
 sum(is.cell, na.rm=TRUE)
 
 # Subsetting the matrix to the cell-containing droplets.
