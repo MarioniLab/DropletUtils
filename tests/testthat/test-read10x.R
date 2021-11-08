@@ -49,6 +49,23 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     expect_equal(assay(ref), assay(combined))
 })
 
+test_that("read10xCounts works correctly with chromosomal positions in the features", {
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    feats <- read.delim(file.path(tmpdir, "genes.tsv"), header=FALSE)
+    feats$Type <- sample(c("protein", "foo"), nrow(feats), replace=TRUE)
+    feats$Chr <- sample(c("chrA", "chrB", "chrC"), nrow(feats), replace=TRUE)
+    feats$Start <- sample(1000, nrow(feats), replace=TRUE)
+    feats$End <- feats$Start + sample(100, nrow(feats), replace=TRUE)
+    write.table(file=file.path(tmpdir, "genes.tsv"), feats, sep="\t", col.names=FALSE, row.names=FALSE, quote=FALSE)
+
+    sce10x <- read10xCounts(tmpdir)
+    expect_s4_class(rowRanges(sce10x), "GRanges")
+    expect_identical(start(rowRanges(sce10x)), feats$Start)
+    expect_identical(rowRanges(sce10x)$Type, feats$Type)
+})
+
 test_that("read10xCounts works correctly for names", {
     tmpdir <- tempfile()
     write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
