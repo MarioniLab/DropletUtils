@@ -3,8 +3,8 @@ Version: 1.15.2
 Date: 2021-11-07
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
-    person("Aaron", "Lun", role = c("aut", "cre"), email = "infinite.monkeys.with.keyboards@gmail.com"), 
-    person("Jonathan", "Griffiths", role="ctb"), 
+    person("Aaron", "Lun", role = "aut"),
+    person("Jonathan", "Griffiths", role=c("ctb", "cre"), email = "jonathan.griffiths.94@gmail.com"),
     person("Davis", "McCarthy", role="ctb"),
     person("Dongze", "He", role="ctb"),
     person("Rob", "Patro", role="ctb"))
