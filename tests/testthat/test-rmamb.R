@@ -64,7 +64,7 @@ test_that("removeAmbience works correctly with other input matrices", {
         obs <- removeAmbience(y3, ambient=ambient, groups=groupings, size.factors=sf, features=features)
         expect_identical(ref, obs)
 
-        sink <- RealizationSink(dim(ref)) 
+        sink <- AutoRealizationSink(dim(ref))
         alt <- removeAmbience(y, ambient=ambient, groups=groupings, size.factors=sf, features=features, sink=sink)
         expect_s4_class(alt, "DelayedMatrix")
         expect_identical(ref, as.matrix(alt))
