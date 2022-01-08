@@ -224,7 +224,7 @@ NULL
     }
     original.ambient <- ambient
 
-    discard <- ambient == 0
+    discard <- as.logical(ambient == 0) # protect against array 'ambient', see MarioniLab/DropletUtils#82.
     x <- x[!discard,,drop=FALSE]
     ambient <- ambient[!discard]
     
