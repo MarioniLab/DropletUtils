@@ -15,6 +15,8 @@
 #' @param col.names A logical scalar indicating whether the columns of the output object should be named with the cell barcodes.
 #' @param type String specifying the type of 10X format to read data from.
 #' @param version String specifying the version of the 10X format to read data from.
+#' @param delayed Logical scalar indicating whether sparse matrices should be wrapped in \linkS4class{DelayedArray}s before combining.
+#' Only relevant for multiple \code{samples}.
 #' @param genome String specifying the genome if \code{type="HDF5"} and \code{version='2'}.
 #' @param compressed Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.
@@ -69,6 +71,8 @@
 #' 
 #' Matrices are combined by column if multiple \code{samples} were specified.
 #' This will throw an error if the gene information is not consistent across \code{samples}.
+#' For \code{type="sparse"} or \code{"prefix"}, users can set \code{delayed=TRUE} to save memory during the combining process.
+#' This also avoids integer overflow for very large datasets.
 #' 
 #' If \code{col.names=TRUE} and \code{length(sample)==1}, each column is named by the cell barcode.
 #' For multiple samples, the index of each sample in \code{samples} is concatenated to the cell barcode to form the column name.
@@ -121,9 +125,16 @@
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importFrom BiocParallel SerialParam bplapply
 #' @importFrom GenomicRanges GRanges
-read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE, 
-    type=c("auto", "sparse", "HDF5", "prefix"), version=c("auto", "2", "3"), 
-    genome=NULL, compressed=NULL, BPPARAM=SerialParam())
+#' @importFrom DelayedArray DelayedArray
+read10xCounts <- function(samples, 
+    sample.names=names(samples), 
+    col.names=FALSE, 
+    type=c("auto", "sparse", "HDF5", "prefix"), 
+    delayed=FALSE,
+    version=c("auto", "2", "3"), 
+    genome=NULL, 
+    compressed=NULL, 
+    BPPARAM=SerialParam())
 {
     type <- match.arg(type)
     version <- match.arg(version)
@@ -157,7 +168,14 @@ read10xCounts <- function(samples, sample.names=names(samples), col.names=FALSE,
     ROWNAMES(gene_info) <- gene_info$ID
 
     # Forming the full data matrix.
-    full_data <- do.call(cbind, full_data)
+    if (length(full_data) > 1) {
+        if (delayed) {
+            full_data <- lapply(full_data, DelayedArray)
+        }
+        full_data <- do.call(cbind, full_data)
+    } else {
+        full_data <- full_data[[1]]
+    }
 
     # Adding the cell data.
     cell_info <- do.call(rbind, cell_info_list)

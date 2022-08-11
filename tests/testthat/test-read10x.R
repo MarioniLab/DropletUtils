@@ -116,6 +116,12 @@ test_that("read10xCounts works correctly for sparse counts, version >= 3", {
     expect_identical(rowData(sce10x)$Type, gene.type)
     expect_identical(sce10x$Sample, rep(tmpdir, ncol(my.counts)))
     expect_identical(sce10x$Barcode, cell.ids)
+
+    # Works in delayed mode.
+    sce10delayed <- read10xCounts(c(tmpdir, tmpdir), delayed=TRUE)
+    expect_s4_class(counts(sce10delayed), "DelayedMatrix")
+    converted <- as(counts(sce10delayed), "dgCMatrix")
+    expect_identical(converted, cbind(alt.counts, alt.counts))
 })
 
 test_that("read10xCounts works correctly for zipped files", {
