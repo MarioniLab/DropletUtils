@@ -61,7 +61,7 @@ test_that("multinomial calculations are correct without alpha", {
     dense.out <- DropletUtils:::.compute_multinom_prob_data(X, prop)
     sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgCMatrix"), prop)
     expect_equal(dense.out, sparse.out1)
-    sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgTMatrix"), prop)
+    sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "TsparseMatrix"), prop)
     expect_equal(dense.out, sparse.out2)
 
     # Checking it's the same compared to a reference.
@@ -89,7 +89,7 @@ test_that("multinomial calculations are correct with alpha", {
         dense.out <- DropletUtils:::.compute_multinom_prob_data(X, prop, alpha=alpha)
         sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgCMatrix"), prop, alpha=alpha)
         expect_equal(dense.out, sparse.out1)
-        sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgTMatrix"), prop, alpha=alpha)
+        sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "TsparseMatrix"), prop, alpha=alpha)
         expect_equal(dense.out, sparse.out2)
 
         # Checking it's the same compared to the reference.
@@ -322,7 +322,7 @@ test_that("emptyDrops works correctly with alpha estimation", {
     ambient.prop <- metadata(e.out)$ambient
     alpha0 <- metadata(e.out)$alpha
 
-    alphaT <- DropletUtils:::.estimate_alpha(as(lostmat, "dgTMatrix"), ambient.prop, totals[discarded])
+    alphaT <- DropletUtils:::.estimate_alpha(as(lostmat, "TsparseMatrix"), ambient.prop, totals[discarded])
     expect_identical(alpha0, alphaT)
 
     # Checking that the total probability calculations are correct.
