@@ -19,6 +19,8 @@
 #' Only relevant for multiple \code{samples}.
 #' @param genome String specifying the genome if \code{type="HDF5"} and \code{version='2'}.
 #' @param compressed Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.
+#' @param intersect.genes Logical scalar indicating whether to take the intersection of common genes across all samples.
+#' If \code{FALSE}, differences in gene information across samples will cause an error to be raised.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.
 #' 
 #' @return A \linkS4class{SingleCellExperiment} object containing count data for each gene (row) and cell (column) across all \code{samples}.
@@ -121,7 +123,7 @@
 #' \url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices}
 #'
 #' @export
-#' @importFrom S4Vectors DataFrame ROWNAMES<-
+#' @importFrom S4Vectors DataFrame ROWNAMES<- ROWNAMES extractROWS
 #' @importFrom SingleCellExperiment SingleCellExperiment
 #' @importFrom BiocParallel SerialParam bplapply
 #' @importFrom GenomicRanges GRanges
@@ -134,6 +136,7 @@ read10xCounts <- function(samples,
     version=c("auto", "2", "3"), 
     genome=NULL, 
     compressed=NULL, 
+    intersect.genes=FALSE,
     BPPARAM=SerialParam())
 {
     type <- match.arg(type)
@@ -153,19 +156,34 @@ read10xCounts <- function(samples,
     for (i in seq_len(nsets)) { 
         current <- load.out[[i]]
         full_data[[i]] <- current$mat
-        gene_info_list[[i]] <- current$gene.info
+
+        rr <- current$gene.info
+        ROWNAMES(rr) <- rr$ID
+        gene_info_list[[i]] <- rr
+
         cell.names <- current$cell.names
         cell_info_list[[i]] <- DataFrame(
             Sample = rep(sample.names[i], length(cell.names)), 
             Barcode = cell.names, row.names=NULL)
     }
 
-    # Checking gene uniqueness. 
-    if (nsets > 1 && length(unique(gene_info_list)) != 1L) {
-        stop("gene information differs between runs")
-    }
+    # Checking gene correctness and handling differences, or failing.
     gene_info <- gene_info_list[[1]]
-    ROWNAMES(gene_info) <- gene_info$ID
+    if (!intersect.genes) {
+        if (nsets > 1 && length(unique(gene_info_list)) != 1L) {
+            stop("gene information differs between runs")
+        }
+    } else {
+        all.genes <- lapply(gene_info_list, ROWNAMES)
+        if (length(unique(all.genes)) > 1) {
+            common.genes <- Reduce(intersect, all.genes)
+            for (i in seq_along(full_data)) {
+                m <- match(common.genes, all.genes[[i]])
+                full_data[[i]] <- full_data[[i]][m,,drop=FALSE]
+            }
+            gene_info <- extractROWS(gene_info, common.genes)
+        }
+    }
 
     # Forming the full data matrix.
     if (length(full_data) > 1) {
@@ -237,7 +255,15 @@ read10xCounts <- function(samples,
     gene.info <- read.delim(gene.loc, header=FALSE, stringsAsFactors=FALSE, quote="", comment.char="")
     possible.names <- c("ID", "Symbol", "Type", "Chromosome", "Start", "End")
     colnames(gene.info) <- head(possible.names, ncol(gene.info))
+
     if (ncol(gene.info) > 3) {
+        # Default ARC-seq reference seems to give empty names for mitochondrial genes.
+        # Hey, I don't make the rules.
+        keep <- gene.info$Chromosome == "" & grepl("^MT-", gene.info$Symbol)
+        if (any(keep)) {
+            gene.info[keep,"Chromosome"] <- "chrM"
+        }
+
         # Newer cellranger versions like to add coordinates, so 
         # let's throw it into the GRanges for fun.
         gr <- GRanges(gene.info$Chromosome, IRanges(gene.info$Start, gene.info$End))

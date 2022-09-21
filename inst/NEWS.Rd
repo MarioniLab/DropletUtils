@@ -2,6 +2,11 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.18.0}{\itemize{
+\item Added an \code{intersect.genes=} option to \code{read10xCounts()} for samples with inconsistent gene information.
+Automatically fix empty chromosome names for mitochondrial genes in certain Cellranger outputs.
+}}
+
 \section{Version 1.12.0}{\itemize{
 \item Added \code{BPPARAM=} to \code{read10xCounts()} for parallelized reading of multiple samples.
 

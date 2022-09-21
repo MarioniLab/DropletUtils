@@ -64,6 +64,15 @@ test_that("read10xCounts works correctly with chromosomal positions in the featu
     expect_s4_class(rowRanges(sce10x), "GRanges")
     expect_identical(start(rowRanges(sce10x)), feats$Start)
     expect_identical(rowRanges(sce10x)$Type, feats$Type)
+
+    # Empty seqnames for mitochondria are replaced with chrM.
+    replace <- 1:10
+    feats$Chr[replace] <- ""
+    feats[,2] <- paste0("MT-", feats[,2])
+    write.table(file=file.path(tmpdir, "genes.tsv"), feats, sep="\t", col.names=FALSE, row.names=FALSE, quote=FALSE)
+
+    sce10x <- read10xCounts(tmpdir)
+    expect_identical(unique(as.character(seqnames(rowRanges(sce10x))[1:10])), "chrM")
 })
 
 test_that("read10xCounts works correctly for names", {
@@ -207,4 +216,20 @@ test_that("read10xCounts works correctly for prefixes", {
     alt <- read10xCounts(c(tmpdir1, tmpdir2))
     expect_identical(assay(out), assay(alt))
     expect_identical(out$Barcode, alt$Barcode)
+})
+
+test_that("read10xCounts works correctly with mismatching features", {
+    tmpdir1 <- tempfile()
+    write10xCounts(path=tmpdir1, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    tmpdir2 <- tempfile()
+    keep <- 5:19
+    write10xCounts(path=tmpdir2, my.counts[keep,], gene.id=gene.ids[keep], gene.symbol=gene.symb[keep], barcodes=cell.ids)
+
+    expect_error(read10xCounts(c(tmpdir1, tmpdir2)), "gene information differs")
+
+    # Intersection works as expected.
+    sce10x <- read10xCounts(c(tmpdir1, tmpdir2), intersect.genes=TRUE)
+    expect_identical(rownames(sce10x), gene.ids[keep])
+    expect_identical(assay(sce10x, withDimnames=FALSE), cbind(my.counts[keep,], my.counts[keep,]))
 })

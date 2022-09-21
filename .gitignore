@@ -2,4 +2,4 @@ src/*.so
 src/*.o
 vignettes/*.md
 vignettes/*.html
-
+*.swp

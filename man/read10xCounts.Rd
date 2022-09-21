@@ -13,6 +13,7 @@ read10xCounts(
   version = c("auto", "2", "3"),
   genome = NULL,
   compressed = NULL,
+  intersect.genes = FALSE,
   BPPARAM = SerialParam()
 )
 }
@@ -41,6 +42,9 @@ Only relevant for multiple \code{samples}.}
 \item{genome}{String specifying the genome if \code{type="HDF5"} and \code{version='2'}.}
 
 \item{compressed}{Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.}
+
+\item{intersect.genes}{Logical scalar indicating whether to take the intersection of common genes across all samples.
+If \code{FALSE}, differences in gene information across samples will cause an error to be raised.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.}
 }
