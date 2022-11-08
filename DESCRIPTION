@@ -1,6 +1,6 @@
 Package: DropletUtils
-Version: 1.17.3
-Date: 2022-09-21
+Version: 1.17.4
+Date: 2022-11-08
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
     person("Aaron", "Lun", role = "aut"),

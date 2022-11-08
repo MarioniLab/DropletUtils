@@ -21,7 +21,8 @@
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param ... For the generic, further arguments to pass to individual methods.
-#' @param known.empty an optional integer vector indexing barcodes that will be assumed to be empty, e.g. to estimate ambience or emptiness for citeseq data by using mRNA totals to define empty droplets.
+#' @param known.empty an optional integer vector indexing barcodes that will be assumed to be empty, over-riding \code{lower} and \code{by.rank}. 
+#' See \code{?\link{ambientProfileEmpty}} for more details.
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'

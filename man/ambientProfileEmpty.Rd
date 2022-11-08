@@ -15,6 +15,7 @@ ambientProfileEmpty(m, ...)
   m,
   lower = 100,
   by.rank = NULL,
+  known.empty = NULL,
   round = TRUE,
   good.turing = TRUE,
   BPPARAM = SerialParam()
@@ -38,7 +39,9 @@ For \code{emptyDrops}, this may also be a \linkS4class{SummarizedExperiment} obj
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
 at or below which all barcodes are assumed to correspond to empty droplets.}
 
-\item{by.rank}{An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.}
+\item{by.rank}{An optional integer scalar, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.}
+
+\item{known.empty}{an optional integer vector indexing barcodes that will be assumed to be empty, over-riding \code{lower} and \code{by.rank}.}
 
 \item{round}{Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.}
 
@@ -95,6 +98,12 @@ In such cases, an alternative approach can be used by passing an integer to the 
 This specifies the number of barcodes with the highest total counts to ignore; the remaining barcodes are assumed to be ambient.
 The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
 By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
+
+Another alternative when working with some multimodal data, such as CITE-seq could be to use statistics from one modality 
+(e.g. mRNA counts) to define empty droplets in the other modality (e.g. CITE-seq)
+or combining CITE-seq with mRNA-counts.  In this case, one may set \code{known.empty} to an integer vector indexing 
+barcodes in columns of `m`.  For the purpose of retaining cells, if \code{lower} is set, it will be passed on \code{barcodeRanks}, 
+otherwise the median of total counts of barcodes that have \code{known.empty} set will be used.
 }
 
 \examples{
