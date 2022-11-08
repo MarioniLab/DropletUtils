@@ -5,7 +5,7 @@
 #' Zeroes are filled in using the Good-Turing method.
 #'
 #' @inheritParams emptyDrops
-#' @param by.rank An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
+#' @param by.rank An optional integer scalar, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
 #' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
 #' @param ... For the generic, further arguments to pass to individual methods.
 #'
@@ -74,7 +74,7 @@ NULL
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom DelayedArray setAutoBPPARAM
-.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
+.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, known.empty=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
@@ -85,16 +85,23 @@ NULL
 
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
-    lower <- .get_lower(totals, lower, by.rank=by.rank)
+    
+    if(!is.null(known.empty)){
+        if(!is.integer(known.empty) || any(known.empty < 1) || any(known.empty > ncol(m)) || any(duplicated(known.empty))) 
+          stop("'known.empty' must be distinct, positive integers that index the barcodes.")
+        if(!is.null(by.rank)) warning("Ignoring 'by.rank' when 'known.empty' is set.")
+        if(!is.null(lower)) warning("Ignoring 'lower' when 'known.empty' is set.")
+    }
+    
+    assumed.empty = .get_putative_empty(totals, lower, by.rank, known.empty)
 
     if (good.turing) {
-        a <- .compute_ambient_stats(m, totals, lower=lower)
+        a <- .compute_ambient_stats(m, totals, assumed.empty)
         output <- numeric(nrow(m))
         output[!a$discard] <- a$ambient.prop
         names(output) <- rownames(m)
     } else {
-        ambient <- totals <= lower
-        output <- rowSums(m[,ambient,drop=FALSE])
+        output <- rowSums(m[,assumed.empty,drop=FALSE])
     }
 
     output
@@ -107,7 +114,7 @@ estimateAmbience <- function(...) {
 }
 
 #' @importFrom Matrix rowSums
-.compute_ambient_stats <- function(m, totals, lower) {
+.compute_ambient_stats <- function(m, totals, assumed.empty) {
     # This doesn't invalidate 'totals', by definition.
     # NOTE: parallelization handled by setAutoBPPARAM above.
     discard <- rowSums(m) == 0
@@ -116,7 +123,7 @@ estimateAmbience <- function(...) {
     }
 
     # Computing the average profile from the ambient cells.
-    ambient <- totals <= lower # lower => "T" in the text.
+    ambient <- assumed.empty
     ambient.m <- m[,ambient,drop=FALSE]
     ambient.prof <- rowSums(ambient.m)
 
@@ -134,14 +141,27 @@ estimateAmbience <- function(...) {
     )
 }
 
-.get_lower <- function(totals, lower, by.rank) {
-    if (is.null(by.rank)) {
-        lower
+inv.which <- function(i, len, useNames = TRUE)
+  setNames('[<-'(logical(len), i, TRUE), if (useNames)
+    names(i)
+    else
+      NULL)
+
+.get_putative_empty <- function(totals, lower, by.rank, known.empty) {
+    if (is.null(by.rank) && is.null(known.empty)) {
+        assumed.empty <- totals <= lower
+    } else if (!is.null(known.empty)) {
+        assumed.empty <- inv.which(known.empty, length(totals))
+        lower <- NA_integer_
     } else if (by.rank >= length(totals)) {
         stop("not have enough columns for supplied 'by.rank'")
     } else {
-        totals[order(totals, decreasing=TRUE)[by.rank+1]]
+        #by.rank non null
+        rt <- rank(-totals, ties.method = "first")
+        assumed.empty <- rt > by.rank
+        lower <- max(totals[rt > by.rank])
     }
+    return(structure(assumed.empty, lower=lower))
 }
 
 #' @importFrom edgeR goodTuringProportions
