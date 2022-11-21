@@ -16,6 +16,7 @@ testEmptyDrops(
   alpha = NULL,
   round = TRUE,
   by.rank = NULL,
+  known.empty = NULL,
   BPPARAM = SerialParam()
 )
 
@@ -57,13 +58,16 @@ at or below which all barcodes are assumed to correspond to empty droplets.}
 \item{by.rank}{An integer scalar parametrizing an alternative method for identifying assumed empty droplets - see \code{?\link{ambientProfileEmpty}} for more details.
 If set, this is used to redefine \code{lower} and any specified value for \code{lower} is ignored.}
 
-\item{BPPARAM}{A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.}
-
-\item{...}{For the generic, further arguments to pass to individual methods.
+\item{known.empty}{an optional integer vector indexing barcodes that will be assumed to be empty, over-riding \code{lower} and \code{by.rank}. 
+See \code{?\link{ambientProfileEmpty}} for more details.
 
 For the SummarizedExperiment method, further arguments to pass to the ANY method.
 
 For the ANY method, further arguments to pass to \code{testEmptyDrops}.}
+
+\item{BPPARAM}{A \linkS4class{BiocParallelParam} object indicating whether parallelization should be used.}
+
+\item{...}{For the generic, further arguments to pass to individual methods.}
 
 \item{retain}{A numeric scalar specifying the threshold for the total UMI count above which all barcodes are assumed to contain cells.}
 

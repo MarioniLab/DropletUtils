@@ -21,6 +21,8 @@
 #' @param round Logical scalar indicating whether to check for non-integer values in \code{m} and, if present, round them for ambient profile estimation (see \code{?\link{ambientProfileEmpty}}) and the multinomial simulations.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param ... For the generic, further arguments to pass to individual methods.
+#' @param known.empty an optional integer vector indexing barcodes that will be assumed to be empty, over-riding \code{lower} and \code{by.rank}. 
+#' See \code{?\link{ambientProfileEmpty}} for more details.
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
 #'
@@ -179,11 +181,11 @@ NULL
 
 #' @export
 #' @rdname emptyDrops
-testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, by.rank=NULL, BPPARAM=SerialParam()) {
+testEmptyDrops <- function(m, lower=100, niters=10000, test.ambient=FALSE, ignore=NULL, alpha=NULL, round=TRUE, by.rank=NULL, known.empty=NULL, BPPARAM=SerialParam()) {
     ambfun <- function(mat, totals) {
-        lower <- .get_lower(totals, lower, by.rank=by.rank)
-        astats <- .compute_ambient_stats(mat, totals, lower=lower)
-        astats$metadata <- list(lower = lower)
+        assumed.empty <- .get_putative_empty(totals, lower, by.rank, known.empty)
+        astats <- .compute_ambient_stats(mat, totals, assumed.empty)
+        astats$metadata <- list(lower = attr(assumed.empty, "lower"))
         astats$keep <- !astats$ambient
         astats
     }

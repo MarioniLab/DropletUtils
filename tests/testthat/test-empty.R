@@ -377,6 +377,22 @@ test_that("emptyDrops works with by.rank=TRUE", {
     expect_identical(e.out$FDR, e.out2$FDR)
 })
 
+test_that("emptyDrops with with known.empty", {
+  my.counts <- DropletUtils:::simCounts() 
+  
+  set.seed(999)
+  known.empty = which(colSums(my.counts)<=100)
+  out <- emptyDrops(my.counts, lower=100, retain=Inf) # lower
+  
+  set.seed(999)
+  expect_message(ref <- emptyDrops(my.counts, known.empty=known.empty, retain=Inf, lower=100))
+  expect_identical(out, ref)
+  
+  expect_error(emptyDrops(my.counts, known.empty = rep(TRUE, 10), lower = NULL))
+  expect_error(emptyDrops(my.counts, known.empty = runif(n=ncol(my.counts))+10, lower = NULL))
+  expect_warning(ambientProfileEmpty(my.counts, known.empty = known.empty, lower = NULL, by.rank = 10))
+})
+
 set.seed(80002)
 test_that("emptyDrops realizes HDF5Arrays properly", {
     my.counts <- DropletUtils:::simCounts() 

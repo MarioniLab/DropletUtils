@@ -5,8 +5,9 @@
 #' Zeroes are filled in using the Good-Turing method.
 #'
 #' @inheritParams emptyDrops
-#' @param by.rank An integer scalar or vector of length 2, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
+#' @param by.rank An optional integer scalar, used as an alternative to \code{lower} to identifying assumed empty droplets - see Details.
 #' @param good.turing Logical scalar indicating whether to perform Good-Turing estimation of the proportions.
+#' @param known.empty an optional integer vector indexing barcodes that will be assumed to be empty, over-riding \code{lower} and \code{by.rank}.
 #' @param ... For the generic, further arguments to pass to individual methods.
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
@@ -46,7 +47,12 @@
 #' This specifies the number of barcodes with the highest total counts to ignore; the remaining barcodes are assumed to be ambient.
 #' The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
 #' By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
-#'
+#' 
+#' Another alternative when working with some multimodal data, such as CITE-seq, could be to use statistics from one modality (e.g. mRNA counts) to define empty droplets in the other modality (e.g. CITE-seq) or combining CITE-seq with mRNA-counts.
+#' In this case, one may set \code{known.empty} to an integer vector indexing barcodes in columns of `m` to mark cells for the ambient pool.
+#' For the purpose of retaining cells, if \code{lower} is set, it will be used to define the pool of ambient RNA in \code{barcodeRanks}.
+#' Otherwise the median of total counts of barcodes that have \code{known.empty} set will be used in its place.
+#' 
 #' @return
 #' A numeric vector of length equal to \code{nrow(m)},
 #' containing the estimated proportion of each transcript in the ambient solution.
@@ -74,7 +80,7 @@ NULL
 #' @importFrom BiocParallel bpstart bpstop SerialParam
 #' @importFrom scuttle .bpNotSharedOrUp
 #' @importFrom DelayedArray setAutoBPPARAM
-.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
+.ambient_profile_empty <- function(m, lower=100, by.rank=NULL, known.empty=NULL, round=TRUE, good.turing=TRUE, BPPARAM=SerialParam()) {
     if (.bpNotSharedOrUp(BPPARAM)) {
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
@@ -85,16 +91,16 @@ NULL
 
     m <- .rounded_to_integer(m, round)
     totals <- .intColSums(m)
-    lower <- .get_lower(totals, lower, by.rank=by.rank)
+    
+    assumed.empty <- .get_putative_empty(totals, lower, by.rank, known.empty)
 
     if (good.turing) {
-        a <- .compute_ambient_stats(m, totals, lower=lower)
+        a <- .compute_ambient_stats(m, totals, assumed.empty)
         output <- numeric(nrow(m))
         output[!a$discard] <- a$ambient.prop
         names(output) <- rownames(m)
     } else {
-        ambient <- totals <= lower
-        output <- rowSums(m[,ambient,drop=FALSE])
+        output <- rowSums(m[,assumed.empty,drop=FALSE])
     }
 
     output
@@ -107,7 +113,7 @@ estimateAmbience <- function(...) {
 }
 
 #' @importFrom Matrix rowSums
-.compute_ambient_stats <- function(m, totals, lower) {
+.compute_ambient_stats <- function(m, totals, assumed.empty) {
     # This doesn't invalidate 'totals', by definition.
     # NOTE: parallelization handled by setAutoBPPARAM above.
     discard <- rowSums(m) == 0
@@ -116,7 +122,7 @@ estimateAmbience <- function(...) {
     }
 
     # Computing the average profile from the ambient cells.
-    ambient <- totals <= lower # lower => "T" in the text.
+    ambient <- assumed.empty
     ambient.m <- m[,ambient,drop=FALSE]
     ambient.prof <- rowSums(ambient.m)
 
@@ -134,14 +140,39 @@ estimateAmbience <- function(...) {
     )
 }
 
-.get_lower <- function(totals, lower, by.rank) {
-    if (is.null(by.rank)) {
-        lower
-    } else if (by.rank >= length(totals)) {
-        stop("not have enough columns for supplied 'by.rank'")
-    } else {
-        totals[order(totals, decreasing=TRUE)[by.rank+1]]
+# inverse of `which(x)`
+inv.which <- function(i, len, useNames = TRUE)
+  stats::setNames('[<-'(logical(len), i, TRUE), if (useNames)
+    names(i)
+    else
+      NULL)
+
+.get_putative_empty <- function(totals, lower, by.rank, known.empty) {
+    if (!is.null(known.empty)) {
+      if (!is.integer(known.empty) || any(known.empty < 1) || any(known.empty > length(totals)) || any(duplicated(known.empty)))
+        stop("If specified, 'known.empty' must be distinct, positive integers that index the barcodes.")
+      if (!is.null(by.rank))
+        warning("Ignoring 'by.rank' when 'known.empty' is set.")
+      if (!is.null(lower))
+        message(
+          "When 'known.empty' is set, 'lower' is only used to mark droplets for unconditional retention via `barcodeRanks(...)`."
+        )
     }
+    if (is.null(by.rank) && is.null(known.empty)) {
+      assumed.empty <- totals <= lower
+    } else if (!is.null(known.empty)) {
+      assumed.empty <- inv.which(known.empty, length(totals))
+      if (is.null(lower))
+        lower <- median(totals[assumed.empty])
+    } else if (by.rank >= length(totals)) {
+      stop("not have enough columns for supplied 'by.rank'")
+    } else {
+      #by.rank non null
+      rt <- rank(-totals, ties.method = "first")
+      assumed.empty <- rt > by.rank
+      lower <- max(totals[rt > by.rank])
+    }
+    return(structure(assumed.empty, lower = lower))
 }
 
 #' @importFrom edgeR goodTuringProportions
