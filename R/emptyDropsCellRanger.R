@@ -128,11 +128,13 @@ NULL
     #  and https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_emptyDrops_CR.cpp) 
     
     ambfun <- function(mat, totals) {
+        o <- order(totals, decreasing=TRUE)
+
         # Simple Filtering
         # https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_cellFiltering.cpp
         # line 36-61
         max.ind <- round(n.expected.cells * (1 - max.percentile)) # maxind
-        n.umi.max <- totals[order(totals, decreasing = TRUE)[min(length(totals), max.ind)]] # nUMImax
+        n.umi.max <- totals[o[min(length(totals), max.ind)]] # nUMImax
         
         # Barcodes with UMI count higher than retain will be regarded as real
         # barcodes without any further tests
@@ -141,7 +143,7 @@ NULL
         # select barcodes to use as ambient solution
         # SoloFeature_emptyDrops_CR.cpp line 117-134
         ncells.simple <- sum(totals >= retain)
-        min.umi  <- max(umi.min, round(umi.min.frac.median * totals[ncells.simple/2]))
+        min.umi  <- max(umi.min, round(umi.min.frac.median * totals[o[ncells.simple/2]]))
         i.cand.last <- min(ncells.simple + cand.max.n, sum(totals > min.umi))
 
         # NOTE: parallelization handled by setAutoBPPARAM above.
@@ -150,7 +152,6 @@ NULL
             mat <- mat[!discard,,drop=FALSE]
         }
         
-        o <- order(totals, decreasing=TRUE)
         ambient <- logical(length(totals))
         ambient[o[min(ind.min, length(totals)):min(ind.max, length(totals))]] <- TRUE
         ambient.m <- mat[,ambient,drop=FALSE]
