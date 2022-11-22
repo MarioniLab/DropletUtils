@@ -128,8 +128,6 @@ NULL
     #  and https://github.com/alexdobin/STAR/blob/master/source/SoloFeature_emptyDrops_CR.cpp) 
     
     ambfun <- function(mat, totals) {
-      
-        # sort totals
         o <- order(totals, decreasing=TRUE)
 
         # Simple Filtering
