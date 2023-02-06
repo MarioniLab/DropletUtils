@@ -99,11 +99,10 @@ This specifies the number of barcodes with the highest total counts to ignore; t
 The idea is that, even if the exact threshold is unknown, we can be certain that a given experiment does not contain more than a particular number of genuine cell-containing barcodes based on the number of cells that were loaded into the machine.
 By setting \code{by.rank} to something greater than this \emph{a priori} known number, we exclude the most likely candidates and use the remaining barcodes to compute the ambient profile.
 
-Another alternative when working with some multimodal data, such as CITE-seq could be to use statistics from one modality 
-(e.g. mRNA counts) to define empty droplets in the other modality (e.g. CITE-seq)
-or combining CITE-seq with mRNA-counts.  In this case, one may set \code{known.empty} to an integer vector indexing 
-barcodes in columns of `m`.  For the purpose of retaining cells, if \code{lower} is set, it will be passed on \code{barcodeRanks}, 
-otherwise the median of total counts of barcodes that have \code{known.empty} set will be used.
+Another alternative when working with some multimodal data, such as CITE-seq, could be to use statistics from one modality (e.g. mRNA counts) to define empty droplets in the other modality (e.g. CITE-seq) or combining CITE-seq with mRNA-counts.
+In this case, one may set \code{known.empty} to an integer vector indexing barcodes in columns of `m` to mark cells for the ambient pool.
+For the purpose of retaining cells, if \code{lower} is set, it will be used to define the pool of ambient RNA in \code{barcodeRanks}.
+Otherwise the median of total counts of barcodes that have \code{known.empty} set will be used in its place.
 }
 
 \examples{

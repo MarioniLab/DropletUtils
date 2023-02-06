@@ -113,7 +113,7 @@ test_that("Alternative input/output parameters work correctly", {
         
         observed3 <- swappedDrops(output$files, barcode, get.swapped=TRUE, 
             get.diagnostics=TRUE, min.frac=min.frac, hdf5.out=FALSE)
-        expect_s4_class(observed3$diagnostics, "dgCMatrix")
+        expect_s4_class(observed3$diagnostics, "CsparseMatrix")
         expect_equal(observed2$cleaned, observed3$cleaned)
         expect_equal(observed2$swapped, observed3$swapped)
 

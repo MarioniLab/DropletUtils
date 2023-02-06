@@ -55,7 +55,7 @@
 #' # Mocking up some count data.
 #' library(Matrix)
 #' my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-#' my.counts <- as(my.counts, "dgCMatrix")
+#' my.counts <- as(my.counts, "CsparseMatrix")
 #' cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 #' 
 #' ngenes <- nrow(my.counts)
@@ -212,7 +212,7 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     }
 
     # Saving matrix information.
-    x <- as(x, "dgCMatrix")
+    x <- as(x, "CsparseMatrix")
     h5write(x@x, file=path, name=paste0(group, "/data"))
     h5write(dim(x), file=path, name=paste0(group, "/shape"))
     h5write(x@i, file=path, name=paste0(group, "/indices")) # already zero-indexed.

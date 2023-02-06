@@ -140,7 +140,7 @@ NULL
         write_block(sink, vp, q)
         NULL
     } else if (is(block, "SparseArraySeed")) {
-        as(q, "dgCMatrix")
+        as(q, "CsparseMatrix")
     } else {
         q 
     }

@@ -6,7 +6,7 @@ library(Matrix)
 
 # Mocking up some 10X genomics output.
 my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-my.counts <- as(my.counts, "dgCMatrix")
+my.counts <- as(my.counts, "CsparseMatrix")
 
 ngenes <- nrow(my.counts)
 gene.ids <- paste0("GENE", seq_len(ngenes))
@@ -129,7 +129,7 @@ test_that("read10xCounts works correctly for sparse counts, version >= 3", {
     # Works in delayed mode.
     sce10delayed <- read10xCounts(c(tmpdir, tmpdir), delayed=TRUE)
     expect_s4_class(counts(sce10delayed), "DelayedMatrix")
-    converted <- as(counts(sce10delayed), "dgCMatrix")
+    converted <- as(counts(sce10delayed), "CsparseMatrix")
     expect_identical(converted, cbind(alt.counts, alt.counts))
 })
 

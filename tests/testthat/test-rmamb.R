@@ -52,9 +52,9 @@ library(DelayedArray)
 test_that("removeAmbience works correctly with other input matrices", {
     ref <- removeAmbience(y, ambient=ambient, groups=groupings, size.factors=sf, features=features)
 
-    y2 <- as(y, "dgCMatrix")
+    y2 <- as(y, "CsparseMatrix")
     obs <- removeAmbience(y2, ambient=ambient, groups=groupings, size.factors=sf, features=features)
-    expect_s4_class(obs, "dgCMatrix")
+    expect_s4_class(obs, "CsparseMatrix")
     expect_equivalent(ref, as.matrix(obs))
 
     y3 <- DelayedArray(y)

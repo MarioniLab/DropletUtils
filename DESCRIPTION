@@ -63,4 +63,4 @@ LinkingTo:
     dqrng,
     scuttle
 SystemRequirements: C++11, GNU make
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3

@@ -272,7 +272,7 @@ read10xCounts <- function(samples,
     }
 
     list(
-        mat=as(readMM(matrix.loc), "dgCMatrix"),
+        mat=as(readMM(matrix.loc), "CsparseMatrix"),
         cell.names=readLines(barcode.loc),
         gene.info=gene.info
     )

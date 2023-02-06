@@ -59,7 +59,7 @@ test_that("multinomial calculations are correct without alpha", {
 
     # Checking it's the same regardless of the input matrix.
     dense.out <- DropletUtils:::.compute_multinom_prob_data(X, prop)
-    sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgCMatrix"), prop)
+    sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "CsparseMatrix"), prop)
     expect_equal(dense.out, sparse.out1)
     sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "TsparseMatrix"), prop)
     expect_equal(dense.out, sparse.out2)
@@ -87,7 +87,7 @@ test_that("multinomial calculations are correct with alpha", {
     # Checking it's the same regardless of the input matrix.
     for (alpha in c(1, 10, 100)) { 
         dense.out <- DropletUtils:::.compute_multinom_prob_data(X, prop, alpha=alpha)
-        sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "dgCMatrix"), prop, alpha=alpha)
+        sparse.out1 <- DropletUtils:::.compute_multinom_prob_data(as(X, "CsparseMatrix"), prop, alpha=alpha)
         expect_equal(dense.out, sparse.out1)
         sparse.out2 <- DropletUtils:::.compute_multinom_prob_data(as(X, "TsparseMatrix"), prop, alpha=alpha)
         expect_equal(dense.out, sparse.out2)

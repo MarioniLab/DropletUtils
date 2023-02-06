@@ -12,7 +12,7 @@ test_that("read10xCounts works for version 2 matrices (tarball)", {
 
     expect_false(is.null(rownames(out)))
     expect_type(out$Barcode, "character")
-    expect_s4_class(counts(out), "dgCMatrix")
+    expect_s4_class(counts(out), "CsparseMatrix")
 
     # Raw:
     fname <- getTestFile("tenx-2.1.0-pbmc4k/1.0.0/raw.tar.gz")
@@ -22,7 +22,7 @@ test_that("read10xCounts works for version 2 matrices (tarball)", {
 
     expect_false(is.null(rownames(out2)))
     expect_type(out2$Barcode, "character")
-    expect_s4_class(counts(out2), "dgCMatrix")
+    expect_s4_class(counts(out2), "CsparseMatrix")
 
     # Comparing the two.
     expect_identical(rowData(out), rowData(out2))
@@ -50,7 +50,7 @@ test_that("read10xCounts works for version 3 matrices (tarball)", {
     expect_identical(length(unique(rowData(out)$Type)), 2L)
     expect_false(is.null(rownames(out)))
     expect_type(out$Barcode, "character")
-    expect_s4_class(counts(out), "dgCMatrix")
+    expect_s4_class(counts(out), "CsparseMatrix")
 
     # Raw:
     fname <- getTestFile("tenx-3.1.0-5k_pbmc_protein_v3/1.0.0/raw.tar.gz")
@@ -61,7 +61,7 @@ test_that("read10xCounts works for version 3 matrices (tarball)", {
     expect_identical(length(unique(rowData(out2)$Type)), 2L)
     expect_false(is.null(rownames(out2)))
     expect_type(out2$Barcode, "character")
-    expect_s4_class(counts(out2), "dgCMatrix")
+    expect_s4_class(counts(out2), "CsparseMatrix")
 
     # Comparing the two.
     expect_identical(rowData(out), rowData(out2))
@@ -107,7 +107,7 @@ test_that("read10xCounts works for version 4 matrices (tarball)", {
     expect_identical(length(unique(rowData(out)$Type)), 1L)
     expect_false(is.null(rownames(out)))
     expect_type(out$Barcode, "character")
-    expect_s4_class(counts(out), "dgCMatrix")
+    expect_s4_class(counts(out), "CsparseMatrix")
 
     # Raw:
     fname <- getTestFile("tenx-4.0.0-SC3_v3_NextGem_DI_Neuron_10K/1.0.0/raw.tar.gz")
@@ -119,7 +119,7 @@ test_that("read10xCounts works for version 4 matrices (tarball)", {
     expect_identical(length(unique(rowData(out)$Type)), 1L)
     expect_false(is.null(rownames(out)))
     expect_type(out$Barcode, "character")
-    expect_s4_class(counts(out), "dgCMatrix")
+    expect_s4_class(counts(out), "CsparseMatrix")
 
     # Comparing the two.
     expect_identical(rowData(out), rowData(out2))

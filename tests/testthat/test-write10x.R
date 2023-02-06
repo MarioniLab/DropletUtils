@@ -6,7 +6,7 @@ library(Matrix)
 
 # Mocking up some 10X genomics output.
 my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-my.counts <- as(my.counts, "dgCMatrix")
+my.counts <- as(my.counts, "CsparseMatrix")
 
 ngenes <- nrow(my.counts)
 gene.ids <- paste0("GENE", seq_len(ngenes))
