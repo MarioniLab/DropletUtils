@@ -8,6 +8,7 @@ read10xCounts(
   samples,
   sample.names = names(samples),
   col.names = FALSE,
+  row.names = c("id", "symbol"),
   type = c("auto", "sparse", "HDF5", "prefix"),
   delayed = FALSE,
   version = c("auto", "2", "3"),
@@ -31,6 +32,8 @@ where the rest of the name of each file follows the standard 10X output.}
 If \code{NULL}, the file paths in \code{samples} are used directly.}
 
 \item{col.names}{A logical scalar indicating whether the columns of the output object should be named with the cell barcodes.}
+
+\item{row.names}{String specifying whether to use Ensembl IDs ("ID") or gene symbols ("Symbol") as row names. If using symbols, the Ensembl ID will be appended to disambiguate in case the same symbol corresponds to multiple Ensembl IDs.}
 
 \item{type}{String specifying the type of 10X format to read data from.}
 
