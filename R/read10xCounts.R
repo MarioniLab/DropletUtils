@@ -13,6 +13,7 @@
 #' @param sample.names A character vector of length equal to \code{samples}, containing the sample names to store in the column metadata of the output object.
 #' If \code{NULL}, the file paths in \code{samples} are used directly.
 #' @param col.names A logical scalar indicating whether the columns of the output object should be named with the cell barcodes.
+#' @param row.names String specifying whether to use Ensembl IDs ("ID") or gene symbols ("Symbol") as row names. If using symbols, the Ensembl ID will be appended to disambiguate in case the same symbol corresponds to multiple Ensembl IDs.
 #' @param type String specifying the type of 10X format to read data from.
 #' @param version String specifying the version of the 10X format to read data from.
 #' @param delayed Logical scalar indicating whether sparse matrices should be wrapped in \linkS4class{DelayedArray}s before combining.
@@ -131,6 +132,7 @@
 read10xCounts <- function(samples, 
     sample.names=names(samples), 
     col.names=FALSE, 
+    row.names = c("id", "symbol"),
     type=c("auto", "sparse", "HDF5", "prefix"), 
     delayed=FALSE,
     version=c("auto", "2", "3"), 
@@ -141,6 +143,7 @@ read10xCounts <- function(samples,
 {
     type <- match.arg(type)
     version <- match.arg(version)
+    row.names <- match.arg(row.names)
     if (is.null(sample.names)) {
         sample.names <- samples
     }
@@ -158,7 +161,12 @@ read10xCounts <- function(samples,
         full_data[[i]] <- current$mat
 
         rr <- current$gene.info
-        ROWNAMES(rr) <- rr$ID
+        rns <- if (row.names == "id") rr$ID else rr$Symbol
+        if (row.names == "symbol" && anyDuplicated(rns)) {
+            dup.name <- rns %in% rns[duplicated(rns)]
+            rns[dup.name] <- paste0(rns[dup.name], "_", rr$ID[dup.name])
+        }
+        ROWNAMES(rr) <- rns
         gene_info_list[[i]] <- rr
 
         cell.names <- current$cell.names

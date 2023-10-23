@@ -3,3 +3,4 @@ src/*.o
 vignettes/*.md
 vignettes/*.html
 *.swp
+.Rproj.user

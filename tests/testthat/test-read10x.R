@@ -233,3 +233,22 @@ test_that("read10xCounts works correctly with mismatching features", {
     expect_identical(rownames(sce10x), gene.ids[keep])
     expect_identical(assay(sce10x, withDimnames=FALSE), cbind(my.counts[keep,], my.counts[keep,]))
 })
+
+test_that("read10xCounts, use gene symbols as row names", {
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    
+    # Reading it in.
+    sce10x <- read10xCounts(tmpdir, row.names = "symbol")
+    expect_equal(rownames(sce10x), gene.symb)
+})
+
+test_that("read10xCounts, use gene symbols as row names, with duplicated symbols", {
+    gene.symb2 <- c(gene.symb[1], gene.symb[1], gene.symb[-c(1,2)])
+    rns_expect <- c(paste(gene.symb[1], gene.ids[1:2], sep = "_"), gene.symb[-c(1,2)])
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
+    
+    sce10x <- read10xCounts(tmpdir, row.names = "symbol")
+    expect_equal(rownames(sce10x), rns_expect)
+})
