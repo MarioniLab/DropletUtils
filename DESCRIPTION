@@ -1,5 +1,5 @@
 Package: DropletUtils
-Version: 1.23.0
+Version: 1.23.1
 Date: 2022-11-21
 Title: Utilities for Handling Single-Cell Droplet Data
 Authors@R: c(
@@ -63,4 +63,4 @@ LinkingTo:
     dqrng,
     scuttle
 SystemRequirements: C++11, GNU make
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.0
