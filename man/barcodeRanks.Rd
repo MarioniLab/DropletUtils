@@ -39,7 +39,7 @@ from which to obtain a section of the curve for spline fitting.}
 \item{exclude.from}{An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
 Ignored if \code{fit.bounds} is specified.}
 
-\item{df}{Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.}
+\item{df}{Deprecated and ignored.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
 
@@ -75,20 +75,10 @@ presumably reflecting the difference between empty droplets with little RNA and 
 \item The inflection point is computed as the point on the rank/total curve where the first derivative is minimized.
 The derivative is computed directly from all points on the curve with total counts greater than \code{lower}.
 This avoids issues with erratic behaviour of the curve at lower totals.
-\item The knee point is defined as the point on the curve where the signed curvature is minimized.
-This requires calculation of the second derivative, which is much more sensitive to noise in the curve.
-To overcome this, a smooth spline is fitted to the log-total counts against the log-rank using \code{\link{smooth.spline}}.
-Derivatives are then calculated from the fitted spline using \code{\link{predict}}.
+\item The knee point is defined as the point on the curve that is furthest from the straight line drawn between the \code{fit.bounds} locations on the curve.
+We used to minimize the signed curvature to identify the knee point but this relies on the second derivative,
+which was too unstable even after smoothing.
 }
-}
-\section{Details on curve fitting}{
-
-We supply a relatively low default setting of \code{df} to avoid overfitting the spline, 
-as this results in unstability in the higher derivatives (and thus the curvature).
-\code{df} and other arguments to \code{\link{smooth.spline}} can be tuned 
-if the estimated knee point is not at an appropriate location.
-We also restrict the fit to lie within the bounds defined by \code{fit.bounds} to focus on the region containing the knee point.
-This allows us to obtain an accurate fit with low \code{df} rather than attempting to model the entire curve.
 
 If \code{fit.bounds} is not specified, the lower bound is automatically set to the inflection point
 as this should lie below the knee point on typical curves.
@@ -100,7 +90,6 @@ to avoid spuriously large numerical derivatives from unstable parts of the curve
 Note that only points with total counts above \code{lower} will be considered for curve fitting,
 regardless of how \code{fit.bounds} is defined.
 }
-
 \examples{
 # Mocking up some data: 
 set.seed(2000)
