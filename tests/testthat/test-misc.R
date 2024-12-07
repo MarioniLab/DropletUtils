@@ -11,7 +11,6 @@ test_that("barcodeRanks runs to completion", {
     brout <- barcodeRanks(my.counts, lower=limit)
     expect_equal(brout$total, totals)
     expect_identical(brout$rank, rank(-totals, ties.method="average"))
-    expect_true(all(is.na(brout$fitted[totals <= limit])))
 
     # Trying again with a higher limit.
     limit2 <- 200
@@ -21,9 +20,8 @@ test_that("barcodeRanks runs to completion", {
     # Specifying the boundaries.
     bounds <- c(200, 1000)
     brout3 <- barcodeRanks(my.counts, lower=limit, fit.bounds=bounds)
-    is.okay <- totals > bounds[1] & totals < bounds[2]
-    expect_true(all(is.na(brout3$fitted[!is.okay])))
-    expect_true(all(!is.na(brout3$fitted[is.okay])))
+    knee <- metadata(brout3)$knee
+    expect_true(knee >= bounds[1] && knee <= bounds[2])
 
     # Respecting column names.
     alt <- my.counts
@@ -32,7 +30,6 @@ test_that("barcodeRanks runs to completion", {
     expect_identical(rownames(brout2), colnames(alt))
     expect_identical(names(brout2$rank), NULL)
     expect_identical(names(brout2$total), NULL)
-    expect_identical(names(brout2$fitted), NULL)
 
     # Trying out silly inputs.
     expect_error(barcodeRanks(my.counts[,0]), "insufficient")

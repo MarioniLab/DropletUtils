@@ -11,7 +11,7 @@
 #' @param exclude.from An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
 #' Ignored if \code{fit.bounds} is specified.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
-#' @param df Integer scalar specifying the number of degrees of freedom, to pass to \code{\link{smooth.spline}}.
+#' @param df Deprecated and ignored.
 #' @param ... For the generic, further arguments to pass to individual methods.
 #'
 #' For the SummarizedExperiment method, further arguments to pass to the ANY method.
@@ -34,20 +34,11 @@
 #' \item The inflection point is computed as the point on the rank/total curve where the first derivative is minimized.
 #' The derivative is computed directly from all points on the curve with total counts greater than \code{lower}.
 #' This avoids issues with erratic behaviour of the curve at lower totals.
-#' \item The knee point is defined as the point on the curve where the signed curvature is minimized.
-#' This requires calculation of the second derivative, which is much more sensitive to noise in the curve.
-#' To overcome this, a smooth spline is fitted to the log-total counts against the log-rank using \code{\link{smooth.spline}}.
-#' Derivatives are then calculated from the fitted spline using \code{\link{predict}}.
+#' \item The knee point is defined as the point on the curve that is furthest from the straight line drawn between the \code{fit.bounds} locations on the curve.
+#' We used to minimize the signed curvature to identify the knee point but this relies on the second derivative,
+#' which was too unstable even after smoothing.
 #' }
 #'
-#' @section Details on curve fitting:
-#' We supply a relatively low default setting of \code{df} to avoid overfitting the spline, 
-#' as this results in unstability in the higher derivatives (and thus the curvature).
-#' \code{df} and other arguments to \code{\link{smooth.spline}} can be tuned 
-#' if the estimated knee point is not at an appropriate location.
-#' We also restrict the fit to lie within the bounds defined by \code{fit.bounds} to focus on the region containing the knee point.
-#' This allows us to obtain an accurate fit with low \code{df} rather than attempting to model the entire curve.
-#' 
 #' If \code{fit.bounds} is not specified, the lower bound is automatically set to the inflection point
 #' as this should lie below the knee point on typical curves.
 #' The upper bound is set to the point at which the first derivative is closest to zero, 
@@ -63,8 +54,6 @@
 #' \describe{
 #' \item{\code{rank}:}{Numeric, the rank of each barcode (averaged across ties).}
 #' \item{\code{total}:}{Numeric, the total counts for each barcode.}
-#' \item{\code{fitted}:}{Numeric, the fitted value from the spline for each barcode.
-#' This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.}
 #' }
 #' 
 #' The metadata contains \code{knee}, a numeric scalar containing the total count at the knee point;
@@ -85,7 +74,6 @@
 #' # Making a plot.
 #' plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 #' o <- order(br.out$rank)
-#' lines(br.out$rank[o], br.out$fitted[o], col="red")
 #' abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
 #' abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
 #' legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
@@ -98,7 +86,6 @@
 #' @name barcodeRanks
 NULL
 
-#' @importFrom stats smooth.spline predict fitted
 #' @importFrom utils tail
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
@@ -134,21 +121,20 @@ NULL
     if (is.null(fit.bounds)) {
         new.keep <- left.edge:right.edge
     } else {
-        new.keep <- y > log10(fit.bounds[1]) & y < log10(fit.bounds[2])
+        new.keep <- which(y > log10(fit.bounds[1]) & y < log10(fit.bounds[2]))
     }
 
-    # Smoothing to avoid error multiplication upon differentiation.
-    # Minimizing the signed curvature and returning the total for the knee point.
-    fitted.vals <- rep(NA_real_, length(keep))
-
+    # Using the maximum distance to identify the knee point.
     if (length(new.keep) >= 4) {
-        fit <- smooth.spline(x[new.keep], y[new.keep], df=df, ...)
-        fitted.vals[keep][new.keep] <- 10^fitted(fit)
-
-        d1 <- predict(fit, deriv=1)$y
-        d2 <- predict(fit, deriv=2)$y
-        curvature <- d2/(1 + d1^2)^1.5
-        knee <- 10^(y[new.keep][which.min(curvature)])
+        curx <- x[new.keep]
+        cury <- y[new.keep]
+        xbounds <- curx[c(1L, length(new.keep))]
+        ybounds <- cury[c(1L, length(new.keep))]
+        gradient <- diff(ybounds)/diff(xbounds)
+        intercept <- ybounds[1] - xbounds[1] * gradient
+        above <- which(cury >= curx * gradient + intercept)
+        dist <- abs(gradient * curx[above] - cury[above] + intercept)/sqrt(gradient^2 + 1)
+        knee <- 10^(cury[above[which.max(dist)]])
     } else {
         # Sane fallback upon overly aggressive filtering by 'exclude.from', 'lower'.
         knee <- 10^(y[new.keep[1]]) 
@@ -157,8 +143,7 @@ NULL
     # Returning a whole stack of useful stats.
     out <- DataFrame(
         rank=.reorder(run.rank, stuff$lengths, o), 
-        total=.reorder(run.totals, stuff$lengths, o),
-        fitted=.reorder(fitted.vals, stuff$lengths, o)
+        total=.reorder(run.totals, stuff$lengths, o)
     )
     rownames(out) <- colnames(m)
     metadata(out) <- list(knee=knee, inflection=inflection)

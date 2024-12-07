@@ -2,6 +2,12 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.28.0}{\itemize{
+\item Use a more stable algorithm for identifying the knee point in \code{barcodeRanks()}.
+The new algorithm is based on maximizing the distance from a line between the plateau and the inflection point.
+Previously, we tried to minimize the signed curvature but this was susceptible to many local minima due to the instability of the empirical second derivative, even after smoothing.
+}}
+
 \section{Version 1.18.0}{\itemize{
 \item Added an \code{intersect.genes=} option to \code{read10xCounts()} for samples with inconsistent gene information.
 Automatically fix empty chromosome names for mitochondrial genes in certain Cellranger outputs.
