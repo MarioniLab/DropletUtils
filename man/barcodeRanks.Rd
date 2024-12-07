@@ -50,8 +50,6 @@ A \linkS4class{DataFrame} where each row corresponds to a column of \code{m}, an
 \describe{
 \item{\code{rank}:}{Numeric, the rank of each barcode (averaged across ties).}
 \item{\code{total}:}{Numeric, the total counts for each barcode.}
-\item{\code{fitted}:}{Numeric, the fitted value from the spline for each barcode.
-This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.}
 }
 
 The metadata contains \code{knee}, a numeric scalar containing the total count at the knee point;
@@ -102,7 +100,6 @@ names(br.out)
 # Making a plot.
 plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 o <- order(br.out$rank)
-lines(br.out$rank[o], br.out$fitted[o], col="red")
 abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
 abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
 legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 

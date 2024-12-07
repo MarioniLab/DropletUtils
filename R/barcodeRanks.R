@@ -54,8 +54,6 @@
 #' \describe{
 #' \item{\code{rank}:}{Numeric, the rank of each barcode (averaged across ties).}
 #' \item{\code{total}:}{Numeric, the total counts for each barcode.}
-#' \item{\code{fitted}:}{Numeric, the fitted value from the spline for each barcode.
-#' This is \code{NA} for points with \code{x} outside of \code{fit.bounds}.}
 #' }
 #' 
 #' The metadata contains \code{knee}, a numeric scalar containing the total count at the knee point;
@@ -76,7 +74,6 @@
 #' # Making a plot.
 #' plot(br.out$rank, br.out$total, log="xy", xlab="Rank", ylab="Total")
 #' o <- order(br.out$rank)
-#' lines(br.out$rank[o], br.out$fitted[o], col="red")
 #' abline(h=metadata(br.out)$knee, col="dodgerblue", lty=2)
 #' abline(h=metadata(br.out)$inflection, col="forestgreen", lty=2)
 #' legend("bottomleft", lty=2, col=c("dodgerblue", "forestgreen"), 
@@ -124,21 +121,19 @@ NULL
     if (is.null(fit.bounds)) {
         new.keep <- left.edge:right.edge
     } else {
-        new.keep <- y > log10(fit.bounds[1]) & y < log10(fit.bounds[2])
+        new.keep <- which(y > log10(fit.bounds[1]) & y < log10(fit.bounds[2]))
     }
 
     # Using the maximum distance to identify the knee point.
-    fitted.vals <- rep(NA_real_, length(keep))
-
     if (length(new.keep) >= 4) {
         curx <- x[new.keep]
         cury <- y[new.keep]
         xbounds <- curx[c(1L, length(new.keep))]
         ybounds <- cury[c(1L, length(new.keep))]
-        m <- diff(ybounds)/diff(xbounds)
-        b <- ybounds[1] - xbounds[1] * m
-        above <- which(cury >= curx * m + b)
-        dist <- abs(m * curx[above] - cury[above] + b)/sqrt(m^2 + 1)
+        gradient <- diff(ybounds)/diff(xbounds)
+        intercept <- ybounds[1] - xbounds[1] * gradient
+        above <- which(cury >= curx * gradient + intercept)
+        dist <- abs(gradient * curx[above] - cury[above] + intercept)/sqrt(gradient^2 + 1)
         knee <- 10^(cury[above[which.max(dist)]])
     } else {
         # Sane fallback upon overly aggressive filtering by 'exclude.from', 'lower'.
@@ -148,8 +143,7 @@ NULL
     # Returning a whole stack of useful stats.
     out <- DataFrame(
         rank=.reorder(run.rank, stuff$lengths, o), 
-        total=.reorder(run.totals, stuff$lengths, o),
-        fitted=.reorder(fitted.vals, stuff$lengths, o)
+        total=.reorder(run.totals, stuff$lengths, o)
     )
     rownames(out) <- colnames(m)
     metadata(out) <- list(knee=knee, inflection=inflection)
