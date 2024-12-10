@@ -65,3 +65,4 @@ LinkingTo:
     scuttle
 SystemRequirements: C++11, GNU make
 RoxygenNote: 7.3.2
+Encoding: UTF-8
