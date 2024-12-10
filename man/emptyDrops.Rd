@@ -13,7 +13,7 @@ testEmptyDrops(
   niters = 10000,
   test.ambient = FALSE,
   ignore = NULL,
-  alpha = NULL,
+  alpha = Inf,
   round = TRUE,
   by.rank = NULL,
   known.empty = NULL,
@@ -144,15 +144,19 @@ The latter is a \dQuote{no frills} version that is largely intended for use with
 
 \section{Handling overdispersion}{
 
+By default, \code{alpha=Inf} which means that the count vector is modelled with a multinomial distribution.
+This is appropriate when molecules are independently sampled into each droplet. 
+
 If \code{alpha} is set to a positive number, sampling is assumed to follow a Dirichlet-multinomial (DM) distribution.
 The parameter vector of the DM distribution is defined as the estimated ambient profile scaled by \code{alpha}.
-Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling between molecules.
+Smaller values of \code{alpha} model overdispersion in the counts, due to dependencies in sampling between molecules (e.g., aggregates, PCR duplication).
 If \code{alpha=NULL}, a maximum likelihood estimate is obtained from the count profiles for all barcodes with totals less than or equal to \code{lower}.
-If \code{alpha=Inf}, the sampling of molecules is modelled with a multinomial distribution.
 
 Users can check whether the model is suitable by extracting the p-values for all barcodes with \code{test.ambient=TRUE}.
 Under the null hypothesis, the p-values for presumed ambient barcodes (i.e., with total counts less than or equal to \code{lower}) should be uniformly distributed.
-Skews in the p-value distribution are indicative of an inaccuracy in the model and/or its estimates (of \code{alpha} or the ambient profile).
+Skews in the p-value distribution are indicative of an inaccuracy in the model.
+For example, an inaccurate \code{alpha} or ambient profile will manifest in the overenrichment of low p-values.
+Conversely, very sparse data will often exhibit in a enrichment of p-values at 1 as the Good-Turing probabilities in the ambient profile cannot be zero.
 }
 
 \section{\code{NA} values in the results}{
