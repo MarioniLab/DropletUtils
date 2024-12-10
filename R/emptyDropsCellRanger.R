@@ -37,7 +37,8 @@
 #' \item The first subset contains barcodes that are selected by the \dQuote{simple filtering algorithm}, which are regarded as high quality cells without any further filtering.
 #' The minimum threshold \eqn{T} for this subset is defined by taking the \code{max.percentile} percentile of the top \code{n.expected.cells} barcodes,
 #' and then dividing by the \code{max.min.ratio} to obtain a minimum UMI count.
-#' All barcodes here will have an FDR of zero.
+#' (This is closely related to the algorithm used by \code{\link{defaultDrops}}.)
+#' All barcodes identified in this manner will have an FDR of zero.
 #' \item The second subset contains the ambient pool and is defined as all barcodes with rankings between \code{ind.min} and \code{ind.max}. 
 #' The barcodes that fall in this category will be used to compute the ambient profile.
 #' None of these barcodes are considered to be potential cells.
@@ -51,10 +52,11 @@
 #' 
 #' The main differences between \code{emptyDropsCellRanger} and \code{emptyDrops} are:
 #' \itemize{
-#' \item \code{emptyDropsCellRanger} applies a simple filtering strategy to identify some real cells before any further investigation.
+#' \item \code{emptyDropsCellRanger} does not use the knee point to identify \dQuote{presumed real} cells,
+#' instead relying on a threshold based on the expected number of cells.
 #' \item \code{emptyDropsCellRanger} takes barcodes whose total count ranks within a certain range - by default, \eqn{(45,000, 90,000]} - to compute the ambient profile.
 #' In contrast, \code{emptyDrops} only defines the upper bound using \code{lower} or \code{by.rank}.
-#' \item \code{emptyDropsCellRanger} defines a cell candidate pool according to three parameters, \code{umi.min},\code{umi.min.frac.median} and \code{cand.max.n}.
+#' \item \code{emptyDropsCellRanger} defines a cell candidate pool according to three parameters, \code{umi.min}, \code{umi.min.frac.median} and \code{cand.max.n}.
 #' In \code{emptyDrops}, this is only defined by \code{lower}.
 #' }
 #' 
