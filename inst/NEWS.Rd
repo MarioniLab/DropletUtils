@@ -6,6 +6,10 @@
 \item Use a more stable algorithm for identifying the knee point in \code{barcodeRanks()}.
 The new algorithm is based on maximizing the distance from a line between the plateau and the inflection point.
 Previously, we tried to minimize the signed curvature but this was susceptible to many local minima due to the instability of the empirical second derivative, even after smoothing.
+
+\item Set \code{alpha=Inf} as the default for \code{testEmptyDrops()}.
+This is motivated by the realization that an underestimated \code{alpha} can still yield anticonservative p-values and is not universally safer than \code{alpha=Inf}.
+Defaulting \code{alpha=Inf} is preferable as it is at least correct in the expected case of multinomial sampling.
 }}
 
 \section{Version 1.18.0}{\itemize{
