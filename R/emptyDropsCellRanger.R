@@ -156,7 +156,18 @@ NULL
         }
         
         ambient <- logical(length(totals))
-        ambient[o[min(ind.min, length(totals)):min(ind.max, length(totals))]] <- TRUE
+        final.ind.min = min(ind.min, length(totals))
+        final.ind.max = min(ind.max, length(totals))
+        if ((final.ind.max - final.ind.min) < 100) {
+            stop(paste0(
+                "The ambient pool size (",
+                final.ind.max - final.ind.min + 1,
+                ") is too small; cannot proceed.",
+                "Please adjust `ind.min` and `ind.max` to increase the size. ",
+                "One suggestion is to set `ind.min = sum(colSums(m) > N)` and `ind.max = ncol(m)`, ",
+                "where N is a threshold of UMI count, such as 100, and m is the count matrix."))
+        }
+        ambient[o[final.ind.min:final.ind.max]] <- TRUE
         ambient.m <- mat[,ambient,drop=FALSE]
         ambient.prof <- rowSums(ambient.m)
         
