@@ -162,7 +162,7 @@ NULL
             stop(paste0(
                 "The ambient pool size (",
                 final.ind.max - final.ind.min + 1,
-                ") is too small; cannot proceed.",
+                ") is too small; cannot proceed. ",
                 "Please adjust `ind.min` and `ind.max` to increase the size. ",
                 "One suggestion is to set `ind.min = sum(colSums(m) > N)` and `ind.max = ncol(m)`, ",
                 "where N is a threshold of UMI count, such as 100, and m is the count matrix."))
