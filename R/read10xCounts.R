@@ -250,7 +250,7 @@ read10xCounts <- function(samples,
 #' @importFrom utils read.delim head
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols<-
-#' @importFrom SparseArray SVT_SparseMatrix
+#' @importClassesFrom SparseArray SVT_SparseMatrix 
 .read_from_sparse <- function(path, version, is.prefix, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     FUN <- if (is.prefix) paste0 else file.path
 
@@ -300,7 +300,7 @@ read10xCounts <- function(samples,
         # Don't use sparseMatrix as this seems to do an unnecessary roundtrip through the triplet form.
         mat <- new("dgCMatrix", Dim=raw_mat$dim, i=raw_mat$contents$i, x=raw_mat$contents$x, p=raw_mat$contents$p) 
     } else {
-        mat <- SVT_SparseArray(raw_mat$contents, dim=raw_mat$dim)
+        mat <- new("SVT_SparseMatrix", SVT=raw_mat$contents$list, dim=raw_mat$dim, type=raw_mat$contents$type)
     }
 
     list(

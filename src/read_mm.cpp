@@ -46,6 +46,7 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
     auto parser = eminem::parse_some_file(path.c_str(), opt);
     parser.scan_preamble();
     const auto& banner = parser.get_banner();
+    std::string out_type;
 
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
         std::vector<double*> vptrs(NC);
@@ -54,7 +55,7 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
             Rcpp::IntegerVector indices(nnz_per_col[c]);
             iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
             vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(indices), std::move(values));
+            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
         }
 
         parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
@@ -65,6 +66,7 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         });
 
         sort_SVT_SparseMatrix_columns(iptrs, vptrs, used, threads);
+        out_type = "double";
 
     } else if (banner.field == eminem::Field::INTEGER) {
         std::vector<int*> vptrs(NC);
@@ -73,7 +75,7 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
             Rcpp::IntegerVector indices(nnz_per_col[c]);
             iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
             vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(indices), std::move(values));
+            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
         }
 
         parser.scan_integer([&](eminem::Index r, eminem::Index c, double val) -> void {
@@ -84,12 +86,16 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         });
 
         sort_SVT_SparseMatrix_columns(iptrs, vptrs, used, threads);
+        out_type = "integer";
 
     } else {
         throw std::runtime_error("unsupported eminem::Field type");
     }
 
-    return contents;
+    return Rcpp::List::create(
+        Rcpp::Named("list") = contents,
+        Rcpp::Named("type") = out_type 
+    );
 }
 
 template<typename Size_>
@@ -132,16 +138,16 @@ Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std:
         Rcpp::NumericVector values(ntotal);
 
         if (banner.field == eminem::Field::INTEGER) {
-            parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
-                auto& pos = offsets[c];
-                row_indices[pos] = r;
+            parser.scan_integer([&](eminem::Index r, eminem::Index c, int val) -> void {
+                auto& pos = offsets[c - 1];
+                row_indices[pos] = r - 1;
                 values[pos] = val;
                 ++pos;
             });
         } else {
-            parser.scan_integer([&](eminem::Index r, eminem::Index c, int val) -> void {
-                auto& pos = offsets[c];
-                row_indices[pos] = r;
+            parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
+                auto& pos = offsets[c - 1];
+                row_indices[pos] = r - 1;
                 values[pos] = val;
                 ++pos;
             });
@@ -269,11 +275,20 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
         for (decltype(NC) c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
             output[c] = Rcpp::List::create(
-                Rcpp::IntegerVector(pair.first.begin(), pair.first.end()),
-                Rclass_(pair.second.begin(), pair.second.end())
+                Rclass_(pair.second.begin(), pair.second.end()),
+                Rcpp::IntegerVector(pair.first.begin(), pair.first.end())
             );
         }
-        return output;
+        return Rcpp::List::create(
+            Rcpp::Named("list") = output,
+            Rcpp::Named("type") = []{
+                if constexpr(std::is_same<Type_, int>::value) {
+                    return std::string("integer");
+                } else {
+                    return std::string("double");
+                }
+            }()
+        );
 
     } else {
         Rcpp::IntegerVector indptr(safe_get_indptr_size<R_xlen_t>(NC));
