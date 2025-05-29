@@ -295,7 +295,7 @@ read10xCounts <- function(samples,
         gene.info <- gr 
     }
 
-    raw_mat <- read_mm(matrix.loc, two_pass=mtx.two.pass, class=mtx.class, threads=mtx.threads)
+    raw_mat <- read_mm(matrix.loc, two_pass=mtx.two.pass, class_name=mtx.class, threads=mtx.threads)
     if (mtx.class == "CsparseMatrix") {
         # Don't use sparseMatrix as this seems to do an unnecessary roundtrip through the triplet form.
         mat <- new("dgCMatrix", Dim=raw_mat$dim, i=raw_mat$contents$i, x=raw_mat$contents$x, p=raw_mat$contents$p) 

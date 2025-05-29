@@ -298,3 +298,36 @@ test_that("read10xCounts with an integer Matrix Market file", {
     sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
     expect_equal(counts(sce10x.mc), alt.counts)
 })
+
+set.seed(2009)
+test_that("read10xCounts with a shuffled Matrix Market file", {
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    # Shuffling the lines of the Matrix Market file to check that read_mm() handles it correctly.
+    mtx.path <- file.path(tmpdir, "matrix.mtx")
+    all.lines <- readLines(mtx.path)
+    writeLines(c(head(all.lines, 2), sample(tail(all.lines, -2))), con=mtx.path)
+
+    alt.counts <- my.counts
+    rownames(alt.counts) <- gene.ids
+    colnames(alt.counts) <- NULL
+
+    # Trying all the options for reading matrices. 
+    sce10x <- read10xCounts(tmpdir)
+    expect_equal(counts(sce10x), alt.counts)
+    sce10x.tp <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.tp), alt.counts)
+
+    sce10x.svt <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    svt.counts <- as(alt.counts, "SVT_SparseArray")
+    expect_equal(counts(sce10x.svt), svt.counts)
+    sce10x.tp.svt <- read10xCounts(tmpdir, mtx.two.pass=TRUE, mtx.class="SVT_SparseMatrix")
+    expect_equal(counts(sce10x.tp.svt), svt.counts)
+
+    # Multiple threads as well:
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2)
+    expect_equal(counts(sce10x.mc), alt.counts)
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.mc), alt.counts)
+})

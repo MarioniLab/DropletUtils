@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <limits>
 #include <type_traits>
+#include <algorithm>
 
 template<typename Type_>
 void sort_SVT_SparseMatrix_columns(const std::vector<int*>& iptrs, const std::vector<Type_*>& vptrs, const std::vector<int>& num, int threads) {
@@ -198,6 +199,14 @@ int safe_cast_dim(Size_ val) {
     return val;
 }
 
+static void safe_increment(int& val) {
+    constexpr auto limiter = std::numeric_limits<int>::max();
+    if (limiter == val) {
+        throw std::runtime_error("number of non-zero elements is too large to be stored as an integer");
+    }
+    ++val;
+}
+
 Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class_name, int threads) {
     // First pass, to determine the size of each column for preallocation.
     std::vector<int> nnz_per_col;
@@ -215,16 +224,13 @@ Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class
     const auto& banner = parser.get_banner();
     switch (banner.field) {
         case eminem::Field::REAL: case eminem::Field::DOUBLE:
-            // Don't bother checking for overflow, as we already did that for the dimension
-            // extents and eminem will automatically check that indices lie within range.
-            // Note that indices are 1-based. 
             parser.scan_real([&](eminem::Index, eminem::Index c, double) -> void {
-                ++(nnz_per_col[c - 1]);
+                safe_increment(nnz_per_col[c - 1]);
             });
             break;
         case eminem::Field::INTEGER:
             parser.scan_real([&](eminem::Index, eminem::Index c, int) -> void {
-                ++(nnz_per_col[c - 1]);
+                safe_increment(nnz_per_col[c - 1]);
             });
             break;
         default:
