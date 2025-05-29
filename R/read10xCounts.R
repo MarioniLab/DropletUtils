@@ -98,7 +98,7 @@
 #' 
 #' @examples
 #' # Mocking up some 10X genomics output.
-#' example(write10xCounts)
+#' example(write10xCounts, echo=FALSE)
 #' 
 #' # Reading it in.
 #' sce10x <- read10xCounts(tmpdir)
@@ -245,11 +245,12 @@ read10xCounts <- function(samples,
     }
 }
 
-#' @importFrom methods as
+#' @importFrom methods as new
 #' @importClassesFrom Matrix dgCMatrix
 #' @importFrom utils read.delim head
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols<-
+#' @importFrom SparseArray SVT_SparseMatrix
 .read_from_sparse <- function(path, version, is.prefix, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     FUN <- if (is.prefix) paste0 else file.path
 
@@ -294,8 +295,16 @@ read10xCounts <- function(samples,
         gene.info <- gr 
     }
 
+    raw_mat <- read_mm(matrix.loc, two_pass=mtx.two.pass, class=mtx.class, threads=mtx.threads)
+    if (mtx.class == "CsparseMatrix") {
+        # Don't use sparseMatrix as this seems to do an unnecessary roundtrip through the triplet form.
+        mat <- new("dgCMatrix", Dim=raw_mat$dim, i=raw_mat$contents$i, x=raw_mat$contents$x, p=raw_mat$contents$p) 
+    } else {
+        mat <- SVT_SparseArray(raw_mat$contents, dim=raw_mat$dim)
+    }
+
     list(
-        mat=read_mm(matrix.loc, two_pass=mtx.two.pass, class=mtx.class, threads=mtx.threads),
+        mat=mat,
         cell.names=readLines(barcode.loc),
         gene.info=gene.info
     )

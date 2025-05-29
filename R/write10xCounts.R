@@ -54,8 +54,7 @@
 #' @examples
 #' # Mocking up some count data.
 #' library(Matrix)
-#' my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-#' my.counts <- as(my.counts, "CsparseMatrix")
+#' my.counts <- abs(rsparsematrix(100, 10, 0.2) * 10)
 #' cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 #' 
 #' ngenes <- nrow(my.counts)

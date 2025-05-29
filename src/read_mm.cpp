@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdexcept>
 #include <limits>
+#include <type_traits>
 
 template<typename Type_>
 void sort_SVT_SparseMatrix_columns(const std::vector<int*>& iptrs, const std::vector<Type_*>& vptrs, const std::vector<int>& num, int threads) {
@@ -100,15 +101,25 @@ int safe_add_indptr(int sofar, Size_ val) {
     return sofar + val;
 }
 
+template<typename Output_, typename Number_>
+Output_ safe_get_indptr_size(Number_ n) {
+    if (static_cast<typename std::make_unsigned<Number_>::type>(n) >= static_cast<typename std::make_unsigned<Output_>::type>(std::numeric_limits<Output_>::max())) {
+        throw std::runtime_error("number of columns is too large for allocating indptrs");
+    }
+    Output_ out = n;
+    ++out;
+    return out;
+}
+
 Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
     auto NC = nnz_per_col.size();
-    std::vector<int> offsets(NC + 1);
+    std::vector<int> offsets(safe_get_indptr_size<typename std::vector<int>::size_type>(NC));
     for (decltype(NC) c = 0; c < NC; ++c) {
         offsets[c + 1] = safe_add_indptr(offsets[c], nnz_per_col[c]);
     }
 
     Rcpp::IntegerVector indptr(offsets.begin(), offsets.end());
-    auto ntotal = indptr[NC + 1];
+    auto ntotal = indptr[NC];
     Rcpp::IntegerVector row_indices(ntotal);
 
     eminem::ParseSomeFileOptions opt;
@@ -265,14 +276,14 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
         return output;
 
     } else {
-        Rcpp::IntegerVector indptr(NC + 1);
+        Rcpp::IntegerVector indptr(safe_get_indptr_size<R_xlen_t>(NC));
         for (decltype(NC) c = 0; c < NC; ++c) {
             indptr[c + 1] = safe_add_indptr(indptr[c], contents[c].first.size());
         }
 
-        auto total_nnz = indptr[NC + 1];
+        auto total_nnz = indptr[NC];
         Rcpp::IntegerVector indices(total_nnz);
-        Rclass_ values(total_nnz);
+        Rcpp::NumericVector values(total_nnz); // it's going to be a dgCMatrix anyway, so we might as well save it as a numeric vector.
         decltype(total_nnz) sofar = 0; 
         for (decltype(NC) c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
@@ -296,8 +307,8 @@ Rcpp::RObject read_mm_one_pass(const std::string& path, const std::string& class
     parser.scan_preamble();
 
     Rcpp::IntegerVector dimensions(2);
-    dimensions[0] = parser.get_nrows();
-    auto NC = parser.get_ncols();
+    dimensions[0] = safe_cast_dim(parser.get_nrows());
+    auto NC = safe_cast_dim(parser.get_ncols());
     dimensions[1] = NC;
 
     const auto& banner = parser.get_banner();

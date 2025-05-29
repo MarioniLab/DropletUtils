@@ -12,7 +12,7 @@ write10xCounts(
   gene.symbol = gene.id,
   gene.type = "Gene Expression",
   overwrite = FALSE,
-  type = c("auto", "sparse", "HDF5"),
+  type = c("auto", "mtx", "hdf5", "sparse", "HDF5"),
   genome = "unknown",
   version = c("2", "3"),
   chemistry = "Single Cell 3' v3",
@@ -21,7 +21,7 @@ write10xCounts(
 )
 }
 \arguments{
-\item{path}{A string containing the path to the output directory (for \code{type="sparse"}) or file (for \code{type="HDF5"}).}
+\item{path}{A string containing the path to the output directory (for \code{type="mtx"}) or file (for \code{type="hdf5"}).}
 
 \item{x}{A sparse numeric matrix of UMI counts.}
 
@@ -37,23 +37,23 @@ Only used when \code{version="3"}.}
 \item{overwrite}{A logical scalar specifying whether \code{path} should be overwritten if it already exists.}
 
 \item{type}{String specifying the type of 10X format to save \code{x} to.
-This is either a directory containing a sparse matrix with row/column annotation (\code{"sparse"})
-or a HDF5 file containing the same information (\code{"HDF5"}).}
+This is either a directory containing a sparse matrix with row/column annotation (\code{"mtx"}, or its older alias \code{"sparse"})
+or a HDF5 file containing the same information (\code{"hdf5"}, or its older alias \code{"HDF5"}).}
 
-\item{genome}{String specifying the genome for storage when \code{type="HDF5"}.
+\item{genome}{String specifying the genome for storage when \code{type="hdf5"}.
 This can be a character vector with one genome per feature if \code{version="3"}.}
 
 \item{version}{String specifying the version of the CellRanger format to produce.}
 
-\item{chemistry, original.gem.groups, library.ids}{Strings containing metadata attributes to be added to the HDF5 file for \code{type="HDF5"}.
+\item{chemistry, original.gem.groups, library.ids}{Strings containing metadata attributes to be added to the HDF5 file for \code{type="hdf5"}.
 Their interpretation is not formally documented and is left to the user's imagination.}
 }
 \value{
-For \code{type="sparse"}, a directory is produced at \code{path}.
+For \code{type="mtx"}, a directory is produced at \code{path}.
 If \code{version="2"}, this will contain the files \code{"matrix.mtx"}, \code{"barcodes.tsv"} and \code{"genes.tsv"}.
 If \code{version="3"}, it will instead contain \code{"matrix.mtx.gz"}, \code{"barcodes.tsv.gz"} and \code{"features.tsv.gz"}.
 
-For \code{type="HDF5"}, a HDF5 file is produced at \code{path} containing data in column-sparse format.
+For \code{type="hdf5"}, a HDF5 file is produced at \code{path} containing data in column-sparse format.
 If \code{version="2"}, data are stored in the HDF5 group named \code{genome}.
 If \code{version="3"}, data are stored in the group \code{"matrix"}.
 
@@ -65,8 +65,8 @@ in the format produced by the CellRanger software suite.
 }
 \details{
 This function will try to automatically detect the desired format based on whether \code{path} ends with \code{".h5"}.
-If so, it assumes that \code{path} specifies a HDF5 file path and sets \code{type="HDF5"}.
-Otherwise it will set \code{type="sparse"} under the assumption that \code{path} specifies a path to a directory.
+If so, it assumes that \code{path} specifies a HDF5 file path and sets \code{type="hdf5"}.
+Otherwise it will set \code{type="mtx"} under the assumption that \code{path} specifies a path to a directory.
 
 Note that there were major changes in the output format for CellRanger version 3.0 to account for non-gene features such as antibody or CRISPR tags. 
 Users can switch to this new format using \code{version="3"}.
@@ -79,8 +79,7 @@ We recommend against doing so routinely due to CellRanger's dependence on undocu
 \examples{
 # Mocking up some count data.
 library(Matrix)
-my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-my.counts <- as(my.counts, "CsparseMatrix")
+my.counts <- abs(rsparsematrix(100, 10, 0.2) * 10)
 cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 
 ngenes <- nrow(my.counts)
