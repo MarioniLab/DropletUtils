@@ -57,9 +57,9 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         }
 
         parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
-            auto& pos = used[c];
-            iptrs[c][pos] = r;
-            vptrs[c][pos] = val;
+            auto& pos = used[c - 1];
+            iptrs[c - 1][pos] = r - 1;
+            vptrs[c - 1][pos] = val;
             ++pos;
         });
 
@@ -76,47 +76,35 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         }
 
         parser.scan_integer([&](eminem::Index r, eminem::Index c, double val) -> void {
-            auto& pos = used[c];
-            iptrs[c][pos] = r;
-            vptrs[c][pos] = val;
+            auto& pos = used[c - 1];
+            iptrs[c - 1][pos] = r - 1;
+            vptrs[c - 1][pos] = val;
             ++pos;
         });
 
         sort_SVT_SparseMatrix_columns(iptrs, vptrs, used, threads);
 
     } else {
-        for (decltype(NC) c = 0; c < NC; ++c) {
-            Rcpp::IntegerVector indices(nnz_per_col[c]);
-            iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
-            contents[c] = Rcpp::List::create(std::move(indices), R_NilValue);
-        }
-
-        subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
-            for (decltype(start) c = start, end = start + length; c < end; ++c) {
-                auto iptr = iptrs[c];
-                auto n = used[c];
-                if (std::is_sorted(iptr, iptr + n)) {
-                    continue;
-                }
-                std::sort(iptr, iptr + n);
-            }
-        });
+        throw std::runtime_error("unsupported eminem::Field type");
     }
 
     return contents;
 }
 
+template<typename Size_>
+int safe_add_indptr(int sofar, Size_ val) {
+    constexpr auto limiter = std::numeric_limits<int>::max();
+    if (static_cast<unsigned>(limiter) < val || static_cast<int>(limiter - val) < sofar) {
+        throw std::runtime_error("too many non-zero elements to be stored in a CsparseMatrix");
+    }
+    return sofar + val;
+}
+
 Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
     auto NC = nnz_per_col.size();
     std::vector<int> offsets(NC + 1);
-    constexpr auto limiter = std::numeric_limits<int>::max();
     for (decltype(NC) c = 0; c < NC; ++c) {
-        auto curnnz = nnz_per_col[c];
-        auto& lastoff = offsets[c];
-        if (limiter - curnnz < lastoff) {
-            throw std::runtime_error("too many non-zero elements to be stored in a CsparseMatrix");
-        }
-        offsets[c + 1] = lastoff + curnnz;
+        offsets[c + 1] = safe_add_indptr(offsets[c], nnz_per_col[c]);
     }
 
     Rcpp::IntegerVector indptr(offsets.begin(), offsets.end());
@@ -178,85 +166,52 @@ Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std:
             Rcpp::Named("p") = indptr
         );
 
-    } else if (banner.field == eminem::Field::PATTERN) {
-        parser.scan_pattern([&](eminem::Index r, eminem::Index c, bool) -> void {
-            auto& pos = offsets[c];
-            row_indices[pos] = r;
-            ++pos;
-        });
-
-        int* iptr = row_indices.begin();
-        const int* pptr = indptr.begin();
-        subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
-            for (decltype(start) c = start, end = start + length; c < end; ++c) {
-                auto pstart = pptr[c], pend = pptr[c + 1];
-                if (std::is_sorted(iptr + pstart, iptr + pend)) {
-                    continue;
-                }
-                std::sort(iptr + pstart, iptr + pend);
-            }
-        });
-
-        return Rcpp::List::create(
-            Rcpp::Named("i") = row_indices, 
-            Rcpp::Named("p") = indptr
-        );
-
     } else {
-        throw std::runtime_error("unknown eminem::Field type");
+        throw std::runtime_error("unsupported eminem::Field type");
         return R_NilValue;
     }
+}
+
+template<typename Size_>
+int safe_cast_dim(Size_ val) {
+    constexpr auto limiter = std::numeric_limits<int>::max();
+    if (static_cast<unsigned>(limiter) < val) {
+        throw std::runtime_error("dimension extent is too large to be stored as an integer");
+    }
+    return val;
 }
 
 Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class_name, int threads) {
     // First pass, to determine the size of each column for preallocation.
     std::vector<int> nnz_per_col;
     Rcpp::IntegerVector dimensions(2);
-    {
-        eminem::ParseSomeFileOptions opt;
-        opt.num_threads = threads;
-        auto parser = eminem::parse_some_file(path.c_str(), opt);
-        parser.scan_preamble();
+    eminem::ParseSomeFileOptions opt;
+    opt.num_threads = threads;
+    auto parser = eminem::parse_some_file(path.c_str(), opt);
+    parser.scan_preamble();
 
-        dimensions[0] = parser.get_nrows();
-        auto NC = parser.get_ncols();
-        dimensions[1] = NC;
+    dimensions[0] = safe_cast_dim(parser.get_nrows());
+    auto NC = safe_cast_dim(parser.get_ncols());
+    dimensions[1] = NC;
 
-        nnz_per_col.resize(NC);
-        constexpr auto limiter = std::numeric_limits<int>::max();
-        auto check_overflow = [&](int count) {
-            if (count == limiter) {
-                throw std::runtime_error("integer overflow on the number of elements in a column");
-            }
-        };
-
-        const auto& banner = parser.get_banner();
-        switch (banner.field) {
-            case eminem::Field::REAL:
-            case eminem::Field::DOUBLE:
-                parser.scan_real([&](eminem::Index, eminem::Index c, double) -> void {
-                    auto& off = nnz_per_col[c + 1];
-                    check_overflow(off);
-                    ++off;
-                });
-                break;
-            case eminem::Field::INTEGER:
-                parser.scan_real([&](eminem::Index, eminem::Index c, int) -> void {
-                    auto& off = nnz_per_col[c + 1];
-                    check_overflow(off);
-                    ++off;
-                });
-                break;
-            case eminem::Field::PATTERN:
-                parser.scan_pattern([&](eminem::Index, eminem::Index c, bool) -> void {
-                    auto& off = nnz_per_col[c + 1];
-                    check_overflow(off);
-                    ++off;
-                });
-                break;
-            default:
-                throw std::runtime_error("unknown eminem::Field type");
-        }
+    nnz_per_col.resize(NC);
+    const auto& banner = parser.get_banner();
+    switch (banner.field) {
+        case eminem::Field::REAL: case eminem::Field::DOUBLE:
+            // Don't bother checking for overflow, as we already did that for the dimension
+            // extents and eminem will automatically check that indices lie within range.
+            // Note that indices are 1-based. 
+            parser.scan_real([&](eminem::Index, eminem::Index c, double) -> void {
+                ++(nnz_per_col[c - 1]);
+            });
+            break;
+        case eminem::Field::INTEGER:
+            parser.scan_real([&](eminem::Index, eminem::Index c, int) -> void {
+                ++(nnz_per_col[c - 1]);
+            });
+            break;
+        default:
+            throw std::runtime_error("unsupported eminem::Field type");
     }
 
     // Second pass, to fill the vectors.
@@ -311,14 +266,8 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
 
     } else {
         Rcpp::IntegerVector indptr(NC + 1);
-        constexpr auto limiter = std::numeric_limits<int>::max();
         for (decltype(NC) c = 0; c < NC; ++c) {
-            auto curnnz = contents[c].first.size();
-            auto& lastoff = indptr[c];
-            if (limiter - curnnz < lastoff) {
-                throw std::runtime_error("too many non-zero elements to be stored in a CsparseMatrix");
-            }
-            indptr[c + 1] = lastoff + curnnz;
+            indptr[c + 1] = safe_add_indptr(indptr[c], contents[c].first.size());
         }
 
         auto total_nnz = indptr[NC + 1];
@@ -356,8 +305,8 @@ Rcpp::RObject read_mm_one_pass(const std::string& path, const std::string& class
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
         std::vector<std::pair<std::vector<int>, std::vector<double> > > contents(NC);
         parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
-            contents[c].first.push_back(r);
-            contents[c].second.push_back(val);
+            contents[c - 1].first.push_back(r - 1);
+            contents[c - 1].second.push_back(val);
         });
         return Rcpp::List::create(
             Rcpp::Named("dim") = dimensions,
@@ -366,77 +315,17 @@ Rcpp::RObject read_mm_one_pass(const std::string& path, const std::string& class
 
     } else if (banner.field == eminem::Field::INTEGER) {
         std::vector<std::pair<std::vector<int>, std::vector<int> > > contents(NC);
-        parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
-            contents[c].first.push_back(r);
-            contents[c].second.push_back(val);
+        parser.scan_real([&](eminem::Index r, eminem::Index c, int val) -> void {
+            contents[c - 1].first.push_back(r - 1);
+            contents[c - 1].second.push_back(val);
         });
         return Rcpp::List::create(
             Rcpp::Named("dim") = dimensions,
             Rcpp::Named("contents") = format_one_pass_output<Rcpp::IntegerVector>(contents, class_name, threads)
         );
 
-    } else if (banner.field == eminem::Field::PATTERN) {
-        std::vector<std::vector<int> > contents(NC);
-        parser.scan_real([&](eminem::Index r, eminem::Index c, bool) -> void {
-            contents[c].push_back(r);
-        });
-
-        subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
-            for (decltype(start) c = start, end = start + length; c < end; ++c) {
-                auto& current = contents[c];
-                if (std::is_sorted(current.begin(), current.end())) {
-                    continue;
-                }
-                std::sort(current.begin(), current.end());
-            }
-        });
-
-        if (class_name == "SVT_SparseMatrix") {
-            Rcpp::List output(NC);
-            for (decltype(NC) c = 0; c < NC; ++c) {
-                const auto& pair = contents[c];
-                output[c] = Rcpp::List::create(
-                    Rcpp::IntegerVector(pair.begin(), pair.end()),
-                    R_NilValue
-                );
-            }
-            return Rcpp::List::create(
-                Rcpp::Named("dim") = dimensions,
-                Rcpp::Named("contents") = output
-            );
-
-        } else {
-            Rcpp::IntegerVector indptr(NC + 1);
-            constexpr auto limiter = std::numeric_limits<int>::max();
-            for (decltype(NC) c = 0; c < NC; ++c) {
-                auto curnnz = contents[c].size();
-                auto& lastoff = indptr[c];
-                if (limiter - curnnz < lastoff) {
-                    throw std::runtime_error("more non-zero elements than are supported in a CsparseMatrix");
-                }
-                indptr[c + 1] = lastoff + curnnz;
-            }
-
-            auto total_nnz = indptr[NC + 1];
-            Rcpp::IntegerVector indices(total_nnz);
-            decltype(total_nnz) sofar = 0; 
-            for (decltype(NC) c = 0; c < NC; ++c) {
-                const auto& idxs = contents[c];
-                std::copy(idxs.begin(), idxs.end(), indices.begin() + sofar);
-                sofar += idxs.size(); 
-            }
-
-            return Rcpp::List::create(
-                Rcpp::Named("dim") = dimensions,
-                Rcpp::Named("contents") = Rcpp::List::create(
-                    Rcpp::Named("i") = indices,
-                    Rcpp::Named("p") = indptr
-                )
-            );
-        }
-
     } else {
-        throw std::runtime_error("unknown eminem::Field type");
+        throw std::runtime_error("unsupported eminem::Field type");
         return R_NilValue;
     }
 }

@@ -237,9 +237,9 @@ read10xCounts <- function(samples,
 .tenx_loader <- function(run, type, version, genome, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     cur.type <- .type_chooser(run, type)
     if (cur.type=="mtx") {
-        .read_from_sparse(run, version=version, compressed=compressed, mtx.two.pass=mtx.two.pass, mtx.class=mtx.class, mtx.threads=mtx.threads)
+        .read_from_sparse(run, version=version, is.prefix=FALSE, compressed=compressed, mtx.two.pass=mtx.two.pass, mtx.class=mtx.class, mtx.threads=mtx.threads)
     } else if (cur.type=="prefix") {
-        .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed)
+        .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed, mtx.two.pass=mtx.two.pass, mtx.class=mtx.class, mtx.threads=mtx.threads)
     } else {
         .read_from_hdf5(run, genome=genome, version=version)
     }
@@ -250,7 +250,7 @@ read10xCounts <- function(samples,
 #' @importFrom utils read.delim head
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols<-
-.read_from_sparse <- function(path, version, is.prefix=FALSE, compressed=NULL) {
+.read_from_sparse <- function(path, version, is.prefix, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     FUN <- if (is.prefix) paste0 else file.path
 
     if (version=="auto") {
