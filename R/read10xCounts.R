@@ -13,15 +13,22 @@
 #' @param sample.names A character vector of length equal to \code{samples}, containing the sample names to store in the column metadata of the output object.
 #' If \code{NULL}, the file paths in \code{samples} are used directly.
 #' @param col.names A logical scalar indicating whether the columns of the output object should be named with the cell barcodes.
-#' @param row.names String specifying whether to use Ensembl IDs ("ID") or gene symbols ("Symbol") as row names. If using symbols, the Ensembl ID will be appended to disambiguate in case the same symbol corresponds to multiple Ensembl IDs.
+#' @param row.names String specifying whether to use Ensembl IDs ("ID") or gene symbols ("Symbol") as row names. 
+#' For symbols, the Ensembl ID will be appended to disambiguate rows where the same symbol corresponds to multiple Ensembl IDs.
 #' @param type String specifying the type of 10X format to read data from.
 #' @param version String specifying the version of the 10X format to read data from.
 #' @param delayed Logical scalar indicating whether sparse matrices should be wrapped in \linkS4class{DelayedArray}s before combining.
 #' Only relevant for multiple \code{samples}.
 #' @param genome String specifying the genome if \code{type="HDF5"} and \code{version='2'}.
-#' @param compressed Logical scalar indicating whether the text files are compressed for \code{type="sparse"} or \code{"prefix"}.
+#' @param compressed Logical scalar indicating whether the text files are compressed for \code{type="mtx"} or \code{"prefix"}.
 #' @param intersect.genes Logical scalar indicating whether to take the intersection of common genes across all samples.
 #' If \code{FALSE}, differences in gene information across samples will cause an error to be raised.
+#' @param mtx.two.pass Logical scalar indicating whether to use a two-pass approach for loading data from a Matrix Market file.
+#' This reduces peak memory usage at the cost of some additional runtime. 
+#' Only relevant when \code{type="mtx"} or \code{type="prefix"}.
+#' @param mtx.class String specifying the class of the output matrix when \code{type="mtx"} or \code{type="prefix"}.
+#' @param mtx.threads Integer scalar specifying the number of threads to use for reading Matrix Market files.
+#' Only relevant when \code{type="mtx"} or \code{type="prefix"}.
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how loading should be parallelized for multiple \code{samples}.
 #' 
 #' @return A \linkS4class{SingleCellExperiment} object containing count data for each gene (row) and cell (column) across all \code{samples}.
@@ -47,34 +54,31 @@
 #' If \code{type="auto"}, the format of the input file is automatically detected for each \code{samples} based on whether it ends with \code{".h5"}.
 #' If so, \code{type} is set to \code{"HDF5"}; otherwise it is set to \code{"sparse"}.
 #' \itemize{
-#' \item If \code{type="sparse"}, count data are loaded as a \linkS4class{dgCMatrix} object.
-#' This is a conventional column-sparse compressed matrix format produced by the CellRanger pipeline,
-#' consisting of a (possibly Gzipped) MatrixMarket text file (\code{"matrix.mtx"})
+#' \item If \code{type="mtx"} (or its older alias \code{"sparse"}), count data are assumed to be stored in a directory. 
+#' This should contain a (possibly Gzipped) MatrixMarket text file (\code{"matrix.mtx"})
 #' with additional tab-delimited files for barcodes (\code{"barcodes.tsv"})
 #' and gene annotation (\code{"features.tsv"} for version 3 or \code{"genes.tsv"} for version 2).
-#' \item If \code{type="prefix"}, count data are also loaded as a \linkS4class{dgCMatrix} object.
-#' This assumes the same three-file structure for each sample as described for \code{type="sparse"},
-#' but each sample is defined here by a prefix in the file names rather than by being a separate directory.
-#' For example, if the \code{samples} entry is \code{"xyx_"},
-#' the files are expected to be \code{"xyz_matrix.mtx"}, \code{"xyz_barcodes.tsv"}, etc.
-#' \item If \code{type="HDF5"}, count data are assumed to follow the 10X sparse HDF5 format for large data sets.
+#' \item If \code{type="prefix"}, count data are assumed to follow same three-file structure for each sample as described for \code{type="mtx"}.
+#' However, each sample is defined by a prefix in the file names rather than by being stored a separate directory.
+#' For example, if the \code{samples} entry is \code{"xyx_"}, the files are expected to be \code{"xyz_matrix.mtx"}, \code{"xyz_barcodes.tsv"}, etc.
+#' \item If \code{type="hdf5"} (or its older alias \code{"HDF5"}), count data are assumed to follow the 10X sparse HDF5 format for large data sets.
 #' It is loaded as a \linkS4class{TENxMatrix} object, which is a stub object that refers back to the file in \code{samples}.
 #' Users may need to set \code{genome} if it cannot be automatically determined when \code{version="2"}.
 #' }
 #'
-#' When \code{type="sparse"} or \code{"prefix"} and \code{compressed=NULL},
+#' When \code{type="mtx"} or \code{"prefix"} and \code{compressed=NULL},
 #' the function will automatically search for both the unzipped and Gzipped versions of the files.
 #' This assumes that the compressed files have an additional \code{".gz"} suffix.
 #' We can restrict to only compressed or uncompressed files by setting \code{compressed=TRUE} or \code{FALSE}, respectively.
 #' 
 #' CellRanger 3.0 introduced a major change in the format of the output files for both \code{type}s.
 #' If \code{version="auto"}, the version of the format is automatically detected from the supplied paths.
-#' For \code{type="sparse"}, this is based on whether there is a \code{"features.tsv.gz"} file in the directory.
+#' For \code{type="mtx"}, this is based on whether there is a \code{"features.tsv.gz"} file in the directory.
 #' For \code{type="HDF5"}, this is based on whether there is a top-level \code{"matrix"} group with a \code{"matrix/features"} subgroup in the file.
 #' 
 #' Matrices are combined by column if multiple \code{samples} were specified.
 #' This will throw an error if the gene information is not consistent across \code{samples}.
-#' For \code{type="sparse"} or \code{"prefix"}, users can set \code{delayed=TRUE} to save memory during the combining process.
+#' For \code{type="mtx"} or \code{"prefix"}, users can set \code{delayed=TRUE} to save memory during the combining process.
 #' This also avoids integer overflow for very large datasets.
 #' 
 #' If \code{col.names=TRUE} and \code{length(sample)==1}, each column is named by the cell barcode.
@@ -94,7 +98,7 @@
 #' 
 #' @examples
 #' # Mocking up some 10X genomics output.
-#' example(write10xCounts)
+#' example(write10xCounts, echo=FALSE)
 #' 
 #' # Reading it in.
 #' sce10x <- read10xCounts(tmpdir)
@@ -133,12 +137,15 @@ read10xCounts <- function(samples,
     sample.names=names(samples), 
     col.names=FALSE, 
     row.names = c("id", "symbol"),
-    type=c("auto", "sparse", "HDF5", "prefix"), 
+    type=c("auto", "mtx", "hdf5", "prefix", "sparse", "HDF5"), 
     delayed=FALSE,
     version=c("auto", "2", "3"), 
     genome=NULL, 
     compressed=NULL, 
     intersect.genes=FALSE,
+    mtx.two.pass=FALSE,
+    mtx.class=c("CsparseMatrix", "SVT_SparseMatrix"),
+    mtx.threads=1,
     BPPARAM=SerialParam())
 {
     type <- match.arg(type)
@@ -148,8 +155,17 @@ read10xCounts <- function(samples,
         sample.names <- samples
     }
 
-    load.out <- bplapply(samples, FUN=.tenx_loader, type=type, version=version, 
-        genome=genome, compressed=compressed, BPPARAM=BPPARAM)
+    load.out <- bplapply(samples,
+        FUN=.tenx_loader,
+        type=type,
+        version=version, 
+        genome=genome,
+        compressed=compressed,
+        mtx.two.pass=mtx.two.pass,
+        mtx.class=match.arg(mtx.class),
+        mtx.threads=mtx.threads,
+        BPPARAM=BPPARAM
+    )
 
     nsets <- length(samples)
     full_data <- vector("list", nsets)
@@ -218,24 +234,24 @@ read10xCounts <- function(samples,
     SingleCellExperiment(list(counts = full_data), rowData = gene_info, colData = cell_info, metadata=list(Samples=samples))
 }
 
-.tenx_loader <- function(run, type, version, genome, compressed) {
+.tenx_loader <- function(run, type, version, genome, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     cur.type <- .type_chooser(run, type)
-    if (cur.type=="sparse") {
-        .read_from_sparse(run, version=version, compressed=compressed)
+    if (cur.type=="mtx") {
+        .read_from_sparse(run, version=version, is.prefix=FALSE, compressed=compressed, mtx.two.pass=mtx.two.pass, mtx.class=mtx.class, mtx.threads=mtx.threads)
     } else if (cur.type=="prefix") {
-        .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed)
+        .read_from_sparse(run, version=version, is.prefix=TRUE, compressed=compressed, mtx.two.pass=mtx.two.pass, mtx.class=mtx.class, mtx.threads=mtx.threads)
     } else {
         .read_from_hdf5(run, genome=genome, version=version)
     }
 }
 
-#' @importFrom methods as
+#' @importFrom methods as new
 #' @importClassesFrom Matrix dgCMatrix
-#' @importFrom Matrix readMM
 #' @importFrom utils read.delim head
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors mcols<-
-.read_from_sparse <- function(path, version, is.prefix=FALSE, compressed=NULL) {
+#' @importClassesFrom SparseArray SVT_SparseMatrix 
+.read_from_sparse <- function(path, version, is.prefix, compressed, mtx.two.pass, mtx.class, mtx.threads) {
     FUN <- if (is.prefix) paste0 else file.path
 
     if (version=="auto") {
@@ -279,8 +295,16 @@ read10xCounts <- function(samples,
         gene.info <- gr 
     }
 
+    raw_mat <- read_mm(matrix.loc, two_pass=mtx.two.pass, class_name=mtx.class, threads=mtx.threads)
+    if (mtx.class == "CsparseMatrix") {
+        # Don't use sparseMatrix as this seems to do an unnecessary roundtrip through the triplet form.
+        mat <- new("dgCMatrix", Dim=raw_mat$dim, i=raw_mat$contents$i, x=raw_mat$contents$x, p=raw_mat$contents$p) 
+    } else {
+        mat <- new("SVT_SparseMatrix", SVT=raw_mat$contents$list, dim=raw_mat$dim, type=raw_mat$contents$type)
+    }
+
     list(
-        mat=as(readMM(matrix.loc), "CsparseMatrix"),
+        mat=mat,
         cell.names=readLines(barcode.loc),
         gene.info=gene.info
     )

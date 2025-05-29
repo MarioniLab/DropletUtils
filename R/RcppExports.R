@@ -41,3 +41,7 @@ montecarlo_pval <- function(totalval, totallen, prob, ambient, iterations, alpha
     .Call('_DropletUtils_montecarlo_pval', PACKAGE = 'DropletUtils', totalval, totallen, prob, ambient, iterations, alpha, seeds, streams)
 }
 
+read_mm <- function(path, two_pass, class_name, threads) {
+    .Call('_DropletUtils_read_mm', PACKAGE = 'DropletUtils', path, two_pass, class_name, threads)
+}
+

@@ -5,7 +5,7 @@ set.seed(2000)
 library(Matrix)
 
 # Mocking up some 10X genomics output.
-my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
+my.counts <- abs(rsparsematrix(100, 10, density=0.2) * 10)
 my.counts <- as(my.counts, "CsparseMatrix")
 
 ngenes <- nrow(my.counts)
@@ -32,6 +32,19 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     expect_identical(rowData(sce10x)$Symbol, gene.symb)
     expect_identical(sce10x$Sample, rep(tmpdir, ncol(my.counts)))
     expect_identical(sce10x$Barcode, cell.ids)
+
+    # Trying all the options for reading matrices. 
+    sce10x.tp <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.tp), alt.counts)
+    sce10x.svt <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    svt.counts <- as(alt.counts, "SVT_SparseArray")
+    expect_equal(counts(sce10x.svt), svt.counts)
+    sce10x.tp.svt <- read10xCounts(tmpdir, mtx.two.pass=TRUE, mtx.class="SVT_SparseMatrix")
+    expect_equal(counts(sce10x.tp.svt), svt.counts)
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2)
+    expect_equal(counts(sce10x.mc), alt.counts)
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.mc), alt.counts)
 
     # Adding another dataset with slightly different counts.
     tmpdir2 <- tempfile()
@@ -251,4 +264,70 @@ test_that("read10xCounts, use gene symbols as row names, with duplicated symbols
     
     sce10x <- read10xCounts(tmpdir, row.names = "symbol")
     expect_equal(rownames(sce10x), rns_expect)
+})
+
+test_that("read10xCounts with an integer Matrix Market file", {
+    int.counts <- ceiling(my.counts) # make them integer but avoid problems with zeros. 
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, int.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    # Checking that the MatrixMarket file says "integer".
+    first.line <- readLines(file.path(tmpdir, "matrix.mtx"), n=1)
+    expect_match(first.line, "integer")
+
+    alt.counts <- int.counts
+    rownames(alt.counts) <- gene.ids
+    colnames(alt.counts) <- NULL
+
+    # Trying all the options for reading matrices. 
+    sce10x <- read10xCounts(tmpdir)
+    expect_equal(counts(sce10x), alt.counts)
+    sce10x.tp <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.tp), alt.counts)
+
+    sce10x.svt <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    svt.counts <- as(alt.counts, "SVT_SparseArray")
+    type(svt.counts) <- "integer"
+    expect_equal(counts(sce10x.svt), svt.counts)
+    sce10x.tp.svt <- read10xCounts(tmpdir, mtx.two.pass=TRUE, mtx.class="SVT_SparseMatrix")
+    expect_equal(counts(sce10x.tp.svt), svt.counts)
+
+    # Multiple threads as well:
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2)
+    expect_equal(counts(sce10x.mc), alt.counts)
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.mc), alt.counts)
+})
+
+set.seed(2009)
+test_that("read10xCounts with a shuffled Matrix Market file", {
+    tmpdir <- tempfile()
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    # Shuffling the lines of the Matrix Market file to check that read_mm() handles it correctly.
+    mtx.path <- file.path(tmpdir, "matrix.mtx")
+    all.lines <- readLines(mtx.path)
+    writeLines(c(head(all.lines, 2), sample(tail(all.lines, -2))), con=mtx.path)
+
+    alt.counts <- my.counts
+    rownames(alt.counts) <- gene.ids
+    colnames(alt.counts) <- NULL
+
+    # Trying all the options for reading matrices. 
+    sce10x <- read10xCounts(tmpdir)
+    expect_equal(counts(sce10x), alt.counts)
+    sce10x.tp <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.tp), alt.counts)
+
+    sce10x.svt <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    svt.counts <- as(alt.counts, "SVT_SparseArray")
+    expect_equal(counts(sce10x.svt), svt.counts)
+    sce10x.tp.svt <- read10xCounts(tmpdir, mtx.two.pass=TRUE, mtx.class="SVT_SparseMatrix")
+    expect_equal(counts(sce10x.tp.svt), svt.counts)
+
+    # Multiple threads as well:
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2)
+    expect_equal(counts(sce10x.mc), alt.counts)
+    sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
+    expect_equal(counts(sce10x.mc), alt.counts)
 })

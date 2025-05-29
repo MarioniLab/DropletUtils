@@ -4,7 +4,7 @@
 #' in the format produced by the CellRanger software suite.
 #' 
 #' @param x A sparse numeric matrix of UMI counts.
-#' @param path A string containing the path to the output directory (for \code{type="sparse"}) or file (for \code{type="HDF5"}).
+#' @param path A string containing the path to the output directory (for \code{type="mtx"}) or file (for \code{type="hdf5"}).
 #' @param barcodes A character vector of cell barcodes, one per column of \code{x}.
 #' @param gene.id A character vector of gene identifiers, one per row of \code{x}.
 #' @param gene.symbol A character vector of gene symbols, one per row of \code{x}.
@@ -12,19 +12,19 @@
 #' Only used when \code{version="3"}.
 #' @param overwrite A logical scalar specifying whether \code{path} should be overwritten if it already exists.
 #' @param type String specifying the type of 10X format to save \code{x} to.
-#' This is either a directory containing a sparse matrix with row/column annotation (\code{"sparse"})
-#' or a HDF5 file containing the same information (\code{"HDF5"}).
-#' @param genome String specifying the genome for storage when \code{type="HDF5"}.
+#' This is either a directory containing a sparse matrix with row/column annotation (\code{"mtx"}, or its older alias \code{"sparse"})
+#' or a HDF5 file containing the same information (\code{"hdf5"}, or its older alias \code{"HDF5"}).
+#' @param genome String specifying the genome for storage when \code{type="hdf5"}.
 #' This can be a character vector with one genome per feature if \code{version="3"}.
 #' @param version String specifying the version of the CellRanger format to produce.
 #' @param chemistry,original.gem.groups,library.ids 
-#' Strings containing metadata attributes to be added to the HDF5 file for \code{type="HDF5"}.
+#' Strings containing metadata attributes to be added to the HDF5 file for \code{type="hdf5"}.
 #' Their interpretation is not formally documented and is left to the user's imagination.
 #' 
 #' @details
 #' This function will try to automatically detect the desired format based on whether \code{path} ends with \code{".h5"}.
-#' If so, it assumes that \code{path} specifies a HDF5 file path and sets \code{type="HDF5"}.
-#' Otherwise it will set \code{type="sparse"} under the assumption that \code{path} specifies a path to a directory.
+#' If so, it assumes that \code{path} specifies a HDF5 file path and sets \code{type="hdf5"}.
+#' Otherwise it will set \code{type="mtx"} under the assumption that \code{path} specifies a path to a directory.
 #' 
 #' Note that there were major changes in the output format for CellRanger version 3.0 to account for non-gene features such as antibody or CRISPR tags. 
 #' Users can switch to this new format using \code{version="3"}.
@@ -35,11 +35,11 @@
 #' We recommend against doing so routinely due to CellRanger's dependence on undocumented metadata attributes that may change without notice.
 #' 
 #' @return 
-#' For \code{type="sparse"}, a directory is produced at \code{path}.
+#' For \code{type="mtx"}, a directory is produced at \code{path}.
 #' If \code{version="2"}, this will contain the files \code{"matrix.mtx"}, \code{"barcodes.tsv"} and \code{"genes.tsv"}.
 #' If \code{version="3"}, it will instead contain \code{"matrix.mtx.gz"}, \code{"barcodes.tsv.gz"} and \code{"features.tsv.gz"}.
 #' 
-#' For \code{type="HDF5"}, a HDF5 file is produced at \code{path} containing data in column-sparse format.
+#' For \code{type="hdf5"}, a HDF5 file is produced at \code{path} containing data in column-sparse format.
 #' If \code{version="2"}, data are stored in the HDF5 group named \code{genome}.
 #' If \code{version="3"}, data are stored in the group \code{"matrix"}.
 #' 
@@ -54,8 +54,7 @@
 #' @examples
 #' # Mocking up some count data.
 #' library(Matrix)
-#' my.counts <- matrix(rpois(1000, lambda=5), ncol=10, nrow=100)
-#' my.counts <- as(my.counts, "CsparseMatrix")
+#' my.counts <- abs(rsparsematrix(100, 10, 0.2) * 10)
 #' cell.ids <- paste0("BARCODE-", seq_len(ncol(my.counts)))
 #' 
 #' ngenes <- nrow(my.counts)
@@ -91,9 +90,19 @@
 #' \url{https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/h5_matrices}
 #' 
 #' @export
-write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), gene.symbol=gene.id, gene.type="Gene Expression",
-    overwrite=FALSE, type=c("auto", "sparse", "HDF5"), genome="unknown", version=c("2", "3"),
-    chemistry="Single Cell 3' v3", original.gem.groups=1L, library.ids="custom")
+write10xCounts <- function(path,
+    x,
+    barcodes=colnames(x),
+    gene.id=rownames(x),
+    gene.symbol=gene.id,
+    gene.type="Gene Expression",
+    overwrite=FALSE,
+    type=c("auto", "mtx", "hdf5", "sparse", "HDF5"),
+    genome="unknown",
+    version=c("2", "3"),
+    chemistry="Single Cell 3' v3",
+    original.gem.groups=1L,
+    library.ids="custom")
 {
     # Doing all the work on a temporary location next to 'path', as we have permissions there.
     # This avoids problems with 'path' already existing.
@@ -113,7 +122,7 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
     # Determining what format to save in.
     version <- match.arg(version)
     type <- .type_chooser(path, match.arg(type))
-    if (type=="sparse") {
+    if (type == "mtx") {
         .write_sparse(temp.path, x, barcodes, gene.id, gene.symbol, gene.type, version=version)
     } else {
         .write_hdf5(temp.path, genome, x, barcodes, gene.id, gene.symbol, gene.type, version=version)
@@ -223,7 +232,11 @@ write10xCounts <- function(path, x, barcodes=colnames(x), gene.id=rownames(x), g
 
 .type_chooser <- function(path, type) {
     if (type=="auto") {
-        type <- if (grepl("\\.h5", path)) "HDF5" else "sparse"
+        type <- if (grepl("\\.h5", path)) "hdf5" else "mtx"
+    } else if (type == "HDF5") {
+        type <- "hdf5"
+    } else if (type == "sparse") {
+        type <- "mtx"
     }
     type
 }
