@@ -102,7 +102,7 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
 template<typename Size_>
 int safe_add_indptr(int sofar, Size_ val) {
     constexpr auto limiter = std::numeric_limits<int>::max();
-    if (static_cast<unsigned>(limiter) < val || static_cast<int>(limiter - val) < sofar) {
+    if (static_cast<unsigned>(limiter) < static_cast<typename std::make_unsigned<Size_>::type>(val) || static_cast<int>(limiter - val) < sofar) {
         throw std::runtime_error("too many non-zero elements to be stored in a CsparseMatrix");
     }
     return sofar + val;
