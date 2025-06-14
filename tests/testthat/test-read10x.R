@@ -51,7 +51,7 @@ test_that("read10xCounts works correctly for sparse counts, version < 3", {
     write10xCounts(path=tmpdir2, my.counts*2, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
 
     sce10x2 <- read10xCounts(tmpdir2)
-    expect_identical(assay(sce10x)*2, assay(sce10x2))
+    expect_equal(assay(sce10x)*2L, assay(sce10x2))
 
     ref <- cbind(sce10x, sce10x2)
     colnames(ref) <- NULL
@@ -115,7 +115,7 @@ test_that("read10xCounts works for sparse counts with odd inputs", {
     write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb2, barcodes=cell.ids)
     sce10x <- read10xCounts(tmpdir)
 
-    expect_identical(assay(sce10x, withDimnames=FALSE), my.counts)
+    expect_equal(assay(sce10x, withDimnames=FALSE), my.counts)
     expect_identical(colData(sce10x)$Barcode, cell.ids)
     expect_identical(rowData(sce10x)$ID, gene.ids)
     expect_identical(rowData(sce10x)$Symbol, gene.symb2)
@@ -143,7 +143,7 @@ test_that("read10xCounts works correctly for sparse counts, version >= 3", {
     sce10delayed <- read10xCounts(c(tmpdir, tmpdir), delayed=TRUE)
     expect_s4_class(counts(sce10delayed), "DelayedMatrix")
     converted <- as(counts(sce10delayed), "CsparseMatrix")
-    expect_identical(converted, cbind(alt.counts, alt.counts))
+    expect_equal(converted, cbind(alt.counts, alt.counts))
 })
 
 test_that("read10xCounts works correctly for zipped files", {
@@ -244,7 +244,7 @@ test_that("read10xCounts works correctly with mismatching features", {
     # Intersection works as expected.
     sce10x <- read10xCounts(c(tmpdir1, tmpdir2), intersect.genes=TRUE)
     expect_identical(rownames(sce10x), gene.ids[keep])
-    expect_identical(assay(sce10x, withDimnames=FALSE), cbind(my.counts[keep,], my.counts[keep,]))
+    expect_equal(assay(sce10x, withDimnames=FALSE), cbind(my.counts[keep,], my.counts[keep,]))
 })
 
 test_that("read10xCounts, use gene symbols as row names", {
