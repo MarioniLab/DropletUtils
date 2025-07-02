@@ -31,15 +31,6 @@ void compare_lists(U left, V right) {
     return;
 }
 
-struct molecule {
-    molecule (int s, size_t i, int g, int u) : index(i), sample(s), gene(g), umi(u) {}
-
-    // need to handle situations where one sample has >2e9 UMIs.
-    // otherwise, using ints for memory efficiency.
-    size_t index; 
-    int sample, gene, umi; 
-};
-
 /* Identifies which molecules should be retained in which samples,
  * given the cell, gene and UMI combination for each molecule per sample.
  * Also returns a diagnostic matrix of molecule-sample read counts.
@@ -55,6 +46,15 @@ Rcpp::List find_swapped(Rcpp::List cells, Rcpp::List genes, Rcpp::List umis, Rcp
     compare_lists(Cells, Genes);
     compare_lists(Cells, Umis);
     compare_lists(Cells, Reads);
+
+    struct molecule {
+        molecule (int s, size_t i, int g, int u) : index(i), sample(s), gene(g), umi(u) {}
+
+        // need to handle situations where one sample has >2e9 UMIs.
+        // otherwise, using ints for memory efficiency.
+        size_t index; 
+        int sample, gene, umi; 
+    };
 
     // Setting up the ordering vector.
     const size_t nsamples=Cells.size();
