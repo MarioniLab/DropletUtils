@@ -4,15 +4,6 @@
 #include <vector>
 #include <algorithm>
 
-struct molecule {
-    molecule (size_t i, int u) : index(i), umi(u) {}
-
-    // need to handle situations where one sample has >2e9 UMIs.
-    // otherwise, using ints for memory efficiency.
-    size_t index; 
-    int umi; 
-};
-
 //[[Rcpp::export(rng=false)]]
 Rcpp::List find_chimeric(Rcpp::StringVector cells, Rcpp::IntegerVector umis, 
     Rcpp::IntegerVector reads, double minfrac, bool diagnostics)
@@ -21,6 +12,15 @@ Rcpp::List find_chimeric(Rcpp::StringVector cells, Rcpp::IntegerVector umis,
     if (nmolecules!=umis.size() || nmolecules!=reads.size()) {
         throw std::runtime_error("'reads', 'umis', 'cells' should be of the same length");
     }
+
+    struct molecule {
+        molecule (size_t i, int u) : index(i), umi(u) {}
+
+        // need to handle situations where one sample has >2e9 UMIs.
+        // otherwise, using ints for memory efficiency.
+        size_t index; 
+        int umi; 
+    };
 
     std::vector<molecule> ordering;
     ordering.reserve(nmolecules);
