@@ -11,8 +11,8 @@ barcodeRanks(m, ...)
 \S4method{barcodeRanks}{ANY}(
   m,
   lower = 100,
-  fit.bounds = NULL,
   exclude.from = 50,
+  fit.bounds = NULL,
   df = 20,
   ...,
   BPPARAM = SerialParam()
@@ -26,20 +26,14 @@ Alternatively, a \linkS4class{SummarizedExperiment} containing such a matrix.}
 
 \item{...}{For the generic, further arguments to pass to individual methods.
 
-For the SummarizedExperiment method, further arguments to pass to the ANY method.
-
-For the ANY method, further arguments to pass to \code{\link{smooth.spline}}.}
+For the SummarizedExperiment method, further arguments to pass to the ANY method.}
 
 \item{lower}{A numeric scalar specifying the lower bound on the total UMI count, 
-at or below which all barcodes are assumed to correspond to empty droplets.}
+at or below which all barcodes are assumed to correspond to empty droplets and excluded from knee/inflection point identification.}
 
-\item{fit.bounds}{A numeric vector of length 2, specifying the lower and upper bounds on the total UMI count
-from which to obtain a section of the curve for spline fitting.}
+\item{exclude.from}{An integer scalar specifying the number of highest ranking barcodes to exclude from knee/inflection point identification.}
 
-\item{exclude.from}{An integer scalar specifying the number of highest ranking barcodes to exclude from spline fitting.
-Ignored if \code{fit.bounds} is specified.}
-
-\item{df}{Deprecated and ignored.}
+\item{fit.bounds, df}{Deprecated and ignored.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
 
@@ -66,27 +60,17 @@ which focuses on the barcodes with the largest counts.
 To help create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
 Barcodes with the same total count receive the same average rank to avoid problems with discrete runs of the same total.
 
-The function will also identify the inflection and knee points on the curve for downstream use, 
+The function will also identify the inflection and knee points on the curve for downstream use.
 Both of these points correspond to a sharp transition between two components of the total count distribution, 
 presumably reflecting the difference between empty droplets with little RNA and cell-containing droplets with much more RNA.
 \itemize{
-\item The inflection point is computed as the point on the rank/total curve where the first derivative is minimized.
-The derivative is computed directly from all points on the curve with total counts greater than \code{lower}.
-This avoids issues with erratic behaviour of the curve at lower totals.
-\item The knee point is defined as the point on the curve that is furthest from the straight line drawn between the \code{fit.bounds} locations on the curve.
-We used to minimize the signed curvature to identify the knee point but this relies on the second derivative,
-which was too unstable even after smoothing.
+\item The inflection point is defined as the point on the log-rank/log-total curve where the first derivative is minimized.
+If multiple inflection points are present, we choose the point that immediately follows the knee point.
+\item To find the knee point, we draw a diagonal line that passes through the inflection point in the log-rank/log-total curve.
+The knee point is defined as the location on the curve that is above and most distant from this line.
 }
-
-If \code{fit.bounds} is not specified, the lower bound is automatically set to the inflection point
-as this should lie below the knee point on typical curves.
-The upper bound is set to the point at which the first derivative is closest to zero, 
-i.e., the \dQuote{plateau} region before the knee point.
-The first \code{exclude.from} barcodes with the highest totals are ignored in this process 
-to avoid spuriously large numerical derivatives from unstable parts of the curve with low point density.
-
-Note that only points with total counts above \code{lower} will be considered for curve fitting,
-regardless of how \code{fit.bounds} is defined.
+Only points with total counts above \code{lower} will be considered for knee/inflection point identification.
+Similarly, the first \code{exclude.from} points will be ignored to avoid instability at the start of the curve.
 }
 \examples{
 # Mocking up some data: 
