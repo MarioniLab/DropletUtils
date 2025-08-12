@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { os: ubuntu-latest, r: 'devel', bioc: '3.21', cont: "bioconductor/bioconductor_docker:devel" } 
+          - { os: ubuntu-latest, r: 'devel', bioc: '3.22', cont: "bioconductor/bioconductor_docker:devel" } 
           #- { os: macOS-latest, r: 'devel', bioc: '3.21'}
           #- { os: windows-latest, r: 'devel', bioc: '3.21'}
           ## Check https://github.com/r-lib/actions/tree/master/examples
@@ -164,6 +164,7 @@ jobs:
         shell: Rscript {0}
 
       - name: Set BiocVersion
+        if: runner.os != 'Linux' # this is already defined from the images. 
         run: |
           BiocManager::install(version = "${{ matrix.config.bioc }}", ask = FALSE, force = TRUE)
         shell: Rscript {0}
@@ -177,27 +178,16 @@ jobs:
           ## https://github.com/r-lib/remotes/issues/296
           ## Ideally, all dependencies should get installed in the first pass.
 
-          ## Set the repos source depending on the OS
-          ## Alternatively use https://storage.googleapis.com/bioconductor_docker/packages/
-          ## though based on https://bit.ly/bioc2021-package-binaries
-          ## the Azure link will be the main one going forward.
-          gha_repos <- if(
-              .Platform$OS.type == "unix" && Sys.info()["sysname"] != "Darwin"
-          ) c(
-              "AnVIL" = "https://bioconductordocker.blob.core.windows.net/packages/3.20/bioc",
-              BiocManager::repositories()
-              ) else BiocManager::repositories()
-
           ## For running the checks
           message(paste('****', Sys.time(), 'installing rcmdcheck and BiocCheck ****'))
-          install.packages(c("rcmdcheck", "BiocCheck"), repos = gha_repos)
+          BiocManager::install(c("rcmdcheck", "BiocCheck"))
 
           ## Pass #1 at installing dependencies
           ## This pass uses AnVIL-powered fast binaries
           ## details at https://github.com/nturaga/bioc2021-bioconductor-binaries
           ## The speed gains only apply to the docker builds.
           message(paste('****', Sys.time(), 'pass number 1 at installing dependencies: local dependencies ****'))
-          remotes::install_local(dependencies = TRUE, repos = gha_repos, build_vignettes = FALSE, upgrade = TRUE)
+          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = FALSE, upgrade = TRUE)
         continue-on-error: true
         shell: Rscript {0}
 
@@ -207,7 +197,7 @@ jobs:
           ## This pass does not use AnVIL and will thus update any packages
           ## that have seen been updated in Bioconductor
           message(paste('****', Sys.time(), 'pass number 2 at installing dependencies: any remaining dependencies ****'))
-          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = TRUE, upgrade = TRUE, force = TRUE)
+          remotes::install_local(dependencies = TRUE, repos = BiocManager::repositories(), build_vignettes = TRUE, upgrade = TRUE)
         shell: Rscript {0}
 
       - name: Install BiocGenerics
