@@ -2,6 +2,16 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.30.0}{\itemize{
+\item Further improvements to the knee point detection in \code{barcodeRanks()}.
+This now tries to use a fixed gradient of -1 to avoid leftward bias in the estimated knee point when there are a large number of real cells.
+We also refine inflection point to report the earlier location if multiple inflection points are present on the curve.
+
+\item Improve the efficiency of Matrix Market file parsing in \code{read10xCounts()}.
+We support multi-threaded parsing and can directly read into dgCMatrices or SVT_SparseMatrices without intermediate.
+This is based on the \pkg{eminem} C++ library from the \pkg{assorthead} package.
+}}
+
 \section{Version 1.28.0}{\itemize{
 \item Use a more stable algorithm for identifying the knee point in \code{barcodeRanks()}.
 The new algorithm is based on maximizing the distance from a line between the plateau and the inflection point.
