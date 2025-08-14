@@ -81,7 +81,7 @@ The midpoint of that window is defined as the knee.
 \item To find the inflection, we pick the window with the lowest (i.e., most negative) gradient of the end-connecting line.
 The midpoint of that window is defined as the inflection.
 \item In cases with multiple knee/inflection points, we aim to report the earlier values, i.e., those with higher log-totals.
-This is achieved by ignoring all windows beyond the first \dQuote{elbow} point in the curve.
+This is achieved by ignoring all windows after the first one that contains an \dQuote{elbow} point in the curve.
 A window contains an elbow if its midpoint lies below the end-connecting line and the gradient is less than \code{gradient.threshold}.
 }
 }

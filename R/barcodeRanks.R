@@ -105,49 +105,50 @@ NULL
     cumdist <- cumsum(dist.along.curve)
     rhs.loc <- cumdist + window
     to.scan <- rhs.loc <= cumdist[length(cumdist)]
+
     if (!any(to.scan)) {
-        stop("insufficient points for finding knee/inflection with the specified 'window'")
-    } 
-
-    left.x <- x[to.scan]
-    left.y <- y[to.scan]
-
-    right.info <- .interpolate_on_curve(rhs.loc[to.scan], cumdist, dist.along.curve, x, y)
-    right.x <- right.info$x
-    right.y <- right.info$y
-
-    window.gap <- sqrt((left.x - right.x)^2 + (left.y - right.y)^2) # distance in 2D space between the ends of the window.
-    window.gradient <- (right.y - left.y) / (right.x - left.x) # gradient of the line between ends of the window
-    window.intercept <- right.y - window.gradient * right.x # intercept of the line between ends of the window
-
-    mid.info <- .interpolate_on_curve(cumdist[to.scan] + window/2, cumdist, dist.along.curve, x, y)
-    mid.x <- mid.info$x
-    mid.y <- mid.info$y
-
-    mid.above <- mid.y > window.gradient * mid.x + window.intercept
-
-    # We define the knee point at the window in 'mid.above' with the smallest 'window.gap', and the inflection point at the window with the most negative 'window.gradient'.
-    # In practice, some curves contain multiple knees and inflections, and we would like to restrict ourselves to the first "meaningful" minima.
-    # We do so by ignoring all points after the first "elbow point", i.e., window gradient below some threshold and the curve is below the line.
-    elbow.index <- which(!mid.above & window.gradient < gradient.threshold)
-    if (length(elbow.index) == 0) {
-        infl.window <- which.min(window.gradient)
-        maybe.knee <- which(mid.above)
+        knee <- inflection <- 10^y[length(y)] # just pick the last point, whatever.
     } else {
-        first.elbow <- elbow.index[1]
-        infl.window <- which.min(head(window.gradient, first.elbow))
-        maybe.knee <- which(head(mid.above, first.elbow))
-    }
+        left.x <- x[to.scan]
+        left.y <- y[to.scan]
 
-    knee.window <- maybe.knee[which.min(window.gap[maybe.knee])]
-    if (length(knee.window) == 0) {
-        # Fallback if the curve is so weird that the midpoint is never above the window line.
-        knee.window <- infl.window
-    }
+        right.info <- .interpolate_on_curve(rhs.loc[to.scan], cumdist, dist.along.curve, x, y)
+        right.x <- right.info$x
+        right.y <- right.info$y
 
-    # Picking an actual inflection/knee point based on the midpoint of the window.
-    knee <- 10^mid.y[knee.window]
-    inflection <- 10^mid.y[infl.window]
+        window.gap <- sqrt((left.x - right.x)^2 + (left.y - right.y)^2) # distance in 2D space between the ends of the window.
+        window.gradient <- (right.y - left.y) / (right.x - left.x) # gradient of the line between ends of the window
+        window.intercept <- right.y - window.gradient * right.x # intercept of the line between ends of the window
+
+        mid.info <- .interpolate_on_curve(cumdist[to.scan] + window/2, cumdist, dist.along.curve, x, y)
+        mid.x <- mid.info$x
+        mid.y <- mid.info$y
+
+        mid.above <- mid.y > window.gradient * mid.x + window.intercept
+
+        # We define the knee point at the window in 'mid.above' with the smallest 'window.gap', and the inflection point at the window with the most negative 'window.gradient'.
+        # In practice, some curves contain multiple knees and inflections, and we would like to restrict ourselves to the first "meaningful" minima.
+        # We do so by ignoring all points after the first "elbow point", i.e., window gradient below some threshold and the curve is below the line.
+        elbow.index <- which(!mid.above & window.gradient < gradient.threshold)
+        if (length(elbow.index) == 0) {
+            infl.window <- which.min(window.gradient)
+            maybe.knee <- which(mid.above)
+        } else {
+            first.elbow <- elbow.index[1]
+            infl.window <- which.min(head(window.gradient, first.elbow))
+            maybe.knee <- which(head(mid.above, first.elbow))
+        }
+
+        knee.window <- maybe.knee[which.min(window.gap[maybe.knee])]
+        if (length(knee.window) == 0) {
+            # Fallback if the curve is so weird that the midpoint is never above the window line.
+            knee.window <- infl.window
+        }
+
+        # Picking an actual inflection/knee point based on the midpoint of the window.
+        knee <- 10^mid.y[knee.window]
+        inflection <- 10^mid.y[infl.window]
+    }
 
     out <- DataFrame(
         rank=.reorder(run.rank, stuff$lengths, o), 
