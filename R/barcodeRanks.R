@@ -131,15 +131,22 @@ NULL
 
         # We define the knee point at the window in 'mid.above' with the smallest 'window.gap', and the inflection point at the window with the most negative 'window.gradient'.
         # In practice, some curves contain multiple knees and inflections, and we would like to restrict ourselves to the first "meaningful" minima.
-        # We do so by ignoring all points after the first "elbow point", i.e., window gradient below some threshold and the curve is below the line.
-        elbow.index <- which(!mid.above & window.gradient < gradient.threshold)
-        if (length(elbow.index) == 0) {
+        # We do so by ignoring all windows after the first window with an "elbow point", i.e., window gradient below some threshold and the curve is below the line.
+        has.elbow.index <- which(!mid.above & window.gradient < gradient.threshold)
+        if (length(has.elbow.index) == 0) {
             infl.window <- which.min(window.gradient)
             maybe.knee <- which(mid.above)
         } else {
-            first.elbow <- elbow.index[1]
-            infl.window <- which.min(head(window.gradient, first.elbow))
-            maybe.knee <- which(head(mid.above, first.elbow))
+            first.elbow.window <- has.elbow.index[1]
+            maybe.knee <- which(head(mid.above, first.elbow.window))
+
+            # For the inflection point, we only skip windows that start past the midpoint of the first elbow-containing window.
+            # This is because the first elbow-containing window may precede the window whose midpoint is the inflection point,
+            # e.g., if the window is longer than the gap between the knee and the elbow.
+            # So, by considering some later windows, we have the chance to identify a better inflection.
+            # (Knee should be unaffected as the midpoint must be above the line and won't be affected by more elbow candidates.)
+            before.first.elbow <- findInterval(mid.x[first.elbow.window], left.x)
+            infl.window <- which.min(head(window.gradient, before.first.elbow))
         }
 
         knee.window <- maybe.knee[which.min(window.gap[maybe.knee])]
