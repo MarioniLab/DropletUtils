@@ -36,6 +36,19 @@ test_that("barcodeRanks runs to completion", {
     expect_error(barcodeRanks(my.counts[0,]), "insufficient")
 })
 
+test_that("barcodeRanks' interpolation works correctly", {
+    cumdist <- c(0, 1, 3, 5)
+    out <- DropletUtils:::.interpolate_on_curve(c(0.5, 1.1, 2.2, 3.3, 4.4, 5), cumdist, c(0, diff(cumdist)), c(1,2,3,4), c(1,2,3,4))
+
+    expect_identical(out$x, out$y)
+    expect_equal(out$x[1], 1.5)
+    expect_equal(out$x[2], (1.9 * 2 + 0.1 * 3) / 2)
+    expect_equal(out$x[3], (0.8 * 2 + 1.2 * 3) / 2)
+    expect_equal(out$x[4], (1.7 * 3 + 0.3 * 4) / 2)
+    expect_equal(out$x[5], (0.6 * 3 + 1.4 * 4) / 2)
+    expect_equal(out$x[6], 4)
+})
+
 test_that("defaultDrops runs to completion", {
     out <- defaultDrops(my.counts)
    

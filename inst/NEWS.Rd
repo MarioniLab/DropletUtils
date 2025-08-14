@@ -4,7 +4,7 @@
 
 \section{Version 1.30.0}{\itemize{
 \item Further improvements to the knee point detection in \code{barcodeRanks()}.
-This now tries to use a fixed gradient of -1 to avoid leftward bias in the estimated knee point when there are a large number of real cells.
+This now uses a curve-tracing algorithm where the knee is defined inside the window with the highest curvature.
 We also refine inflection point to report the earlier location if multiple inflection points are present on the curve.
 
 \item Improve the efficiency of Matrix Market file parsing in \code{read10xCounts()}.
