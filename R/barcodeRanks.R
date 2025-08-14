@@ -96,6 +96,9 @@ NULL
 
     keep <- run.totals > lower
     keep[run.rank <= exclude.from] <- FALSE
+    if (sum(keep) < 2) {
+        stop("insufficient unique points for computing knee/inflection points")
+    }
     y <- log10(run.totals[keep])
     x <- log10(run.rank[keep])
 

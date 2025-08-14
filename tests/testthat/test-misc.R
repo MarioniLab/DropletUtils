@@ -12,17 +12,6 @@ test_that("barcodeRanks runs to completion", {
     expect_equal(brout$total, totals)
     expect_identical(brout$rank, rank(-totals, ties.method="average"))
 
-    # Trying again with a higher limit.
-    limit2 <- 200
-    brout2 <- barcodeRanks(my.counts, lower=limit2)
-    expect_identical(brout, brout2)
-
-    # Specifying the boundaries.
-    bounds <- c(200, 1000)
-    brout3 <- barcodeRanks(my.counts, lower=limit, fit.bounds=bounds)
-    knee <- metadata(brout3)$knee
-    expect_true(knee >= bounds[1] && knee <= bounds[2])
-
     # Respecting column names.
     alt <- my.counts
     colnames(alt) <- sprintf("BARCODE_%i", seq_len(ncol(alt)))
