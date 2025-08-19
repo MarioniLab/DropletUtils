@@ -1,6 +1,7 @@
 #include "eminem/eminem.hpp"
 #include "byteme/byteme.hpp"
 #include "subpar/subpar.hpp"
+#include "sanisizer/sanisizer.hpp"
 
 #include "Rcpp.h"
 
@@ -38,28 +39,30 @@ void sort_SVT_SparseMatrix_columns(const std::vector<int*>& iptrs, const std::ve
 
 Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
     auto NC = nnz_per_col.size();
-    Rcpp::List contents(NC);
-    std::vector<int*> iptrs(NC);
-    std::vector<int> used(NC);
+    auto contents = sanisizer::create<Rcpp::List>(NC);
+    auto iptrs = sanisizer::create<std::vector<int*> >(NC);
+    auto used = sanisizer::create<std::vector<int> >(NC);
 
-    eminem::ParseSomeFileOptions opt;
-    opt.num_threads = threads;
-    auto parser = eminem::parse_some_file(path.c_str(), opt);
+    auto parser = eminem::parse_some_file<int>(path.c_str(), [&]{
+        eminem::ParseSomeFileOptions opt;
+        opt.num_threads = threads;
+        return opt;
+    }());
     parser.scan_preamble();
     const auto& banner = parser.get_banner();
     std::string out_type;
 
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
-        std::vector<double*> vptrs(NC);
+        auto vptrs = sanisizer::create<std::vector<double*> >(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
-            Rcpp::NumericVector values(nnz_per_col[c]);
-            Rcpp::IntegerVector indices(nnz_per_col[c]);
+            auto values = sanisizer::create<Rcpp::NumericVector>(nnz_per_col[c]);
+            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
             iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
             vptrs[c] = values.begin();
             contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
         }
 
-        parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
+        parser.scan_real([&](int r, int c, double val) -> void {
             auto& pos = used[c - 1];
             iptrs[c - 1][pos] = r - 1;
             vptrs[c - 1][pos] = val;
@@ -70,16 +73,16 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         out_type = "double";
 
     } else if (banner.field == eminem::Field::INTEGER) {
-        std::vector<int*> vptrs(NC);
+        auto vptrs = sanisizer::create<std::vector<int*> >(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
-            Rcpp::IntegerVector values(nnz_per_col[c]);
-            Rcpp::IntegerVector indices(nnz_per_col[c]);
+            auto values = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
             iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
             vptrs[c] = values.begin();
             contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
         }
 
-        parser.scan_integer([&](eminem::Index r, eminem::Index c, double val) -> void {
+        parser.scan_integer([&](int r, int c, double val) -> void {
             auto& pos = used[c - 1];
             iptrs[c - 1][pos] = r - 1;
             vptrs[c - 1][pos] = val;
@@ -99,54 +102,38 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
     );
 }
 
-template<typename Size_>
-int safe_add_indptr(int sofar, Size_ val) {
-    constexpr auto limiter = std::numeric_limits<int>::max();
-    if (static_cast<unsigned>(limiter) < static_cast<typename std::make_unsigned<Size_>::type>(val) || static_cast<int>(limiter - val) < sofar) {
-        throw std::runtime_error("too many non-zero elements to be stored in a CsparseMatrix");
-    }
-    return sofar + val;
-}
-
-template<typename Output_, typename Number_>
-Output_ safe_get_indptr_size(Number_ n) {
-    if (static_cast<typename std::make_unsigned<Number_>::type>(n) >= static_cast<typename std::make_unsigned<Output_>::type>(std::numeric_limits<Output_>::max())) {
-        throw std::runtime_error("number of columns is too large for allocating indptrs");
-    }
-    Output_ out = n;
-    ++out;
-    return out;
-}
-
 Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
     auto NC = nnz_per_col.size();
-    std::vector<int> offsets(safe_get_indptr_size<typename std::vector<int>::size_type>(NC));
+    std::vector<int> offsets(sanisizer::sum<typename std::vector<int>::size_type>(NC, 1));
     for (decltype(NC) c = 0; c < NC; ++c) {
-        offsets[c + 1] = safe_add_indptr(offsets[c], nnz_per_col[c]);
+        // Increment is safe from overflow as 'c + 1 <= NC'.
+        offsets[c + 1] = sanisizer::sum<int>(offsets[c], nnz_per_col[c]);
     }
 
     Rcpp::IntegerVector indptr(offsets.begin(), offsets.end());
     auto ntotal = indptr[NC];
-    Rcpp::IntegerVector row_indices(ntotal);
+    auto row_indices = sanisizer::create<Rcpp::IntegerVector>(ntotal);
 
-    eminem::ParseSomeFileOptions opt;
-    opt.num_threads = threads;
-    auto parser = eminem::parse_some_file(path.c_str(), opt);
+    auto parser = eminem::parse_some_file<int>(path.c_str(), [&]{
+        eminem::ParseSomeFileOptions opt;
+        opt.num_threads = threads;
+        return opt;
+    }());
     parser.scan_preamble();
     const auto& banner = parser.get_banner();
 
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE || banner.field == eminem::Field::INTEGER) {
-        Rcpp::NumericVector values(ntotal);
+        auto values = sanisizer::create<Rcpp::NumericVector>(ntotal);
 
         if (banner.field == eminem::Field::INTEGER) {
-            parser.scan_integer([&](eminem::Index r, eminem::Index c, int val) -> void {
+            parser.scan_integer([&](int r, int c, int val) -> void {
                 auto& pos = offsets[c - 1];
                 row_indices[pos] = r - 1;
                 values[pos] = val;
                 ++pos;
             });
         } else {
-            parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
+            parser.scan_real([&](int r, int c, double val) -> void {
                 auto& pos = offsets[c - 1];
                 row_indices[pos] = r - 1;
                 values[pos] = val;
@@ -160,7 +147,7 @@ Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std:
         subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
             std::vector<std::pair<int, double> > sortbuffer;
             for (decltype(start) c = start, end = start + length; c < end; ++c) {
-                auto pstart = pptr[c], pend = pptr[c + 1];
+                auto pstart = pptr[c], pend = pptr[c + 1]; // increment won't overflow as 'c + 1 <= end'.
                 if (std::is_sorted(iptr + pstart, iptr + pend)) {
                     continue;
                 }
@@ -190,47 +177,31 @@ Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std:
     }
 }
 
-template<typename Size_>
-int safe_cast_dim(Size_ val) {
-    constexpr auto limiter = std::numeric_limits<int>::max();
-    if (static_cast<unsigned>(limiter) < val) {
-        throw std::runtime_error("dimension extent is too large to be stored as an integer");
-    }
-    return val;
-}
-
-static void safe_increment(int& val) {
-    constexpr auto limiter = std::numeric_limits<int>::max();
-    if (limiter == val) {
-        throw std::runtime_error("number of non-zero elements is too large to be stored as an integer");
-    }
-    ++val;
-}
-
 Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class_name, int threads) {
     // First pass, to determine the size of each column for preallocation.
-    std::vector<int> nnz_per_col;
-    Rcpp::IntegerVector dimensions(2);
-    eminem::ParseSomeFileOptions opt;
-    opt.num_threads = threads;
-    auto parser = eminem::parse_some_file(path.c_str(), opt);
+    auto parser = eminem::parse_some_file<int>(path.c_str(), [&]{
+        eminem::ParseSomeFileOptions opt;
+        opt.num_threads = threads;
+        return opt;
+    }());
     parser.scan_preamble();
 
-    dimensions[0] = safe_cast_dim(parser.get_nrows());
-    auto NC = safe_cast_dim(parser.get_ncols());
+    Rcpp::IntegerVector dimensions(2);
+    dimensions[0] = parser.get_nrows();
+    auto NC = parser.get_ncols();
     dimensions[1] = NC;
 
-    nnz_per_col.resize(NC);
+    auto nnz_per_col = sanisizer::create<std::vector<int> >(NC);
     const auto& banner = parser.get_banner();
     switch (banner.field) {
         case eminem::Field::REAL: case eminem::Field::DOUBLE:
-            parser.scan_real([&](eminem::Index, eminem::Index c, double) -> void {
-                safe_increment(nnz_per_col[c - 1]);
+            parser.scan_real([&](int, int c, double) -> void {
+                sanisizer::sum<int>(nnz_per_col[c - 1], 1);
             });
             break;
         case eminem::Field::INTEGER:
-            parser.scan_real([&](eminem::Index, eminem::Index c, int) -> void {
-                safe_increment(nnz_per_col[c - 1]);
+            parser.scan_real([&](int, int c, int) -> void {
+                sanisizer::sum<int>(nnz_per_col[c - 1], 1);
             });
             break;
         default:
@@ -277,7 +248,7 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
     });
 
     if (class_name == "SVT_SparseMatrix") {
-        Rcpp::List output(NC);
+        auto output = sanisizer::create<Rcpp::List>(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
             output[c] = Rcpp::List::create(
@@ -297,14 +268,15 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
         );
 
     } else {
-        Rcpp::IntegerVector indptr(safe_get_indptr_size<R_xlen_t>(NC));
+        Rcpp::IntegerVector indptr(sanisizer::sum<decltype(std::declval<Rcpp::IntegerVector>().size())>(NC, 1));
         for (decltype(NC) c = 0; c < NC; ++c) {
-            indptr[c + 1] = safe_add_indptr(indptr[c], contents[c].first.size());
+            // Increment is safe from overflow as 'c + 1 <= NC'.
+            indptr[c + 1] = sanisizer::sum<int>(indptr[c], contents[c].first.size());
         }
 
         auto total_nnz = indptr[NC];
-        Rcpp::IntegerVector indices(total_nnz);
-        Rcpp::NumericVector values(total_nnz); // it's going to be a dgCMatrix anyway, so we might as well save it as a numeric vector.
+        auto indices = sanisizer::create<Rcpp::IntegerVector>(total_nnz);
+        auto values = sanisizer::create<Rcpp::NumericVector>(total_nnz); // it's going to be a dgCMatrix anyway, so we might as well save it as a numeric vector.
         decltype(total_nnz) sofar = 0; 
         for (decltype(NC) c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
@@ -322,21 +294,23 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
 }
 
 Rcpp::RObject read_mm_one_pass(const std::string& path, const std::string& class_name, int threads) {
-    eminem::ParseSomeFileOptions opt;
-    opt.num_threads = threads;
-    auto parser = eminem::parse_some_file(path.c_str(), opt);
+    auto parser = eminem::parse_some_file<int>(path.c_str(), [&]{
+        eminem::ParseSomeFileOptions opt;
+        opt.num_threads = threads;
+        return opt;
+    }());
     parser.scan_preamble();
 
     Rcpp::IntegerVector dimensions(2);
-    dimensions[0] = safe_cast_dim(parser.get_nrows());
-    auto NC = safe_cast_dim(parser.get_ncols());
+    dimensions[0] = parser.get_nrows();
+    auto NC = parser.get_ncols();
     dimensions[1] = NC;
 
     const auto& banner = parser.get_banner();
 
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
-        std::vector<std::pair<std::vector<int>, std::vector<double> > > contents(NC);
-        parser.scan_real([&](eminem::Index r, eminem::Index c, double val) -> void {
+        auto contents = sanisizer::create<std::vector<std::pair<std::vector<int>, std::vector<double> > > >(NC);
+        parser.scan_real([&](int r, int c, double val) -> void {
             contents[c - 1].first.push_back(r - 1);
             contents[c - 1].second.push_back(val);
         });
@@ -346,8 +320,8 @@ Rcpp::RObject read_mm_one_pass(const std::string& path, const std::string& class
         );
 
     } else if (banner.field == eminem::Field::INTEGER) {
-        std::vector<std::pair<std::vector<int>, std::vector<int> > > contents(NC);
-        parser.scan_real([&](eminem::Index r, eminem::Index c, int val) -> void {
+        auto contents = sanisizer::create<std::vector<std::pair<std::vector<int>, std::vector<int> > > >(NC);
+        parser.scan_real([&](int r, int c, int val) -> void {
             contents[c - 1].first.push_back(r - 1);
             contents[c - 1].second.push_back(val);
         });
