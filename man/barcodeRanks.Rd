@@ -12,6 +12,8 @@ barcodeRanks(m, ...)
   m,
   lower = 100,
   exclude.from = 50,
+  window = 1,
+  gradient.threshold = -1,
   fit.bounds = NULL,
   df = 20,
   ...,
@@ -33,6 +35,12 @@ at or below which all barcodes are assumed to correspond to empty droplets and e
 
 \item{exclude.from}{An integer scalar specifying the number of highest ranking barcodes to exclude from knee/inflection point identification.}
 
+\item{window}{Numeric scalar specifying the length of the window (in log10 units) for knee/inflection point identification.
+Larger values improve stability of estimates at the cost of sensitivity to changes in the curve.}
+
+\item{gradient.threshold}{Numeric scalar specifying the maximum threshold on the gradient for identifying potential elbow points.
+Lower values increase the stringency of elbow point identification.}
+
 \item{fit.bounds, df}{Deprecated and ignored.}
 
 \item{BPPARAM}{A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.}
@@ -53,24 +61,29 @@ and \code{inflection}, a numeric scalar containing the total count at the inflec
 Compute barcode rank statistics and identify the knee and inflection points on the total count curve.
 }
 \details{
-Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode
-where the highest ranks have the largest totals.
-This is equivalent to a transposed empirical cumulative density plot with log-transformed axes, 
-which focuses on the barcodes with the largest counts.
-To help create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
+Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode where the highest ranks have the largest totals.
+This is equivalent to a transposed empirical cumulative density plot with log-transformed axes, which focuses on the barcodes with the largest counts.
+To create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
 Barcodes with the same total count receive the same average rank to avoid problems with discrete runs of the same total.
 
 The function will also identify the inflection and knee points on the curve for downstream use.
 Both of these points correspond to a sharp transition between two components of the total count distribution, 
 presumably reflecting the difference between empty droplets with little RNA and cell-containing droplets with much more RNA.
-\itemize{
-\item The inflection point is defined as the point on the log-rank/log-total curve where the first derivative is minimized.
-If multiple inflection points are present, we choose the point that immediately follows the knee point.
-\item To find the knee point, we draw a diagonal line that passes through the inflection point in the log-rank/log-total curve.
-The knee point is defined as the location on the curve that is above and most distant from this line.
-}
 Only points with total counts above \code{lower} will be considered for knee/inflection point identification.
 Similarly, the first \code{exclude.from} points will be ignored to avoid instability at the start of the curve.
+
+The actual identification of the knee/inflection points is based on a simple curve-tracing algorithm.
+We trace a window of fixed length \code{window} through the curve, and for each window, we consider the straight line connecting its ends: 
+\itemize{
+\item To find the knee, we filter for windows where the midpoint of the window lies above the end-connecting line.
+Of these, we select the window with the shortest end-connecting line, i.e., the strongest curvature.
+The midpoint of that window is defined as the knee.
+\item To find the inflection, we pick the window with the lowest (i.e., most negative) gradient of the end-connecting line.
+The midpoint of that window is defined as the inflection.
+\item In cases with multiple knee/inflection points, we aim to report the earlier values, i.e., those with higher log-totals.
+This is achieved by ignoring all windows after the first one that contains an \dQuote{elbow} point in the curve.
+A window contains an elbow if its midpoint lies below the end-connecting line and the gradient is less than \code{gradient.threshold}.
+}
 }
 \examples{
 # Mocking up some data: 

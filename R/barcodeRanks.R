@@ -7,6 +7,10 @@
 #' @param lower A numeric scalar specifying the lower bound on the total UMI count, 
 #' at or below which all barcodes are assumed to correspond to empty droplets and excluded from knee/inflection point identification.
 #' @param exclude.from An integer scalar specifying the number of highest ranking barcodes to exclude from knee/inflection point identification.
+#' @param window Numeric scalar specifying the length of the window (in log10 units) for knee/inflection point identification.
+#' Larger values improve stability of estimates at the cost of sensitivity to changes in the curve.
+#' @param gradient.threshold Numeric scalar specifying the maximum threshold on the gradient for identifying potential elbow points.
+#' Lower values increase the stringency of elbow point identification.
 #' @param fit.bounds,df Deprecated and ignored.
 #' @param assay.type Integer or string specifying the assay containing the count matrix.
 #' @param ... For the generic, further arguments to pass to individual methods.
@@ -15,24 +19,29 @@
 #' @param BPPARAM A \linkS4class{BiocParallelParam} object specifying how parallelization should be performed.
 #' 
 #' @details
-#' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode
-#' where the highest ranks have the largest totals.
-#' This is equivalent to a transposed empirical cumulative density plot with log-transformed axes, 
-#' which focuses on the barcodes with the largest counts.
-#' To help create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
+#' Analyses of droplet-based scRNA-seq data often show a plot of the log-total count against the log-rank of each barcode where the highest ranks have the largest totals.
+#' This is equivalent to a transposed empirical cumulative density plot with log-transformed axes, which focuses on the barcodes with the largest counts.
+#' To create this plot, the \code{barcodeRanks} function will compute these ranks for all barcodes in \code{m}.
 #' Barcodes with the same total count receive the same average rank to avoid problems with discrete runs of the same total.
 #' 
 #' The function will also identify the inflection and knee points on the curve for downstream use.
 #' Both of these points correspond to a sharp transition between two components of the total count distribution, 
 #' presumably reflecting the difference between empty droplets with little RNA and cell-containing droplets with much more RNA.
-#' \itemize{
-#' \item The inflection point is defined as the point on the log-rank/log-total curve where the first derivative is minimized.
-#' If multiple inflection points are present, we choose the point that immediately follows the knee point.
-#' \item To find the knee point, we draw a diagonal line that passes through the inflection point in the log-rank/log-total curve.
-#' The knee point is defined as the location on the curve that is above and most distant from this line.
-#' }
 #' Only points with total counts above \code{lower} will be considered for knee/inflection point identification.
 #' Similarly, the first \code{exclude.from} points will be ignored to avoid instability at the start of the curve.
+#'
+#' The actual identification of the knee/inflection points is based on a simple curve-tracing algorithm.
+#' We trace a window of fixed length \code{window} through the curve, and for each window, we consider the straight line connecting its ends: 
+#' \itemize{
+#' \item To find the knee, we filter for windows where the midpoint of the window lies above the end-connecting line.
+#' Of these, we select the window with the shortest end-connecting line, i.e., the strongest curvature.
+#' The midpoint of that window is defined as the knee.
+#' \item To find the inflection, we pick the window with the lowest (i.e., most negative) gradient of the end-connecting line.
+#' The midpoint of that window is defined as the inflection.
+#' \item In cases with multiple knee/inflection points, we aim to report the earlier values, i.e., those with higher log-totals.
+#' This is achieved by ignoring all windows after the first one that contains an \dQuote{elbow} point in the curve.
+#' A window contains an elbow if its midpoint lies below the end-connecting line and the gradient is less than \code{gradient.threshold}.
+#' }
 #' 
 #' @return
 #' A \linkS4class{DataFrame} where each row corresponds to a column of \code{m}, and containing the following fields:
@@ -74,7 +83,7 @@ NULL
 #' @importFrom utils head
 #' @importFrom Matrix colSums
 #' @importFrom S4Vectors DataFrame metadata<-
-.barcode_ranks <- function(m, lower=100, exclude.from=50, fit.bounds=NULL, df=20, ..., BPPARAM=SerialParam()) {
+.barcode_ranks <- function(m, lower=100, exclude.from=50, window=1, gradient.threshold=-1, fit.bounds=NULL, df=20, ..., BPPARAM=SerialParam()) {
     old <- .parallelize(BPPARAM)
     on.exit(setAutoBPPARAM(old))
 
@@ -87,61 +96,69 @@ NULL
 
     keep <- run.totals > lower
     keep[run.rank <= exclude.from] <- FALSE
-    if (sum(keep) < 2L) { 
+    if (sum(keep) < 2) {
         stop("insufficient unique points for computing knee/inflection points")
-    } 
-
+    }
     y <- log10(run.totals[keep])
     x <- log10(run.rank[keep])
-    deriv <- diff(y) / diff(x)
 
-    # Initial inflection point is defined as the minima in the first derivative.
-    infl.index <- which.min(deriv)
+    # Scanning a window of length 'window' along the curve.
+    # The length is calculated along the curve itself, not along the axes.
+    dist.along.curve <- c(0, sqrt(diff(x)^2 + diff(y)^2))
+    cumdist <- cumsum(dist.along.curve)
+    rhs.loc <- cumdist + window
+    to.scan <- rhs.loc <= cumdist[length(cumdist)]
 
-    # Heuristically drawing a diagonal line (gradient -1) from the initial inflection point.
-    # The knee is defined as the point on the curve with the maximum distance from that line.
-    # The -1 is more or less pulled out of thin air based on what most curves look like;
-    if (infl.index > 1) {
-        infl.x <- x[infl.index]
-        infl.y <- y[infl.index] 
-        left.of.infl.x <- head(x, infl.index) # only considering points to the left of the inflection.
-        left.of.infl.y <- head(y, infl.index)
+    if (!any(to.scan)) {
+        knee <- inflection <- 10^y[length(y)] # just pick the last point, whatever.
+    } else {
+        left.x <- x[to.scan]
+        left.y <- y[to.scan]
 
-        .find_knee <- function(gradient) {
-            intercept <- infl.y - gradient * infl.x
-            relative.dist <- left.of.infl.y - gradient * left.of.infl.x - intercept # vertical vs perpendicular distance is the same, relatively.
-            knee.index <- which.max(relative.dist)
-            if (relative.dist[knee.index] <= 0) { # if it's not above the line, we failed to find the knee.
-                NULL
-            } else {
-                knee.index
-            }
+        right.info <- .interpolate_on_curve(rhs.loc[to.scan], cumdist, dist.along.curve, x, y)
+        right.x <- right.info$x
+        right.y <- right.info$y
+
+        window.gap <- sqrt((left.x - right.x)^2 + (left.y - right.y)^2) # distance in 2D space between the ends of the window.
+        window.gradient <- (right.y - left.y) / (right.x - left.x) # gradient of the line between ends of the window
+        window.intercept <- right.y - window.gradient * right.x # intercept of the line between ends of the window
+
+        mid.info <- .interpolate_on_curve(cumdist[to.scan] + window/2, cumdist, dist.along.curve, x, y)
+        mid.x <- mid.info$x
+        mid.y <- mid.info$y
+
+        mid.above <- mid.y > window.gradient * mid.x + window.intercept
+
+        # We define the knee point at the window in 'mid.above' with the smallest 'window.gap', and the inflection point at the window with the most negative 'window.gradient'.
+        # In practice, some curves contain multiple knees and inflections, and we would like to restrict ourselves to the first "meaningful" minima.
+        # We do so by ignoring all windows after the first window with an "elbow point", i.e., window gradient below some threshold and the curve is below the line.
+        has.elbow.index <- which(!mid.above & window.gradient < gradient.threshold)
+        if (length(has.elbow.index) == 0) {
+            infl.window <- which.min(window.gradient)
+            maybe.knee <- which(mid.above)
+        } else {
+            first.elbow.window <- has.elbow.index[1]
+            maybe.knee <- which(head(mid.above, first.elbow.window))
+
+            # For the inflection point, we only skip windows that start past the midpoint of the first elbow-containing window.
+            # This is because the first elbow-containing window may precede the window whose midpoint is the inflection point,
+            # e.g., if the window is longer than the gap between the knee and the elbow.
+            # So, by considering some later windows, we have the chance to identify a better inflection.
+            # (Knee should be unaffected as the midpoint must be above the line and won't be affected by more elbow candidates.)
+            before.first.elbow <- findInterval(mid.x[first.elbow.window], left.x)
+            infl.window <- which.min(head(window.gradient, before.first.elbow))
         }
 
-        knee.index <- .find_knee(-1)
-
-        # If there's nothing above the line with a fixed gradient, we fall back to an empirical gradient from the start of the curve.
-        # This is more sensitive to the number of real cells, which stretches out the plateau and causes a leftward shift in the knee point.
-        # But, at least we'll get something approximating a knee point.
-        if (is.null(knee.index)) {
-            gradient <- (infl.y - y[1]) / (infl.x - x[1])
-            knee.index <- .find_knee(gradient)
-
-            # If there's still nothing, we just set the knee index to the inflection point.
-            if (is.null(knee.index)) {
-                knee.index <- infl.index
-            }
+        knee.window <- maybe.knee[which.min(window.gap[maybe.knee])]
+        if (length(knee.window) == 0) {
+            # Fallback if the curve is so weird that the midpoint is never above the window line.
+            knee.window <- infl.window
         }
+
+        # Picking an actual inflection/knee point based on the midpoint of the window.
+        knee <- 10^mid.y[knee.window]
+        inflection <- 10^mid.y[infl.window]
     }
-
-    # Refining the inflection point to the interval immediately following the knee point. 
-    # This aims to protect against curves with multiple inflection points.
-    up.to <- findInterval(x[knee.index] + 1, x)
-    new.infl.index <- knee.index + which.min(deriv[knee.index:up.to]) - 1L
-    infl.index <- new.infl.index
-
-    knee <- 10^y[knee.index]
-    inflection <- 10^y[infl.index]
 
     out <- DataFrame(
         rank=.reorder(run.rank, stuff$lengths, o), 
@@ -150,6 +167,20 @@ NULL
     rownames(out) <- colnames(m)
     metadata(out) <- list(knee=knee, inflection=inflection)
     out
+}
+
+.interpolate_on_curve <- function(target.distance, cumulative.distance, stepwise.distance, x, y) {
+    index <- findInterval(target.distance, cumulative.distance, checkSorted=FALSE, checkNA=FALSE, left.open=TRUE)
+    index.p1 <- index + 1L
+    prop <- (target.distance - cumulative.distance[index]) / stepwise.distance[index.p1]
+    list(
+        x=.interpolate_simple(prop, x[index], x[index.p1]),
+        y=.interpolate_simple(prop, y[index], y[index.p1])
+    )
+}
+
+.interpolate_simple <- function(prop, left.val, right.val) {
+    left.val + prop * (right.val - left.val)
 }
 
 .reorder <- function(vals, lens, o) {

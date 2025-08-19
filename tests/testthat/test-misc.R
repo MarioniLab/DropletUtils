@@ -12,17 +12,6 @@ test_that("barcodeRanks runs to completion", {
     expect_equal(brout$total, totals)
     expect_identical(brout$rank, rank(-totals, ties.method="average"))
 
-    # Trying again with a higher limit.
-    limit2 <- 200
-    brout2 <- barcodeRanks(my.counts, lower=limit2)
-    expect_identical(brout, brout2)
-
-    # Specifying the boundaries.
-    bounds <- c(200, 1000)
-    brout3 <- barcodeRanks(my.counts, lower=limit, fit.bounds=bounds)
-    knee <- metadata(brout3)$knee
-    expect_true(knee >= bounds[1] && knee <= bounds[2])
-
     # Respecting column names.
     alt <- my.counts
     colnames(alt) <- sprintf("BARCODE_%i", seq_len(ncol(alt)))
@@ -34,6 +23,19 @@ test_that("barcodeRanks runs to completion", {
     # Trying out silly inputs.
     expect_error(barcodeRanks(my.counts[,0]), "insufficient")
     expect_error(barcodeRanks(my.counts[0,]), "insufficient")
+})
+
+test_that("barcodeRanks' interpolation works correctly", {
+    cumdist <- c(0, 1, 3, 5)
+    out <- DropletUtils:::.interpolate_on_curve(c(0.5, 1.1, 2.2, 3.3, 4.4, 5), cumdist, c(0, diff(cumdist)), c(1,2,3,4), c(1,2,3,4))
+
+    expect_identical(out$x, out$y)
+    expect_equal(out$x[1], 1.5)
+    expect_equal(out$x[2], (1.9 * 2 + 0.1 * 3) / 2)
+    expect_equal(out$x[3], (0.8 * 2 + 1.2 * 3) / 2)
+    expect_equal(out$x[4], (1.7 * 3 + 0.3 * 4) / 2)
+    expect_equal(out$x[5], (0.6 * 3 + 1.4 * 4) / 2)
+    expect_equal(out$x[6], 4)
 })
 
 test_that("defaultDrops runs to completion", {
