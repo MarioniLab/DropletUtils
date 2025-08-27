@@ -196,12 +196,14 @@ Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class
     switch (banner.field) {
         case eminem::Field::REAL: case eminem::Field::DOUBLE:
             parser.scan_real([&](int, int c, double) -> void {
-                sanisizer::sum<int>(nnz_per_col[c - 1], 1);
+                auto& percol = nnz_per_col[c - 1];
+                percol = sanisizer::sum<int>(percol, 1);
             });
             break;
         case eminem::Field::INTEGER:
             parser.scan_real([&](int, int c, int) -> void {
-                sanisizer::sum<int>(nnz_per_col[c - 1], 1);
+                auto& percol = nnz_per_col[c - 1];
+                percol = sanisizer::sum<int>(percol, 1);
             });
             break;
         default:
