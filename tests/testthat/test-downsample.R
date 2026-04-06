@@ -82,13 +82,13 @@ test_that("downsampling from the reads compares correctly to downsampleMatrix", 
     Z <- downsampleMatrix(X, prop=0.11, bycol=FALSE)
     set.seed(100)
     Y <- downsampleReads(out.file, prop=0.11)
-    expect_equal(Y, Z)
+    expect_equal(as(Y, "CsparseMatrix"), as(Z, "CsparseMatrix"))
 
     set.seed(100)
     Z <- downsampleMatrix(X, prop=0.55)
     set.seed(100)
     Y <- downsampleReads(out.file, prop=0.55, bycol=TRUE)
-    expect_equal(Y, Z)
+    expect_equal(as(Y, "CsparseMatrix"), as(Z, "CsparseMatrix"))
 })
 
 test_that("downsampling from the reads works correctly with feature subsets", {
