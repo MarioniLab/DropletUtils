@@ -2,6 +2,11 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.32.0}{\itemize{
+\item Updated \code{downsampleReads()} to use the new downsampling algorithm from \pkg{scuttle}.
+This is more efficient but slightly changes the results compared to the previous version.
+}}
+
 \section{Version 1.30.0}{\itemize{
 \item Further improvements to the knee point detection in \code{barcodeRanks()}.
 This now uses a curve-tracing algorithm where the knee is defined inside the window with the highest curvature.

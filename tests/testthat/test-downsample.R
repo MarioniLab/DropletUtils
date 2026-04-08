@@ -53,43 +53,6 @@ test_that("downsampling from the reads yields correct results", {
     out <- downsampleReads(out.paths, barcode, prop=0.5)
     expect_identical(dim(out), c(0L, 0L))
 })
-    
-test_that("downsampling from the reads compares correctly to downsampleMatrix", {
-    # Manually creating files for comparison to downsampleMatrix - this relies on ordered 'gene' and 'cell', 
-    # so that the retention probabilities applied to each molecule are the same across functions.
-    ngenes <- 4
-    gene.count <- seq_len(ngenes)*100
-    ncells <- 200
-    nmolecules <- sum(gene.count)*ncells
-
-    tmpfile <- tempfile()
-    dir.create(tmpfile)
-    out.file <- file.path(tmpfile, "out.h5")
-
-    library(rhdf5)
-    h5 <- h5createFile(out.file)
-    h5write(rep(seq_len(ncells), each=sum(gene.count)), out.file, "barcode")
-    h5write(seq_len(nmolecules), out.file, "umi")
-    h5write(rep(rep(seq_len(ngenes)-1L, gene.count), ncells), out.file, "gene")
-    h5write(rep(1, nmolecules), out.file, "gem_group")
-    h5write(rep(1, nmolecules), out.file, "reads") # one read per molecule.
-    h5write(array(sprintf("ENSG%i", seq_len(ngenes))), out.file, "gene_ids")
-
-    alt <- read10xMolInfo(out.file)
-    X <- makeCountMatrix(alt$data$gene, alt$data$cell, all.genes=alt$genes)
-    colnames(X) <- paste0(colnames(X), "-1")
-    set.seed(100)
-    Z <- downsampleMatrix(X, prop=0.11, bycol=FALSE)
-    set.seed(100)
-    Y <- downsampleReads(out.file, prop=0.11)
-    expect_equal(as(Y, "CsparseMatrix"), as(Z, "CsparseMatrix"))
-
-    set.seed(100)
-    Z <- downsampleMatrix(X, prop=0.55)
-    set.seed(100)
-    Y <- downsampleReads(out.file, prop=0.55, bycol=TRUE)
-    expect_equal(as(Y, "CsparseMatrix"), as(Z, "CsparseMatrix"))
-})
 
 test_that("downsampling from the reads works correctly with feature subsets", {
     tmpfile <- tempfile(fileext=".h5")
