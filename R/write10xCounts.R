@@ -205,15 +205,17 @@ write10xCounts <- function(path,
             file=path, name=paste0(group, "/features/genome"))
 
         # Writing attributes.
-        h5f <- H5Fopen(path)
-        h5g <- H5Gopen(h5f, "/")
-        h5writeAttribute(chemistry, h5obj=h5g, name="chemistry_description", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
-        h5writeAttribute("matrix", h5obj=h5g, name="filetype", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
-        h5writeAttribute(library.ids, h5obj=h5g, name="library_ids", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
-        h5writeAttribute(original.gem.groups, h5obj=h5g, name="original_gem_groups")
-        h5writeAttribute(as.integer(version) - 1L, h5obj=h5g, name="version") # this is probably correct.
-        H5Gclose(h5g)
-        H5Fclose(h5f)
+        local({
+            h5f <- H5Fopen(path)
+            on.exit(H5Fclose(h5f), add=TRUE, after=FALSE)
+            h5g <- H5Gopen(h5f, "/")
+            on.exit(H5Gclose(h5g), add=TRUE, after=FALSE)
+            h5writeAttribute(chemistry, h5obj=h5g, name="chemistry_description", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
+            h5writeAttribute("matrix", h5obj=h5g, name="filetype", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
+            h5writeAttribute(library.ids, h5obj=h5g, name="library_ids", variableLengthString=TRUE, asScalar=TRUE, encoding="UTF-8")
+            h5writeAttribute(original.gem.groups, h5obj=h5g, name="original_gem_groups")
+            h5writeAttribute(as.integer(version) - 1L, h5obj=h5g, name="version") # this is probably correct.
+        })
 
     } else {
         h5write(gene.id, file=path, name=paste0(group, "/genes"))
@@ -222,10 +224,18 @@ write10xCounts <- function(path,
 
     # Saving matrix information.
     x <- as(x, "CsparseMatrix")
-    h5write(x@x, file=path, name=paste0(group, "/data"))
     h5write(dim(x), file=path, name=paste0(group, "/shape"))
-    h5write(x@i, file=path, name=paste0(group, "/indices")) # already zero-indexed.
-    h5write(x@p, file=path, name=paste0(group, "/indptr"))
+
+    local({
+        h5f <- H5Fopen(path)
+        on.exit(H5Fclose(h5f), add=TRUE, after=FALSE)
+        h5g <- H5Gopen(h5f, group)
+        on.exit(H5Gclose(h5g), add=TRUE, after=FALSE)
+
+        h5_write_vector(h5g, "data", x@x)
+        h5_write_vector(h5g, "indices", x@i) # already zero-indexed.
+        h5_write_vector(h5g, "indptr", x@p)
+    })
 
     return(NULL)
 }
@@ -239,4 +249,40 @@ write10xCounts <- function(path,
         type <- "mtx"
     }
     type
+}
+
+#' @importFrom rhdf5 H5Screate_simple H5Sclose H5Pcreate H5Pclose H5Pset_fill_time H5Pset_obj_track_times H5Pset_shuffle H5Pset_deflate H5Pset_chunk H5Dcreate
+h5_create_vector <- function(handle, name, len, type, compress=6, chunks=NULL, scalar=FALSE) {
+    shandle <- H5Screate_simple(len)
+    on.exit(H5Sclose(shandle), add=TRUE, after=FALSE)
+
+    phandle <- H5Pcreate("H5P_DATASET_CREATE")
+    on.exit(H5Pclose(phandle), add=TRUE, after=FALSE)
+    H5Pset_fill_time(phandle, "H5D_FILL_TIME_NEVER")
+    H5Pset_obj_track_times(phandle, FALSE)
+
+    if (compress > 0 && len) {
+        H5Pset_shuffle(phandle)
+        H5Pset_deflate(phandle, level=compress)
+        if (is.null(chunks)) {
+            chunks <- min(len, 10000) 
+        }
+        H5Pset_chunk(phandle, chunks)
+    }
+
+    H5Dcreate(handle, name, dtype_id=type, h5space=shandle, dcpl=phandle)
+}
+
+#' @importFrom rhdf5 H5Dwrite H5Dclose
+h5_write_vector <- function(handle, name, x, type=NULL, compress=6, chunks=NULL, scalar=FALSE) {
+    if (is.null(type)) {
+        if (is.integer(type)) {
+            type <- "H5T_NATIVE_INT32"
+        } else {
+            type <- "H5T_NATIVE_DOUBLE"
+        }
+    }
+    dhandle <- h5_create_vector(handle, name, length(x), type=type, compress=compress, chunks=chunks, scalar=scalar)
+    on.exit(H5Dclose(dhandle), add=TRUE, after=FALSE)
+    H5Dwrite(dhandle, x)
 }
