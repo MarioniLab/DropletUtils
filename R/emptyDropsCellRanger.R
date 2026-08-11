@@ -7,6 +7,7 @@
 #' The matrix should only contain barcodes for an individual sample, prior to any filtering for barcodes.
 #' Alternatively, a \linkS4class{SummarizedExperiment} containing such an object.
 #' @param n.expected.cells An integer scalar specifying the number of expected cells in a sample. 
+#' If missing, will try to estimate this from the data using the order of magnitude algorithm from CellRanger.
 #' Corresponds to the \code{nExpectedCells} argument in \pkg{STARsolo}. 
 #' @param max.percentile A numeric scalar between 0 and 1 used to define the maximum UMI count in the simple filtering algorithm. 
 #' Corresponds to the \code{maxPercentile} argument in \pkg{STARsolo}. 
@@ -100,7 +101,7 @@ NULL
 .empty_drops_cell_ranger  <- function(m, 
                                       # STARsolo arguments
                                       ## simple filtering
-                                      n.expected.cells=3000,            # nExpectedCells
+                                      n.expected.cells=NULL,            # nExpectedCells
                                       max.percentile=0.99,      # maxPercentile
                                       max.min.ratio=10,         # maxMinRatio
                                       
@@ -120,7 +121,7 @@ NULL
         bpstart(BPPARAM)
         on.exit(bpstop(BPPARAM))
     }
-    
+
     # This function is an approximate implementation of the 
     # `--soloCellFilter  EmptyDrops_CR` filtering approach 
     # of STARsolo 2.7.9a (https://www.biorxiv.org/content/10.1101/2021.05.05.442755v1),
@@ -155,7 +156,18 @@ NULL
         }
         
         ambient <- logical(length(totals))
-        ambient[o[min(ind.min, length(totals)):min(ind.max, length(totals))]] <- TRUE
+        final.ind.min = min(ind.min, length(totals))
+        final.ind.max = min(ind.max, length(totals))
+        if ((final.ind.max - final.ind.min) < 100) {
+            stop(paste0(
+                "The ambient pool size (",
+                final.ind.max - final.ind.min + 1,
+                ") is too small; cannot proceed. ",
+                "Please adjust `ind.min` and `ind.max` to increase the size. ",
+                "One suggestion is to set `ind.min = sum(colSums(m) > N)` and `ind.max = ncol(m)`, ",
+                "where N is a threshold of UMI count, such as 100, and m is the count matrix."))
+        }
+        ambient[o[final.ind.min:final.ind.max]] <- TRUE
         ambient.m <- mat[,ambient,drop=FALSE]
         ambient.prof <- rowSums(ambient.m)
         
@@ -181,6 +193,14 @@ NULL
         )
     }
     
+    if (is.null(n.expected.cells)) {
+        n.expected.cells <- filter_cellular_barcodes_ordmag(colSums(m))$filtered_bcs
+        if (n.expected.cells < 1) {
+            warning("Could not estimate the number of expected cells; using 3000 instead.")
+            n.expected.cells <- 3000
+        }
+    }
+
     stats <- .test_empty_drops(m=m, ambient.FUN=ambfun, niters=niters, test.ambient=FALSE, ignore=NULL, alpha=Inf, round=round, BPPARAM=BPPARAM)
     
     tmp <- stats$PValue
@@ -206,3 +226,127 @@ setMethod("emptyDropsCellRanger", "ANY", .empty_drops_cell_ranger)
 setMethod("emptyDropsCellRanger", "SummarizedExperiment", function(m, ..., assay.type="counts") {
     .empty_drops_cell_ranger(assay(m, assay.type), ...)
 })
+
+# The following functions are adopted from CellRanger
+# https://github.com/10XGenomics/cellranger/blob/fe0616967771151209c3a6f97f4de92bf55ac0bd/lib/python/cellranger/cell_calling_helpers.py#L841
+## Cell calling constants
+ORDMAG_NUM_BOOTSTRAP_SAMPLES = 100
+ORDMAG_RECOVERED_CELLS_QUANTILE = 0.99
+MIN_RECOVERED_CELLS_PER_GEM_GROUP = 50
+MAX_RECOVERED_CELLS_PER_GEM_GROUP = 262144 # 1 << 18
+
+find_within_ordmag <- function(x, baseline_idx) {
+    x_ascending = sort(x)
+    baseline = x_ascending[length(x_ascending) - baseline_idx]
+    cutoff = round(0.1 * baseline)
+    cutoff[cutoff <= 1] = 1
+    # Return the index corresponding to the cutoff in descending order
+    length(x) - findInterval(cutoff, x_ascending)
+}
+
+# Estimate the number of recovered cells by trying to find ordmag(recovered) =~ filtered.
+# - Search for a result such that some loss(recovered_cells, filtered_cells) is minimized.
+# - Here I'm using (obs - exp)**2 / exp, which approximates a proportion for small differences
+#   but blows up for large differences.
+# - Test over a log2-spaced range of values from 1..262_144
+estimate_recovered_cells_ordmag <- function(nonzero_bc_counts, max_expected_cells) {
+    recovered_cells = seq(1, log2(max_expected_cells), length.out = 2000)
+    recovered_cells = unique(round(2^recovered_cells))
+
+    baseline_bc_idx = round(recovered_cells * (1 - ORDMAG_RECOVERED_CELLS_QUANTILE))
+    baseline_bc_idx[baseline_bc_idx > length(nonzero_bc_counts)] = length(nonzero_bc_counts) 
+    
+    filtered_cells = find_within_ordmag(nonzero_bc_counts, baseline_bc_idx)
+    loss = (filtered_cells - recovered_cells)^2 / recovered_cells
+    idx = which.min(loss)
+    c(recovered_cells[idx], loss[idx])
+}
+
+# All barcodes that are close to within an order of magnitude of a top barcode.
+# Takes all barcodes that are close to within an order of magnitude of a
+# top barcode that likely represents a cell.
+filter_cellular_barcodes_ordmag <- function(bc_counts) {
+    nonzero_bc_counts = bc_counts[bc_counts > 0]
+    if (length(nonzero_bc_counts) == 0) {
+        stop("All barcodes have zero count; cannot proceed.")
+    }
+    
+    set.seed(0)
+    # Set the most cells to examine based on the empty drops range for this chemistry
+    max_expected_cells = MAX_RECOVERED_CELLS_PER_GEM_GROUP
+    recovered_cells_loss = 
+        sapply(seq(1, ORDMAG_NUM_BOOTSTRAP_SAMPLES), function(x) {
+        estimate_recovered_cells_ordmag(
+            sample(nonzero_bc_counts, length(nonzero_bc_counts),replace = TRUE), max_expected_cells
+        )
+        })
+    recovered_cells = mean(recovered_cells_loss[1,])
+    loss = mean(recovered_cells_loss[2,])
+    
+    recovered_cells = max(round(recovered_cells), MIN_RECOVERED_CELLS_PER_GEM_GROUP)
+    
+    message(paste0("Found recovered_cells = ", recovered_cells, " with loss = ", loss))
+    
+    baseline_bc_idx = round(recovered_cells * (1 - ORDMAG_RECOVERED_CELLS_QUANTILE))
+    baseline_bc_idx = min(baseline_bc_idx, length(nonzero_bc_counts))
+    
+    # Bootstrap sampling; run algo with many random samples of the data
+    top_n_boot = sapply(seq(1, ORDMAG_NUM_BOOTSTRAP_SAMPLES), function(x) {
+        find_within_ordmag(
+        sample(nonzero_bc_counts, length(nonzero_bc_counts), replace = TRUE), baseline_bc_idx
+        )
+    })
+
+    metrics = summarize_bootstrapped_top_n(top_n_boot, nonzero_bc_counts)
+    
+    # Get the filtered barcodes
+    top_n = metrics.filtered_bcs
+
+    if (top_n > len(nonzero_bc_counts)) {
+        stop("Invalid selection of 0-count barcodes!")
+    }
+    return(metrics)
+}
+
+summarize_bootstrapped_top_n <- function(top_n_boot, nonzero_counts) {
+    top_n_bcs_mean = mean(top_n_boot)
+    # mimick cellranger, but not sure if we want to use sample var or population var
+    top_n_bcs_var = sum((top_n_boot - top_n_bcs_mean)^2)/length(top_n_boot) 
+    top_n_bcs_sd = sqrt(top_n_bcs_var)
+    result = list(
+        filtered_bcs = 0,
+        filtered_bcs_lb = 0,
+        filtered_bcs_ub = 0,
+        filtered_bcs_var = 0,
+        filtered_bcs_cv = 0,
+        filtered_bcs_cutoff = 0
+    )
+    
+    result$filtered_bcs_var = top_n_bcs_var
+    result$filtered_bcs_cv = top_n_bcs_sd/top_n_bcs_mean
+    result$filtered_bcs_lb = round(qnorm(0.025, mean = top_n_bcs_mean, sd = top_n_bcs_sd, lower.tail = TRUE), 0)
+    result$filtered_bcs_ub = round(qnorm(0.975, mean = top_n_bcs_mean, sd = top_n_bcs_sd, lower.tail = TRUE), 0)
+    
+    nbcs = round(top_n_bcs_mean)
+    result$filtered_bcs = nbcs
+    
+    # make sure that if a barcode with count x is selected, we select all barcodes with count >= x
+    # this is true for each bootstrap sample, but is not true when we take the mean
+    
+    if (nbcs > 0) {
+        sorted_counts = nonzero_counts[order(nonzero_counts, decreasing = TRUE)]
+        
+        cutoff = sorted_counts[nbcs]
+        index = nbcs
+        while (((index) < length(sorted_counts)) && sorted_counts[index] == cutoff) {
+        index = index + 1
+        }
+        # if we end up grabbing too many barcodes, revert to initial estimate
+        if ((index - nbcs) > 0.20 * nbcs) {
+        return(result)
+        }
+        result$filtered_bcs = index
+        result$filtered_bcs_cutoff = cutoff
+    }
+    return(result)
+}
