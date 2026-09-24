@@ -1,34 +1,41 @@
+#include "Rcpp.h"
+
 #include "eminem/eminem.hpp"
 #include "byteme/byteme.hpp"
 #include "subpar/subpar.hpp"
 #include "sanisizer/sanisizer.hpp"
-
-#include "Rcpp.h"
 
 #include <vector>
 #include <stdexcept>
 #include <limits>
 #include <type_traits>
 #include <algorithm>
+#include <string>
+
+template <typename Type_>
+using I = std::remove_cv_t<std::remove_reference_t<Type_> >;
 
 template<typename Type_>
 void sort_SVT_SparseMatrix_columns(const std::vector<int*>& iptrs, const std::vector<Type_*>& vptrs, const std::vector<int>& num, int threads) {
-    auto NC = iptrs.size();
-    subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
+    const auto NC = iptrs.size();
+
+    subpar::parallelize_range(threads, NC, [&](int, I<decltype(NC)> start, I<decltype(NC)> length) -> void {
         std::vector<std::pair<int, Type_> > sortbuffer;
-        for (decltype(start) c = start, end = start + length; c < end; ++c) {
+        for (I<decltype(start)> c = start, end = start + length; c < end; ++c) {
             auto iptr = iptrs[c];
             auto n = num[c];
-            if (std::is_sorted(iptr, iptr + n)) {
+            if (iptr == NULL || std::is_sorted(iptr, iptr + n)) {
                 continue;
             }
+
             auto vptr = vptrs[c];
             sortbuffer.clear();
-            for (decltype(n) i = 0; i < n; ++i) {
+            for (I<decltype(n)> i = 0; i < n; ++i) {
                 sortbuffer.emplace_back(iptr[i], vptr[i]);
             }
+
             std::sort(sortbuffer.begin(), sortbuffer.end());
-            for (decltype(n) i = 0; i < n; ++i) {
+            for (I<decltype(n)> i = 0; i < n; ++i) {
                 const auto& current = sortbuffer[i];
                 iptr[i] = current.first;
                 vptr[i] = current.second;
@@ -38,7 +45,7 @@ void sort_SVT_SparseMatrix_columns(const std::vector<int*>& iptrs, const std::ve
 }
 
 Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
-    auto NC = nnz_per_col.size();
+    const auto NC = nnz_per_col.size();
     auto contents = sanisizer::create<Rcpp::List>(NC);
     auto iptrs = sanisizer::create<std::vector<int*> >(NC);
     auto used = sanisizer::create<std::vector<int> >(NC);
@@ -51,15 +58,22 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
     parser.scan_preamble();
     const auto& banner = parser.get_banner();
     std::string out_type;
+    bool all_empty = true;
 
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
         auto vptrs = sanisizer::create<std::vector<double*> >(NC);
-        for (decltype(NC) c = 0; c < NC; ++c) {
-            auto values = sanisizer::create<Rcpp::NumericVector>(nnz_per_col[c]);
-            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
-            vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+        for (I<decltype(NC)> c = 0; c < NC; ++c) {
+            const auto curnnz = nnz_per_col[c];
+            if (curnnz) {
+                all_empty = false;
+                auto values = sanisizer::create<Rcpp::NumericVector>(curnnz);
+                auto indices = sanisizer::create<Rcpp::IntegerVector>(curnnz);
+                iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
+                vptrs[c] = values.begin();
+                contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            } else {
+                contents[c] = R_NilValue;
+            }
         }
 
         parser.scan_real([&](int r, int c, double val) -> void {
@@ -74,12 +88,18 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
 
     } else if (banner.field == eminem::Field::INTEGER) {
         auto vptrs = sanisizer::create<std::vector<int*> >(NC);
-        for (decltype(NC) c = 0; c < NC; ++c) {
-            auto values = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
-            vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+        for (I<decltype(NC)> c = 0; c < NC; ++c) {
+            const auto curnnz = nnz_per_col[c];
+            if (curnnz) {
+                all_empty = false;
+                auto values = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+                auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+                iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
+                vptrs[c] = values.begin();
+                contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            } else {
+                contents[c] = R_NilValue;
+            }
         }
 
         parser.scan_integer([&](int r, int c, double val) -> void {
@@ -96,16 +116,23 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
         throw std::runtime_error("unsupported eminem::Field type");
     }
 
-    return Rcpp::List::create(
-        Rcpp::Named("list") = contents,
-        Rcpp::Named("type") = out_type 
-    );
+    if (all_empty) {
+        return Rcpp::List::create(
+            Rcpp::Named("list") = R_NilValue,
+            Rcpp::Named("type") = out_type 
+        );
+    } else {
+        return Rcpp::List::create(
+            Rcpp::Named("list") = contents,
+            Rcpp::Named("type") = out_type 
+        );
+    }
 }
 
 Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std::vector<int>& nnz_per_col, int threads) {
-    auto NC = nnz_per_col.size();
+    const auto NC = nnz_per_col.size();
     std::vector<int> offsets(sanisizer::sum<typename std::vector<int>::size_type>(NC, 1));
-    for (decltype(NC) c = 0; c < NC; ++c) {
+    for (I<decltype(NC)> c = 0; c < NC; ++c) {
         // Increment is safe from overflow as 'c + 1 <= NC'.
         offsets[c + 1] = sanisizer::sum<int>(offsets[c], nnz_per_col[c]);
     }
@@ -144,19 +171,22 @@ Rcpp::RObject read_mm_two_pass_CsparseMatrix(const std::string& path, const std:
         int* iptr = row_indices.begin();
         double* vptr = values.begin();
         const int* pptr = indptr.begin();
-        subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
+
+        subpar::parallelize_range(threads, NC, [&](int, I<decltype(NC)> start, I<decltype(NC)> length) -> void {
             std::vector<std::pair<int, double> > sortbuffer;
-            for (decltype(start) c = start, end = start + length; c < end; ++c) {
+            for (I<decltype(start)> c = start, end = start + length; c < end; ++c) {
                 auto pstart = pptr[c], pend = pptr[c + 1]; // increment won't overflow as 'c + 1 <= end'.
                 if (std::is_sorted(iptr + pstart, iptr + pend)) {
                     continue;
                 }
+
                 sortbuffer.clear();
                 for (auto p = pstart; p < pend; ++p) {
                     sortbuffer.emplace_back(iptr[p], vptr[p]);
                 }
                 std::sort(sortbuffer.begin(), sortbuffer.end());
-                for (decltype(sortbuffer.size()) i = 0, end = sortbuffer.size(); i < end; ++i) {
+
+                for (I<decltype(sortbuffer.size())> i = 0, end = sortbuffer.size(); i < end; ++i) {
                     auto offset = pstart + i;
                     const auto& current = sortbuffer[i];
                     iptr[offset] = current.first;
@@ -187,9 +217,9 @@ Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class
     parser.scan_preamble();
 
     Rcpp::IntegerVector dimensions(2);
-    dimensions[0] = parser.get_nrows();
-    auto NC = parser.get_ncols();
-    dimensions[1] = NC;
+    dimensions[0] = sanisizer::cast<int>(parser.get_nrows());
+    const auto NC = parser.get_ncols();
+    dimensions[1] = sanisizer::cast<int>(NC);
 
     auto nnz_per_col = sanisizer::create<std::vector<int> >(NC);
     const auto& banner = parser.get_banner();
@@ -201,7 +231,7 @@ Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class
             });
             break;
         case eminem::Field::INTEGER:
-            parser.scan_real([&](int, int c, int) -> void {
+            parser.scan_integer([&](int, int c, int) -> void {
                 auto& percol = nnz_per_col[c - 1];
                 percol = sanisizer::sum<int>(percol, 1);
             });
@@ -227,21 +257,23 @@ Rcpp::RObject read_mm_two_pass(const std::string& path, const std::string& class
 template<typename Rclass_, typename Type_>
 Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std::vector<Type_> > >& contents, const std::string& class_name, int threads) {
     auto NC = contents.size();
-    subpar::parallelize_range(threads, NC, [&](int, decltype(NC) start, decltype(NC) length) -> void {
+    subpar::parallelize_range(threads, NC, [&](int, I<decltype(NC)> start, I<decltype(NC)> length) -> void {
         std::vector<std::pair<int, Type_> > sortbuffer;
-        for (decltype(start) c = start, end = start + length; c < end; ++c) {
+        for (I<decltype(start)> c = start, end = start + length; c < end; ++c) {
             auto& idxs = contents[c].first;
             if (std::is_sorted(idxs.begin(), idxs.end())) {
                 continue;
             }
+
             auto& vals = contents[c].second;
             auto n = idxs.size();
             sortbuffer.clear();
-            for (decltype(n) i = 0; i < n; ++i) {
+            for (I<decltype(n)> i = 0; i < n; ++i) {
                 sortbuffer.emplace_back(idxs[i], vals[i]);
             }
             std::sort(sortbuffer.begin(), sortbuffer.end());
-            for (decltype(n) i = 0; i < n; ++i) {
+
+            for (I<decltype(n)> i = 0; i < n; ++i) {
                 const auto& current = sortbuffer[i];
                 idxs[i] = current.first;
                 vals[i] = current.second;
@@ -251,36 +283,51 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
 
     if (class_name == "SVT_SparseMatrix") {
         auto output = sanisizer::create<Rcpp::List>(NC);
-        for (decltype(NC) c = 0; c < NC; ++c) {
+        bool all_empty = true;
+        for (I<decltype(NC)> c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
-            output[c] = Rcpp::List::create(
-                Rclass_(pair.second.begin(), pair.second.end()),
-                Rcpp::IntegerVector(pair.first.begin(), pair.first.end())
+            if (pair.second.size()) {
+                all_empty = false;
+                output[c] = Rcpp::List::create(
+                    Rclass_(pair.second.begin(), pair.second.end()),
+                    Rcpp::IntegerVector(pair.first.begin(), pair.first.end())
+                );
+            } else {
+                output[c] = R_NilValue;
+            }
+        }
+
+        std::string out_type;
+        if constexpr(std::is_same<Type_, int>::value) {
+            out_type = "integer";
+        } else {
+            out_type = "double";
+        }
+
+        if (all_empty) {
+            return Rcpp::List::create(
+                Rcpp::Named("list") = R_NilValue,
+                Rcpp::Named("type") = out_type
+            );
+        } else {
+            return Rcpp::List::create(
+                Rcpp::Named("list") = output,
+                Rcpp::Named("type") = out_type
             );
         }
-        return Rcpp::List::create(
-            Rcpp::Named("list") = output,
-            Rcpp::Named("type") = []{
-                if constexpr(std::is_same<Type_, int>::value) {
-                    return std::string("integer");
-                } else {
-                    return std::string("double");
-                }
-            }()
-        );
 
     } else {
-        Rcpp::IntegerVector indptr(sanisizer::sum<decltype(std::declval<Rcpp::IntegerVector>().size())>(NC, 1));
-        for (decltype(NC) c = 0; c < NC; ++c) {
+        Rcpp::IntegerVector indptr(sanisizer::sum<I<decltype(std::declval<Rcpp::IntegerVector>().size())> >(NC, 1));
+        for (I<decltype(NC)> c = 0; c < NC; ++c) {
             // Increment is safe from overflow as 'c + 1 <= NC'.
             indptr[c + 1] = sanisizer::sum<int>(indptr[c], contents[c].first.size());
         }
 
-        auto total_nnz = indptr[NC];
+        const auto total_nnz = indptr[NC];
         auto indices = sanisizer::create<Rcpp::IntegerVector>(total_nnz);
         auto values = sanisizer::create<Rcpp::NumericVector>(total_nnz); // it's going to be a dgCMatrix anyway, so we might as well save it as a numeric vector.
-        decltype(total_nnz) sofar = 0; 
-        for (decltype(NC) c = 0; c < NC; ++c) {
+        I<decltype(total_nnz)> sofar = 0; 
+        for (I<decltype(NC)> c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
             std::copy(pair.first.begin(), pair.first.end(), indices.begin() + sofar);
             std::copy(pair.second.begin(), pair.second.end(), values.begin() + sofar);

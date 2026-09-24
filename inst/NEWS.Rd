@@ -2,6 +2,11 @@
 \title{DropletUtils News}
 \encoding{UTF-8}
 
+\section{Version 1.34.0}{\itemize{
+\item Bugfix to \code{read10xCounts()} when \code{mtx.class = "SVT_SparseMatrix"},
+to generate a valid SVT_SparseMatrix from a Matrix Market file containing empty columns. 
+}}
+
 \section{Version 1.32.0}{\itemize{
 \item Updated \code{downsampleReads()} to use the new downsampling algorithm from \pkg{scuttle}.
 This is more efficient but slightly changes the results compared to the previous version.
