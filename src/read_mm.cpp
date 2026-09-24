@@ -55,11 +55,15 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
     if (banner.field == eminem::Field::REAL || banner.field == eminem::Field::DOUBLE) {
         auto vptrs = sanisizer::create<std::vector<double*> >(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
-            auto values = sanisizer::create<Rcpp::NumericVector>(nnz_per_col[c]);
-            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
-            vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            if (nnz_per_col[c]) {
+                auto values = sanisizer::create<Rcpp::NumericVector>(nnz_per_col[c]);
+                auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+                iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
+                vptrs[c] = values.begin();
+                contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            } else {
+                contents[c] = R_NilValue;
+            }
         }
 
         parser.scan_real([&](int r, int c, double val) -> void {
@@ -75,11 +79,15 @@ Rcpp::RObject read_mm_two_pass_SVT_SparseMatrix(const std::string& path, const s
     } else if (banner.field == eminem::Field::INTEGER) {
         auto vptrs = sanisizer::create<std::vector<int*> >(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
-            auto values = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
-            iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
-            vptrs[c] = values.begin();
-            contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            if (nnz_per_col[c]) {
+                auto values = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+                auto indices = sanisizer::create<Rcpp::IntegerVector>(nnz_per_col[c]);
+                iptrs[c] = indices.begin(); // these pointers should still be valid after the std::move as they refer to R-managed allocations.
+                vptrs[c] = values.begin();
+                contents[c] = Rcpp::List::create(std::move(values), std::move(indices));
+            } else {
+                contents[c] = R_NilValue;
+            }
         }
 
         parser.scan_integer([&](int r, int c, double val) -> void {
@@ -253,10 +261,14 @@ Rcpp::RObject format_one_pass_output(std::vector<std::pair<std::vector<int>, std
         auto output = sanisizer::create<Rcpp::List>(NC);
         for (decltype(NC) c = 0; c < NC; ++c) {
             const auto& pair = contents[c];
-            output[c] = Rcpp::List::create(
-                Rclass_(pair.second.begin(), pair.second.end()),
-                Rcpp::IntegerVector(pair.first.begin(), pair.first.end())
-            );
+            if (pair.second.empty()) {
+                output[c] = R_NilValue;
+            } else {
+                output[c] = Rcpp::List::create(
+                    Rclass_(pair.second.begin(), pair.second.end()),
+                    Rcpp::IntegerVector(pair.first.begin(), pair.first.end())
+                );
+            }
         }
         return Rcpp::List::create(
             Rcpp::Named("list") = output,
