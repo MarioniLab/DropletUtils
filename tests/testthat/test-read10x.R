@@ -331,3 +331,50 @@ test_that("read10xCounts with a shuffled Matrix Market file", {
     sce10x.mc <- read10xCounts(tmpdir, mtx.threads=2, mtx.two.pass=TRUE)
     expect_equal(counts(sce10x.mc), alt.counts)
 })
+
+test_that("read10xCounts for empty columns", {
+    tmpdir <- tempfile()
+    my.counts[,seq_len(ncol(my.counts)) %% 2 == 0] <- 0
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+
+    sce10x <- read10xCounts(tmpdir)
+    expect_identical(counts(sce10x, withDimnames=FALSE), my.counts)
+    sce10x <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_identical(counts(sce10x, withDimnames=FALSE), my.counts)
+    sce10x <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    expect_identical(counts(sce10x, withDimnames=FALSE), as(my.counts, "SVT_SparseArray"))
+    sce10x <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix", mtx.two.pass=TRUE)
+    expect_identical(counts(sce10x, withDimnames=FALSE), as(my.counts, "SVT_SparseArray"))
+
+    tmph5 <- tempfile(fileext=".h5")
+    write10xCounts(path=tmph5, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    sce10x <- read10xCounts(tmph5)
+    denseref <- as.matrix(my.counts)
+    expect_identical(as.matrix(counts(sce10x, withDimnames=FALSE)), denseref)
+    sce10x <- read10xCounts(tmph5, mtx.class="SVT_SparseMatrix")
+    expect_identical(as.matrix(counts(sce10x, withDimnames=FALSE)), denseref)
+})
+
+test_that("read10xCounts for completely empty matrices", {
+    tmpdir <- tempfile()
+    my.counts[] <- 0
+    write10xCounts(path=tmpdir, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    writeLines(c("%%MatrixMarket matrix coordinate real general", sprintf("%s %s 0", nrow(my.counts), ncol(my.counts))), con=file.path(tmpdir, "matrix.mtx"))
+
+    sce10x <- read10xCounts(tmpdir)
+    expect_identical(counts(sce10x, withDimnames=FALSE), my.counts)
+    sce10x <- read10xCounts(tmpdir, mtx.two.pass=TRUE)
+    expect_identical(counts(sce10x, withDimnames=FALSE), my.counts)
+    sce10x <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix")
+    expect_identical(counts(sce10x, withDimnames=FALSE), as(my.counts, "SVT_SparseArray"))
+    sce10x <- read10xCounts(tmpdir, mtx.class="SVT_SparseMatrix", mtx.two.pass=TRUE)
+    expect_identical(counts(sce10x, withDimnames=FALSE), as(my.counts, "SVT_SparseArray"))
+
+    tmph5 <- tempfile(fileext=".h5")
+    write10xCounts(path=tmph5, my.counts, gene.id=gene.ids, gene.symbol=gene.symb, barcodes=cell.ids)
+    sce10x <- read10xCounts(tmph5)
+    denseref <- as.matrix(my.counts)
+    expect_identical(as.matrix(counts(sce10x, withDimnames=FALSE)), denseref)
+    sce10x <- read10xCounts(tmph5, mtx.class="SVT_SparseMatrix")
+    expect_identical(as.matrix(counts(sce10x, withDimnames=FALSE)), denseref)
+})
